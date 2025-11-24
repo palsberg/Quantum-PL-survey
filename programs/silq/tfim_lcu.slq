@@ -1,0 +1,44 @@
+const pi : real = 3.141592653589793;
+
+struct Term {
+  gate : int;
+  i : int;
+  j : int;
+  angle : real;
+}
+
+proc apply_term(term : Term, qs : qureg 2) : qureg 2 {
+  var work := qs;
+  if term.gate == 0 {
+    work[term.i] := rotX(2.0 * term.angle, work[term.i]);
+  } else {
+    let (qi, qj) := (work[term.i], work[term.j]);
+    let (a, b) := evolveZZ(term.angle, qi, qj);
+    work[term.i] := a;
+    work[term.j] := b;
+  }
+  return work;
+}
+
+proc evolveZZ(theta : real, qi : qubit, qj : qubit) : (qubit, qubit) {
+  (qi, qj) := cnot(qi, qj);
+  qj := rotZ(2.0 * theta, qj);
+  (qi, qj) := cnot(qi, qj);
+  return (qi, qj);
+}
+
+proc tfim_lcu(total_time : real) {
+  var qs : qureg 2 := |0>^2;
+  let terms : list<Term> := [
+    Term(0, 0, -1, 0.5 * total_time),
+    Term(0, 1, -1, 0.5 * total_time),
+    Term(1, 0, 1, 1.0 * total_time)
+  ];
+  for term in terms {
+    qs := apply_term(term, qs);
+  }
+}
+
+proc main() {
+  tfim_lcu(0.2);
+}

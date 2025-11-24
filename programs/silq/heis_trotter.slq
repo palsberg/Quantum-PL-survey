@@ -1,0 +1,52 @@
+// Heisenberg XXX trotterization for two qubits in Silq.
+
+def evolveZZ(theta : !ℝ, pair : 𝔹 × 𝔹) : 𝔹 × 𝔹 {
+  let (qi, qj) = pair;
+  qj := cnot(qi, qj);
+  qj := rotZ(2.0 * theta, qj);
+  qj := cnot(qi, qj);
+  return (qi, qj);
+}
+
+def evolveXX(theta : !ℝ, pair : 𝔹 × 𝔹) : 𝔹 × 𝔹 {
+  let (qi, qj) = pair;
+  qi := H(qi);
+  qj := H(qj);
+  let (a, b) = evolveZZ(theta, (qi, qj));
+  a := H(a);
+  b := H(b);
+  return (a, b);
+}
+
+def evolveYY(theta : !ℝ, pair : 𝔹 × 𝔹) : 𝔹 × 𝔹 {
+  let (qi, qj) = pair;
+  qi := rotX(-1.5707963267948966, qi);
+  qj := rotX(-1.5707963267948966, qj);
+  let (a, b) = evolveZZ(theta, (qi, qj));
+  a := rotX(1.5707963267948966, a);
+  b := rotX(1.5707963267948966, b);
+  return (a, b);
+}
+
+def heis_step(pair : 𝔹 × 𝔹, j : !ℝ, field : !ℝ, dt : !ℝ) : 𝔹 × 𝔹 {
+  pair := evolveXX(j * dt, pair);
+  pair := evolveYY(j * dt, pair);
+  pair := evolveZZ(j * dt, pair);
+  let (q0, q1) = pair;
+  q0 := rotZ(2.0 * field * dt, q0);
+  q1 := rotZ(2.0 * field * dt, q1);
+  return (q0, q1);
+}
+
+def heis_circuit(j : !ℝ, field : !ℝ, total_time : !ℝ, steps : !ℕ) : 𝔹 × 𝔹 {
+  pair := (false : 𝔹, false : 𝔹);
+  dt := total_time / (steps as !ℝ + 0.0);
+  for _ in [0..steps) {
+    pair := heis_step(pair, j, field, dt);
+  }
+  return pair;
+}
+
+def main() : 𝔹 × 𝔹 {
+  return heis_circuit(1.0, 0.3, 1.0, 4);
+}

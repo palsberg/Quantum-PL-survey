@@ -1,0 +1,49 @@
+// Transverse-Field Ising Model via first-order Trotterization in Silq.
+
+def evolveZZ(theta : R, pair : B × B) : B × B {
+  let (qi, qj) = pair;
+  (qi, qj) = cnot(qi, qj);
+  qj = rotZ(2.0 * theta, qj);
+  (qi, qj) = cnot(qi, qj);
+  return (qi, qj);
+}
+
+
+def evolveX(theta : R, q : B) : B {
+  q = H(q);
+  q = rotZ(2.0 * theta, q);
+  q = H(q);
+  return q;
+}
+
+
+def trotter_layer(n : Nat, j : R, h : R, qs : B^n) : B^n {
+  var work = qs;
+  for i in [0..n - 1) {
+    let (qi, qj) = (work[i], work[i + 1]);
+    let (qa, qb) = evolveZZ(j, (qi, qj));
+    work[i] = qa;
+    work[i + 1] = qb;
+  }
+  for i in [0..n) {
+    work[i] = evolveX(h, work[i]);
+  }
+  return work;
+}
+
+
+def tfim_circuit(n : Nat, j : R, h : R, total_time : R, steps : Nat) {
+  var qs : B^n = |0>^n;
+  for i in [0..n) {
+    qs[i] = H(qs[i]);
+  }
+  let dt = total_time / real(steps);
+  for _ in [0..steps) {
+    qs = trotter_layer(n, j * dt, h * dt, qs);
+  }
+}
+
+
+def main() {
+  tfim_circuit(4, 1.0, 0.5, 1.0, 10);
+}

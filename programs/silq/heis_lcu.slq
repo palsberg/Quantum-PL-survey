@@ -1,0 +1,59 @@
+const pi : real = 3.141592653589793;
+
+struct HTerm {
+  gate : int;
+  i : int;
+  j : int;
+  angle : real;
+}
+
+proc evolveZZ(theta : real, qi : qubit, qj : qubit) : (qubit, qubit) {
+  (qi, qj) := cnot(qi, qj);
+  qj := rotZ(2.0 * theta, qj);
+  (qi, qj) := cnot(qi, qj);
+  return (qi, qj);
+}
+
+proc evolveXX(theta : real, qi : qubit, qj : qubit) : (qubit, qubit) {
+  qi := H(qi);
+  qj := H(qj);
+  let (a, b) := evolveZZ(theta, qi, qj);
+  a := H(a);
+  b := H(b);
+  return (a, b);
+}
+
+proc apply_heis(term : HTerm, qs : qureg 2) : qureg 2 {
+  var work := qs;
+  if term.gate == 0 {
+    work[term.i] := rotZ(2.0 * term.angle, work[term.i]);
+  } else if term.gate == 1 {
+    let (qi, qj) := (work[term.i], work[term.j]);
+    let (a, b) := evolveXX(term.angle, qi, qj);
+    work[term.i] := a;
+    work[term.j] := b;
+  } else {
+    let (qi, qj) := (work[term.i], work[term.j]);
+    let (a, b) := evolveZZ(term.angle, qi, qj);
+    work[term.i] := a;
+    work[term.j] := b;
+  }
+  return work;
+}
+
+proc heis_lcu(total_time : real) {
+  var qs : qureg 2 := |0>^2;
+  let terms : list<HTerm> := [
+    HTerm(1, 0, 1, 0.3 * total_time),
+    HTerm(2, 0, 1, 0.3 * total_time),
+    HTerm(0, 0, -1, 0.1 * total_time),
+    HTerm(0, 1, -1, 0.1 * total_time)
+  ];
+  for term in terms {
+    qs := apply_heis(term, qs);
+  }
+}
+
+proc main() {
+  heis_lcu(0.2);
+}

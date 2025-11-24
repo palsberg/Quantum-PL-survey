@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.Quantum.Sdk/0.27.261157-beta" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>HamiltonianSimulation</AssemblyName>
+    <RootNamespace>HamiltonianSimulation</RootNamespace>
+  </PropertyGroup>
+</Project>

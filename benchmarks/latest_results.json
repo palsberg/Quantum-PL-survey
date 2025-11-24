@@ -1,0 +1,1560 @@
+[
+  {
+    "benchmark_id": "cirq-tfim_trotter-n2-J1.0-h0.5-trotter_steps4",
+    "language": "cirq",
+    "hamiltonian": "TFIM",
+    "method": "Trotter",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 1.0,
+      "h": 0.5,
+      "trotter_steps": 4
+    },
+    "implementation_path": "programs/cirq/tfim_trotter.py",
+    "backend": "cirq.Simulator",
+    "compilation_time_seconds": 0.0007062500226311386,
+    "execution_time_seconds": 0.026276334014255553,
+    "total_gate_count": 36,
+    "two_qubit_gate_count": 8,
+    "circuit_depth": 24,
+    "qubit_count": 2,
+    "native_gate_set": [
+      "CXPowGate",
+      "HPowGate",
+      "Rz"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "cirq": "1.4.0"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "cirq-tfim_lcu-n2-J1.0-h0.5-lcu_precision0.01",
+    "language": "cirq",
+    "hamiltonian": "TFIM",
+    "method": "LCU",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 1.0,
+      "h": 0.5,
+      "lcu_precision": 0.01
+    },
+    "implementation_path": "programs/cirq/tfim_lcu.py",
+    "backend": "cirq.Simulator",
+    "compilation_time_seconds": 0.0007290409994311631,
+    "execution_time_seconds": 0.0019116670009680092,
+    "total_gate_count": 37,
+    "two_qubit_gate_count": 0,
+    "circuit_depth": 23,
+    "qubit_count": 6,
+    "native_gate_set": [
+      "ControlledGate",
+      "MatrixGate",
+      "_PauliX"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "cirq": "1.4.0"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "cirq-heis_trotter-n2-J0.8-field0.2-trotter_steps4",
+    "language": "cirq",
+    "hamiltonian": "HeisenbergXXX",
+    "method": "Trotter",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 0.8,
+      "field": 0.2,
+      "trotter_steps": 4
+    },
+    "implementation_path": "programs/cirq/heis_trotter.py",
+    "backend": "cirq.Simulator",
+    "compilation_time_seconds": 0.0004237089888192713,
+    "execution_time_seconds": 0.0023735419963486493,
+    "total_gate_count": 92,
+    "two_qubit_gate_count": 24,
+    "circuit_depth": 64,
+    "qubit_count": 2,
+    "native_gate_set": [
+      "CXPowGate",
+      "HPowGate",
+      "Rz",
+      "ZPowGate"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "cirq": "1.4.0"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "cirq-heis_lcu-n2-J0.8-field0.2-lcu_precision0.01",
+    "language": "cirq",
+    "hamiltonian": "HeisenbergXXX",
+    "method": "LCU",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 0.8,
+      "field": 0.2,
+      "lcu_precision": 0.01
+    },
+    "implementation_path": "programs/cirq/heis_lcu.py",
+    "backend": "cirq.Simulator",
+    "compilation_time_seconds": 0.0010588750010356307,
+    "execution_time_seconds": 0.0038635830278508365,
+    "total_gate_count": 90,
+    "two_qubit_gate_count": 0,
+    "circuit_depth": 50,
+    "qubit_count": 7,
+    "native_gate_set": [
+      "ControlledGate",
+      "MatrixGate",
+      "_PauliX"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "cirq": "1.4.0"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "hml-tfim_trotter-n2-J1.0-h0.5-trotter_steps4",
+    "language": "hml",
+    "hamiltonian": "TFIM",
+    "method": "Trotter",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 1.0,
+      "h": 0.5,
+      "trotter_steps": 4
+    },
+    "implementation_path": "programs/hml/tfim_trotter.py",
+    "backend": "cirq.Simulator",
+    "compilation_time_seconds": 0.00017441698582842946,
+    "execution_time_seconds": 0.0023754159919917583,
+    "total_gate_count": 36,
+    "two_qubit_gate_count": 8,
+    "circuit_depth": 24,
+    "qubit_count": 2,
+    "native_gate_set": [
+      "CXPowGate",
+      "HPowGate",
+      "Rz"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "cirq": "1.4.0"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "hml-tfim_lcu-n2-J1.0-h0.5-lcu_precision0.01",
+    "language": "hml",
+    "hamiltonian": "TFIM",
+    "method": "LCU",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 1.0,
+      "h": 0.5,
+      "lcu_precision": 0.01
+    },
+    "implementation_path": "programs/hml/tfim_lcu.py",
+    "backend": "cirq.Simulator",
+    "compilation_time_seconds": 0.0005032499902881682,
+    "execution_time_seconds": 0.0016639999812468886,
+    "total_gate_count": 37,
+    "two_qubit_gate_count": 0,
+    "circuit_depth": 23,
+    "qubit_count": 6,
+    "native_gate_set": [
+      "ControlledGate",
+      "MatrixGate",
+      "_PauliX"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "cirq": "1.4.0"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "hml-heis_trotter-n2-J0.8-field0.2-trotter_steps4",
+    "language": "hml",
+    "hamiltonian": "HeisenbergXXX",
+    "method": "Trotter",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 0.8,
+      "field": 0.2,
+      "trotter_steps": 4
+    },
+    "implementation_path": "programs/hml/heis_trotter.py",
+    "backend": "cirq.Simulator",
+    "compilation_time_seconds": 0.00039770902367308736,
+    "execution_time_seconds": 0.0021760829840786755,
+    "total_gate_count": 92,
+    "two_qubit_gate_count": 24,
+    "circuit_depth": 64,
+    "qubit_count": 2,
+    "native_gate_set": [
+      "CXPowGate",
+      "HPowGate",
+      "Rz",
+      "ZPowGate"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "cirq": "1.4.0"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "hml-heis_lcu-n2-J0.8-field0.2-lcu_precision0.01",
+    "language": "hml",
+    "hamiltonian": "HeisenbergXXX",
+    "method": "LCU",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 0.8,
+      "field": 0.2,
+      "lcu_precision": 0.01
+    },
+    "implementation_path": "programs/hml/heis_lcu.py",
+    "backend": "cirq.Simulator",
+    "compilation_time_seconds": 0.001042041985783726,
+    "execution_time_seconds": 0.003435624996200204,
+    "total_gate_count": 90,
+    "two_qubit_gate_count": 0,
+    "circuit_depth": 50,
+    "qubit_count": 7,
+    "native_gate_set": [
+      "ControlledGate",
+      "MatrixGate",
+      "_PauliX"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "cirq": "1.4.0"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "openqasm-tfim_trotter-n2-J1.0-h0.5-trotter_steps4",
+    "language": "openqasm",
+    "hamiltonian": "TFIM",
+    "method": "Trotter",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 1.0,
+      "h": 0.5,
+      "trotter_steps": 4
+    },
+    "implementation_path": "programs/openqasm/tfim_trotter.py",
+    "backend": "cirq.Simulator",
+    "compilation_time_seconds": 0.00016866601072251797,
+    "execution_time_seconds": 0.0019000419997610152,
+    "total_gate_count": 36,
+    "two_qubit_gate_count": 8,
+    "circuit_depth": 24,
+    "qubit_count": 2,
+    "native_gate_set": [
+      "CXPowGate",
+      "HPowGate",
+      "Rz"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "cirq": "1.4.0"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "openqasm-tfim_lcu-n2-J1.0-h0.5-lcu_precision0.01",
+    "language": "openqasm",
+    "hamiltonian": "TFIM",
+    "method": "LCU",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 1.0,
+      "h": 0.5,
+      "lcu_precision": 0.01
+    },
+    "implementation_path": "programs/openqasm/tfim_lcu.py",
+    "backend": "cirq.Simulator",
+    "compilation_time_seconds": 0.0006310000317171216,
+    "execution_time_seconds": 0.0021162499906495214,
+    "total_gate_count": 37,
+    "two_qubit_gate_count": 0,
+    "circuit_depth": 23,
+    "qubit_count": 6,
+    "native_gate_set": [
+      "ControlledGate",
+      "MatrixGate",
+      "_PauliX"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "cirq": "1.4.0"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "openqasm-heis_trotter-n2-J0.8-field0.2-trotter_steps4",
+    "language": "openqasm",
+    "hamiltonian": "HeisenbergXXX",
+    "method": "Trotter",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 0.8,
+      "field": 0.2,
+      "trotter_steps": 4
+    },
+    "implementation_path": "programs/openqasm/heis_trotter.py",
+    "backend": "cirq.Simulator",
+    "compilation_time_seconds": 0.0004027500399388373,
+    "execution_time_seconds": 0.002286125032696873,
+    "total_gate_count": 92,
+    "two_qubit_gate_count": 24,
+    "circuit_depth": 64,
+    "qubit_count": 2,
+    "native_gate_set": [
+      "CXPowGate",
+      "HPowGate",
+      "Rz",
+      "ZPowGate"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "cirq": "1.4.0"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "openqasm-heis_lcu-n2-J0.8-field0.2-lcu_precision0.01",
+    "language": "openqasm",
+    "hamiltonian": "HeisenbergXXX",
+    "method": "LCU",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 0.8,
+      "field": 0.2,
+      "lcu_precision": 0.01
+    },
+    "implementation_path": "programs/openqasm/heis_lcu.py",
+    "backend": "cirq.Simulator",
+    "compilation_time_seconds": 0.0010792079847306013,
+    "execution_time_seconds": 0.003697125008329749,
+    "total_gate_count": 90,
+    "two_qubit_gate_count": 0,
+    "circuit_depth": 50,
+    "qubit_count": 7,
+    "native_gate_set": [
+      "ControlledGate",
+      "MatrixGate",
+      "_PauliX"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "cirq": "1.4.0"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "pennylane-tfim_trotter-n2-J1.0-h0.5-trotter_steps4",
+    "language": "pennylane",
+    "hamiltonian": "TFIM",
+    "method": "Trotter",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 1.0,
+      "h": 0.5,
+      "trotter_steps": 4
+    },
+    "implementation_path": "programs/pennylane/tfim_trotter.py",
+    "backend": "qml.default.qubit",
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.004145791986957192,
+    "total_gate_count": 12,
+    "two_qubit_gate_count": 4,
+    "circuit_depth": 8,
+    "qubit_count": 2,
+    "native_gate_set": [
+      "PauliRot"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "pennylane": "0.43.1"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "pennylane-tfim_lcu-n2-J1.0-h0.5-lcu_precision0.01",
+    "language": "pennylane",
+    "hamiltonian": "TFIM",
+    "method": "LCU",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 1.0,
+      "h": 0.5,
+      "lcu_precision": 0.01
+    },
+    "implementation_path": "programs/pennylane/tfim_lcu.py",
+    "backend": null,
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.00505487498594448,
+    "total_gate_count": null,
+    "two_qubit_gate_count": null,
+    "circuit_depth": null,
+    "qubit_count": null,
+    "native_gate_set": null,
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "pennylane": "0.43.1"
+    },
+    "status": "ok",
+    "notes": "PennyLane metric extractor not implemented for tfim_lcu"
+  },
+  {
+    "benchmark_id": "pennylane-heis_trotter-n2-J0.8-field0.2-trotter_steps4",
+    "language": "pennylane",
+    "hamiltonian": "HeisenbergXXX",
+    "method": "Trotter",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 0.8,
+      "field": 0.2,
+      "trotter_steps": 4
+    },
+    "implementation_path": "programs/pennylane/heis_trotter.py",
+    "backend": "qml.default.qubit",
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.0013528750278055668,
+    "total_gate_count": 20,
+    "two_qubit_gate_count": 12,
+    "circuit_depth": 16,
+    "qubit_count": 2,
+    "native_gate_set": [
+      "PauliRot"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "pennylane": "0.43.1"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "pennylane-heis_lcu-n2-J0.8-field0.2-lcu_precision0.01",
+    "language": "pennylane",
+    "hamiltonian": "HeisenbergXXX",
+    "method": "LCU",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 0.8,
+      "field": 0.2,
+      "lcu_precision": 0.01
+    },
+    "implementation_path": "programs/pennylane/heis_lcu.py",
+    "backend": null,
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.00805754098109901,
+    "total_gate_count": null,
+    "two_qubit_gate_count": null,
+    "circuit_depth": null,
+    "qubit_count": null,
+    "native_gate_set": null,
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "pennylane": "0.43.1"
+    },
+    "status": "ok",
+    "notes": "PennyLane metric extractor not implemented for heis_lcu"
+  },
+  {
+    "benchmark_id": "pyquil-tfim_trotter-n2-J1.0-h0.5-trotter_steps4",
+    "language": "pyquil",
+    "hamiltonian": "TFIM",
+    "method": "Trotter",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 1.0,
+      "h": 0.5,
+      "trotter_steps": 4
+    },
+    "implementation_path": "programs/pyquil/tfim_trotter.py",
+    "backend": "pyquil.NumpyWavefunctionSimulator",
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.0014446250279434025,
+    "total_gate_count": 20,
+    "two_qubit_gate_count": 8,
+    "circuit_depth": 16,
+    "qubit_count": 2,
+    "native_gate_set": [
+      "CNOT",
+      "RX",
+      "RZ"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "pyquil": "4.17.0"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "pyquil-tfim_lcu-n2-J1.0-h0.5-lcu_precision0.01",
+    "language": "pyquil",
+    "hamiltonian": "TFIM",
+    "method": "LCU",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 1.0,
+      "h": 0.5,
+      "lcu_precision": 0.01
+    },
+    "implementation_path": "programs/pyquil/tfim_lcu.py",
+    "backend": null,
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.004663124971557409,
+    "total_gate_count": null,
+    "two_qubit_gate_count": null,
+    "circuit_depth": null,
+    "qubit_count": null,
+    "native_gate_set": null,
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "pyquil": "4.17.0"
+    },
+    "status": "ok",
+    "notes": "PyQuil metric extractor not implemented for tfim_lcu"
+  },
+  {
+    "benchmark_id": "pyquil-heis_trotter-n2-J0.8-field0.2-trotter_steps4",
+    "language": "pyquil",
+    "hamiltonian": "HeisenbergXXX",
+    "method": "Trotter",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 0.8,
+      "field": 0.2,
+      "trotter_steps": 4
+    },
+    "implementation_path": "programs/pyquil/heis_trotter.py",
+    "backend": "pyquil.NumpyWavefunctionSimulator",
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.001963874965440482,
+    "total_gate_count": 92,
+    "two_qubit_gate_count": 24,
+    "circuit_depth": 64,
+    "qubit_count": 2,
+    "native_gate_set": [
+      "CNOT",
+      "H",
+      "PHASE",
+      "RZ"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "pyquil": "4.17.0"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "pyquil-heis_lcu-n2-J0.8-field0.2-lcu_precision0.01",
+    "language": "pyquil",
+    "hamiltonian": "HeisenbergXXX",
+    "method": "LCU",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 0.8,
+      "field": 0.2,
+      "lcu_precision": 0.01
+    },
+    "implementation_path": "programs/pyquil/heis_lcu.py",
+    "backend": null,
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.027291083009913564,
+    "total_gate_count": null,
+    "two_qubit_gate_count": null,
+    "circuit_depth": null,
+    "qubit_count": null,
+    "native_gate_set": null,
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "pyquil": "4.17.0"
+    },
+    "status": "ok",
+    "notes": "PyQuil metric extractor not implemented for heis_lcu"
+  },
+  {
+    "benchmark_id": "qiskit-tfim_trotter-n2-J1.0-h0.5-trotter_steps4",
+    "language": "qiskit",
+    "hamiltonian": "TFIM",
+    "method": "Trotter",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 1.0,
+      "h": 0.5,
+      "trotter_steps": 4
+    },
+    "implementation_path": "programs/qiskit/tfim_trotter.py",
+    "backend": null,
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.0012962079490534961,
+    "total_gate_count": null,
+    "two_qubit_gate_count": null,
+    "circuit_depth": null,
+    "qubit_count": null,
+    "native_gate_set": null,
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "qiskit": "2.2.3"
+    },
+    "status": "ok",
+    "notes": "Qiskit stack unavailable: cannot import name 'FakeJakarta' from 'qiskit.providers.fake_provider' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/qiskit/providers/fake_provider/__init__.py)"
+  },
+  {
+    "benchmark_id": "qiskit-tfim_lcu-n2-J1.0-h0.5-lcu_precision0.01",
+    "language": "qiskit",
+    "hamiltonian": "TFIM",
+    "method": "LCU",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 1.0,
+      "h": 0.5,
+      "lcu_precision": 0.01
+    },
+    "implementation_path": "programs/qiskit/tfim_lcu.py",
+    "backend": null,
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.012817582988645881,
+    "total_gate_count": null,
+    "two_qubit_gate_count": null,
+    "circuit_depth": null,
+    "qubit_count": null,
+    "native_gate_set": null,
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "qiskit": "2.2.3"
+    },
+    "status": "ok",
+    "notes": "Qiskit stack unavailable: cannot import name 'FakeJakarta' from 'qiskit.providers.fake_provider' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/qiskit/providers/fake_provider/__init__.py)"
+  },
+  {
+    "benchmark_id": "qiskit-heis_trotter-n2-J0.8-field0.2-trotter_steps4",
+    "language": "qiskit",
+    "hamiltonian": "HeisenbergXXX",
+    "method": "Trotter",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 0.8,
+      "field": 0.2,
+      "trotter_steps": 4
+    },
+    "implementation_path": "programs/qiskit/heis_trotter.py",
+    "backend": null,
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.0012566670193336904,
+    "total_gate_count": null,
+    "two_qubit_gate_count": null,
+    "circuit_depth": null,
+    "qubit_count": null,
+    "native_gate_set": null,
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "qiskit": "2.2.3"
+    },
+    "status": "ok",
+    "notes": "Qiskit stack unavailable: cannot import name 'FakeJakarta' from 'qiskit.providers.fake_provider' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/qiskit/providers/fake_provider/__init__.py)"
+  },
+  {
+    "benchmark_id": "qiskit-heis_lcu-n2-J0.8-field0.2-lcu_precision0.01",
+    "language": "qiskit",
+    "hamiltonian": "HeisenbergXXX",
+    "method": "LCU",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 0.8,
+      "field": 0.2,
+      "lcu_precision": 0.01
+    },
+    "implementation_path": "programs/qiskit/heis_lcu.py",
+    "backend": null,
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.029518999974243343,
+    "total_gate_count": null,
+    "two_qubit_gate_count": null,
+    "circuit_depth": null,
+    "qubit_count": null,
+    "native_gate_set": null,
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "qiskit": "2.2.3"
+    },
+    "status": "ok",
+    "notes": "Qiskit stack unavailable: cannot import name 'FakeJakarta' from 'qiskit.providers.fake_provider' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/qiskit/providers/fake_provider/__init__.py)"
+  },
+  {
+    "benchmark_id": "qrisp-tfim_trotter-n2-J1.0-h0.5-trotter_steps4",
+    "language": "qrisp",
+    "hamiltonian": "TFIM",
+    "method": "Trotter",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 1.0,
+      "h": 0.5,
+      "trotter_steps": 4
+    },
+    "implementation_path": "programs/qrisp/tfim_trotter.py",
+    "backend": null,
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.3995113749988377,
+    "total_gate_count": null,
+    "two_qubit_gate_count": null,
+    "circuit_depth": null,
+    "qubit_count": null,
+    "native_gate_set": null,
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "qiskit": "2.2.3"
+    },
+    "status": "ok",
+    "notes": "Qrisp native metric extraction pending"
+  },
+  {
+    "benchmark_id": "qrisp-tfim_lcu-n2-J1.0-h0.5-lcu_precision0.01",
+    "language": "qrisp",
+    "hamiltonian": "TFIM",
+    "method": "LCU",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 1.0,
+      "h": 0.5,
+      "lcu_precision": 0.01
+    },
+    "implementation_path": "programs/qrisp/tfim_lcu.py",
+    "backend": null,
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.010362917033489794,
+    "total_gate_count": null,
+    "two_qubit_gate_count": null,
+    "circuit_depth": null,
+    "qubit_count": null,
+    "native_gate_set": null,
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "qiskit": "2.2.3"
+    },
+    "status": "ok",
+    "notes": "Qrisp LCU via Qiskit fallback: Qiskit stack unavailable: cannot import name 'FakeJakarta' from 'qiskit.providers.fake_provider' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/qiskit/providers/fake_provider/__init__.py)"
+  },
+  {
+    "benchmark_id": "qrisp-heis_trotter-n2-J0.8-field0.2-trotter_steps4",
+    "language": "qrisp",
+    "hamiltonian": "HeisenbergXXX",
+    "method": "Trotter",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 0.8,
+      "field": 0.2,
+      "trotter_steps": 4
+    },
+    "implementation_path": "programs/qrisp/heis_trotter.py",
+    "backend": null,
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.007232124975416809,
+    "total_gate_count": null,
+    "two_qubit_gate_count": null,
+    "circuit_depth": null,
+    "qubit_count": null,
+    "native_gate_set": null,
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "qiskit": "2.2.3"
+    },
+    "status": "ok",
+    "notes": "Qrisp native metric extraction pending"
+  },
+  {
+    "benchmark_id": "qrisp-heis_lcu-n2-J0.8-field0.2-lcu_precision0.01",
+    "language": "qrisp",
+    "hamiltonian": "HeisenbergXXX",
+    "method": "LCU",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 0.8,
+      "field": 0.2,
+      "lcu_precision": 0.01
+    },
+    "implementation_path": "programs/qrisp/heis_lcu.py",
+    "backend": null,
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.03025012498255819,
+    "total_gate_count": null,
+    "two_qubit_gate_count": null,
+    "circuit_depth": null,
+    "qubit_count": null,
+    "native_gate_set": null,
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "qiskit": "2.2.3"
+    },
+    "status": "ok",
+    "notes": "Qrisp LCU via Qiskit fallback: Qiskit stack unavailable: cannot import name 'FakeJakarta' from 'qiskit.providers.fake_provider' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/qiskit/providers/fake_provider/__init__.py)"
+  },
+  {
+    "benchmark_id": "qsharp-tfim_trotter-n2-J1.0-h0.5-trotter_steps4",
+    "language": "qsharp",
+    "hamiltonian": "TFIM",
+    "method": "Trotter",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 1.0,
+      "h": 0.5,
+      "trotter_steps": 4
+    },
+    "implementation_path": "programs/qsharp",
+    "backend": null,
+    "compilation_time_seconds": null,
+    "execution_time_seconds": null,
+    "total_gate_count": null,
+    "two_qubit_gate_count": null,
+    "circuit_depth": null,
+    "qubit_count": null,
+    "native_gate_set": null,
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {},
+    "status": "skipped",
+    "notes": "Placeholder language with no metric extractor | dotnet CLI integration pending"
+  },
+  {
+    "benchmark_id": "qsharp-tfim_lcu-n2-J1.0-h0.5-lcu_precision0.01",
+    "language": "qsharp",
+    "hamiltonian": "TFIM",
+    "method": "LCU",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 1.0,
+      "h": 0.5,
+      "lcu_precision": 0.01
+    },
+    "implementation_path": "programs/qsharp",
+    "backend": null,
+    "compilation_time_seconds": null,
+    "execution_time_seconds": null,
+    "total_gate_count": null,
+    "two_qubit_gate_count": null,
+    "circuit_depth": null,
+    "qubit_count": null,
+    "native_gate_set": null,
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {},
+    "status": "skipped",
+    "notes": "Placeholder language with no metric extractor | dotnet CLI integration pending"
+  },
+  {
+    "benchmark_id": "qsharp-heis_trotter-n2-J0.8-field0.2-trotter_steps4",
+    "language": "qsharp",
+    "hamiltonian": "HeisenbergXXX",
+    "method": "Trotter",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 0.8,
+      "field": 0.2,
+      "trotter_steps": 4
+    },
+    "implementation_path": "programs/qsharp",
+    "backend": null,
+    "compilation_time_seconds": null,
+    "execution_time_seconds": null,
+    "total_gate_count": null,
+    "two_qubit_gate_count": null,
+    "circuit_depth": null,
+    "qubit_count": null,
+    "native_gate_set": null,
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {},
+    "status": "skipped",
+    "notes": "Placeholder language with no metric extractor | dotnet CLI integration pending"
+  },
+  {
+    "benchmark_id": "qsharp-heis_lcu-n2-J0.8-field0.2-lcu_precision0.01",
+    "language": "qsharp",
+    "hamiltonian": "HeisenbergXXX",
+    "method": "LCU",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 0.8,
+      "field": 0.2,
+      "lcu_precision": 0.01
+    },
+    "implementation_path": "programs/qsharp",
+    "backend": null,
+    "compilation_time_seconds": null,
+    "execution_time_seconds": null,
+    "total_gate_count": null,
+    "two_qubit_gate_count": null,
+    "circuit_depth": null,
+    "qubit_count": null,
+    "native_gate_set": null,
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {},
+    "status": "skipped",
+    "notes": "Placeholder language with no metric extractor | dotnet CLI integration pending"
+  },
+  {
+    "benchmark_id": "qualtran-tfim_trotter-n2-J1.0-h0.5-trotter_steps4",
+    "language": "qualtran",
+    "hamiltonian": "TFIM",
+    "method": "Trotter",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 1.0,
+      "h": 0.5,
+      "trotter_steps": 4
+    },
+    "implementation_path": "programs/qualtran/tfim_trotter.py",
+    "backend": "cirq.Simulator",
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.00990541698411107,
+    "total_gate_count": 8,
+    "two_qubit_gate_count": 8,
+    "circuit_depth": 8,
+    "qubit_count": 2,
+    "native_gate_set": [
+      "BloqAsCirqGate"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "cirq": "1.4.0"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "qualtran-tfim_lcu-n2-J1.0-h0.5-lcu_precision0.01",
+    "language": "qualtran",
+    "hamiltonian": "TFIM",
+    "method": "LCU",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 1.0,
+      "h": 0.5,
+      "lcu_precision": 0.01
+    },
+    "implementation_path": "programs/qualtran/tfim_lcu.py",
+    "backend": "cirq.Simulator",
+    "compilation_time_seconds": 0.0008229160448536277,
+    "execution_time_seconds": 0.0028242910047993064,
+    "total_gate_count": 37,
+    "two_qubit_gate_count": 0,
+    "circuit_depth": 23,
+    "qubit_count": 6,
+    "native_gate_set": [
+      "ControlledGate",
+      "MatrixGate",
+      "_PauliX"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "cirq": "1.4.0"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "qualtran-heis_trotter-n2-J0.8-field0.2-trotter_steps4",
+    "language": "qualtran",
+    "hamiltonian": "HeisenbergXXX",
+    "method": "Trotter",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 0.8,
+      "field": 0.2,
+      "trotter_steps": 4
+    },
+    "implementation_path": "programs/qualtran/heis_trotter.py",
+    "backend": "cirq.Simulator",
+    "compilation_time_seconds": 0.00041916698683053255,
+    "execution_time_seconds": 0.002217833010945469,
+    "total_gate_count": 92,
+    "two_qubit_gate_count": 24,
+    "circuit_depth": 64,
+    "qubit_count": 2,
+    "native_gate_set": [
+      "CXPowGate",
+      "HPowGate",
+      "Rz",
+      "ZPowGate"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "cirq": "1.4.0"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "qualtran-heis_lcu-n2-J0.8-field0.2-lcu_precision0.01",
+    "language": "qualtran",
+    "hamiltonian": "HeisenbergXXX",
+    "method": "LCU",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 0.8,
+      "field": 0.2,
+      "lcu_precision": 0.01
+    },
+    "implementation_path": "programs/qualtran/heis_lcu.py",
+    "backend": "cirq.Simulator",
+    "compilation_time_seconds": 0.0011202500318177044,
+    "execution_time_seconds": 0.003578791976906359,
+    "total_gate_count": 90,
+    "two_qubit_gate_count": 0,
+    "circuit_depth": 50,
+    "qubit_count": 7,
+    "native_gate_set": [
+      "ControlledGate",
+      "MatrixGate",
+      "_PauliX"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "cirq": "1.4.0"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "quipper-tfim_trotter-n2-J1.0-h0.5-trotter_steps4",
+    "language": "quipper",
+    "hamiltonian": "TFIM",
+    "method": "Trotter",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 1.0,
+      "h": 0.5,
+      "trotter_steps": 4
+    },
+    "implementation_path": "programs/quipper/tfim_trotter.hs",
+    "backend": null,
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.2574762500007637,
+    "total_gate_count": null,
+    "two_qubit_gate_count": null,
+    "circuit_depth": null,
+    "qubit_count": null,
+    "native_gate_set": null,
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "qiskit": "2.2.3"
+    },
+    "status": "ok",
+    "notes": "Qiskit stack unavailable: cannot import name 'FakeJakarta' from 'qiskit.providers.fake_provider' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/qiskit/providers/fake_provider/__init__.py)"
+  },
+  {
+    "benchmark_id": "quipper-tfim_lcu-n2-J1.0-h0.5-lcu_precision0.01",
+    "language": "quipper",
+    "hamiltonian": "TFIM",
+    "method": "LCU",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 1.0,
+      "h": 0.5,
+      "lcu_precision": 0.01
+    },
+    "implementation_path": "programs/quipper/tfim_lcu.hs",
+    "backend": null,
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.2429807500448078,
+    "total_gate_count": null,
+    "two_qubit_gate_count": null,
+    "circuit_depth": null,
+    "qubit_count": null,
+    "native_gate_set": null,
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "qiskit": "2.2.3"
+    },
+    "status": "ok",
+    "notes": "Qiskit stack unavailable: cannot import name 'FakeJakarta' from 'qiskit.providers.fake_provider' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/qiskit/providers/fake_provider/__init__.py)"
+  },
+  {
+    "benchmark_id": "quipper-heis_trotter-n2-J0.8-field0.2-trotter_steps4",
+    "language": "quipper",
+    "hamiltonian": "HeisenbergXXX",
+    "method": "Trotter",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 0.8,
+      "field": 0.2,
+      "trotter_steps": 4
+    },
+    "implementation_path": "programs/quipper/heis_trotter.hs",
+    "backend": null,
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.22983508399920538,
+    "total_gate_count": null,
+    "two_qubit_gate_count": null,
+    "circuit_depth": null,
+    "qubit_count": null,
+    "native_gate_set": null,
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "qiskit": "2.2.3"
+    },
+    "status": "ok",
+    "notes": "Qiskit stack unavailable: cannot import name 'FakeJakarta' from 'qiskit.providers.fake_provider' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/qiskit/providers/fake_provider/__init__.py)"
+  },
+  {
+    "benchmark_id": "quipper-heis_lcu-n2-J0.8-field0.2-lcu_precision0.01",
+    "language": "quipper",
+    "hamiltonian": "HeisenbergXXX",
+    "method": "LCU",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 0.8,
+      "field": 0.2,
+      "lcu_precision": 0.01
+    },
+    "implementation_path": "programs/quipper/heis_lcu.hs",
+    "backend": null,
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.29944183299085125,
+    "total_gate_count": null,
+    "two_qubit_gate_count": null,
+    "circuit_depth": null,
+    "qubit_count": null,
+    "native_gate_set": null,
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "qiskit": "2.2.3"
+    },
+    "status": "ok",
+    "notes": "Qiskit stack unavailable: cannot import name 'FakeJakarta' from 'qiskit.providers.fake_provider' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/qiskit/providers/fake_provider/__init__.py)"
+  },
+  {
+    "benchmark_id": "silq-tfim_trotter-n2-J1.0-h0.5-trotter_steps4",
+    "language": "silq",
+    "hamiltonian": "TFIM",
+    "method": "Trotter",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 1.0,
+      "h": 0.5,
+      "trotter_steps": 4
+    },
+    "implementation_path": "programs/silq/tfim_trotter.slq",
+    "backend": "cirq.Simulator",
+    "compilation_time_seconds": 0.0004891669959761202,
+    "execution_time_seconds": 0.931832458009012,
+    "total_gate_count": 36,
+    "two_qubit_gate_count": 8,
+    "circuit_depth": 24,
+    "qubit_count": 2,
+    "native_gate_set": [
+      "CXPowGate",
+      "HPowGate",
+      "Rz"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "cirq": "1.4.0"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "silq-tfim_lcu-n2-J1.0-h0.5-lcu_precision0.01",
+    "language": "silq",
+    "hamiltonian": "TFIM",
+    "method": "LCU",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 1.0,
+      "h": 0.5,
+      "lcu_precision": 0.01
+    },
+    "implementation_path": "programs/silq/tfim_lcu.slq",
+    "backend": "cirq.Simulator",
+    "compilation_time_seconds": 0.0012130410177633166,
+    "execution_time_seconds": 0.9491340839886107,
+    "total_gate_count": 37,
+    "two_qubit_gate_count": 0,
+    "circuit_depth": 23,
+    "qubit_count": 6,
+    "native_gate_set": [
+      "ControlledGate",
+      "MatrixGate",
+      "_PauliX"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "cirq": "1.4.0"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "silq-heis_trotter-n2-J0.8-field0.2-trotter_steps4",
+    "language": "silq",
+    "hamiltonian": "HeisenbergXXX",
+    "method": "Trotter",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 0.8,
+      "field": 0.2,
+      "trotter_steps": 4
+    },
+    "implementation_path": "programs/silq/heis_trotter.slq",
+    "backend": "cirq.Simulator",
+    "compilation_time_seconds": 0.0006526249926537275,
+    "execution_time_seconds": 0.8987497909693047,
+    "total_gate_count": 92,
+    "two_qubit_gate_count": 24,
+    "circuit_depth": 64,
+    "qubit_count": 2,
+    "native_gate_set": [
+      "CXPowGate",
+      "HPowGate",
+      "Rz",
+      "ZPowGate"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "cirq": "1.4.0"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "silq-heis_lcu-n2-J0.8-field0.2-lcu_precision0.01",
+    "language": "silq",
+    "hamiltonian": "HeisenbergXXX",
+    "method": "LCU",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 0.8,
+      "field": 0.2,
+      "lcu_precision": 0.01
+    },
+    "implementation_path": "programs/silq/heis_lcu.slq",
+    "backend": "cirq.Simulator",
+    "compilation_time_seconds": 0.0016307089827023447,
+    "execution_time_seconds": 1.0193471249658614,
+    "total_gate_count": 90,
+    "two_qubit_gate_count": 0,
+    "circuit_depth": 50,
+    "qubit_count": 7,
+    "native_gate_set": [
+      "ControlledGate",
+      "MatrixGate",
+      "_PauliX"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "cirq": "1.4.0"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "strawberryfields-tfim_trotter-n2-J1.0-h0.5-trotter_steps4",
+    "language": "strawberryfields",
+    "hamiltonian": "TFIM",
+    "method": "Trotter",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 1.0,
+      "h": 0.5,
+      "trotter_steps": 4
+    },
+    "implementation_path": "programs/strawberryfields/tfim_trotter.py",
+    "backend": null,
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 3.0168233329895884,
+    "total_gate_count": null,
+    "two_qubit_gate_count": null,
+    "circuit_depth": null,
+    "qubit_count": null,
+    "native_gate_set": null,
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "strawberryfields": "0.19.0"
+    },
+    "status": "ok",
+    "notes": "Strawberry Fields dependency unavailable: cannot import name 'simps' from 'scipy.integrate' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/scipy/integrate/__init__.py)"
+  },
+  {
+    "benchmark_id": "strawberryfields-tfim_lcu-n2-J1.0-h0.5-lcu_precision0.01",
+    "language": "strawberryfields",
+    "hamiltonian": "TFIM",
+    "method": "LCU",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 1.0,
+      "h": 0.5,
+      "lcu_precision": 0.01
+    },
+    "implementation_path": "programs/strawberryfields/tfim_lcu.py",
+    "backend": "sf.Engine(fock)",
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.014987625007051975,
+    "total_gate_count": 8,
+    "two_qubit_gate_count": 4,
+    "circuit_depth": null,
+    "qubit_count": 2,
+    "native_gate_set": [
+      "BSgate",
+      "CZgate",
+      "Fock"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "strawberryfields": "0.19.0"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "strawberryfields-heis_trotter-n2-J0.8-field0.2-trotter_steps4",
+    "language": "strawberryfields",
+    "hamiltonian": "HeisenbergXXX",
+    "method": "Trotter",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 0.8,
+      "field": 0.2,
+      "trotter_steps": 4
+    },
+    "implementation_path": "programs/strawberryfields/heis_trotter.py",
+    "backend": "sf.Engine(fock)",
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.0968543749768287,
+    "total_gate_count": 36,
+    "two_qubit_gate_count": 16,
+    "circuit_depth": null,
+    "qubit_count": 2,
+    "native_gate_set": [
+      "BSgate",
+      "CZgate",
+      "Fock",
+      "Rgate"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "strawberryfields": "0.19.0"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "strawberryfields-heis_lcu-n2-J0.8-field0.2-lcu_precision0.01",
+    "language": "strawberryfields",
+    "hamiltonian": "HeisenbergXXX",
+    "method": "LCU",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 0.8,
+      "field": 0.2,
+      "lcu_precision": 0.01
+    },
+    "implementation_path": "programs/strawberryfields/heis_lcu.py",
+    "backend": "sf.Engine(fock)",
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.023097416968084872,
+    "total_gate_count": 12,
+    "two_qubit_gate_count": 4,
+    "circuit_depth": null,
+    "qubit_count": 2,
+    "native_gate_set": [
+      "BSgate",
+      "CZgate",
+      "Fock",
+      "Rgate"
+    ],
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "strawberryfields": "0.19.0"
+    },
+    "status": "ok",
+    "notes": null
+  },
+  {
+    "benchmark_id": "tket-tfim_trotter-n2-J1.0-h0.5-trotter_steps4",
+    "language": "tket",
+    "hamiltonian": "TFIM",
+    "method": "Trotter",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 1.0,
+      "h": 0.5,
+      "trotter_steps": 4
+    },
+    "implementation_path": "programs/tket/tfim_trotter.py",
+    "backend": null,
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.002746833022683859,
+    "total_gate_count": null,
+    "two_qubit_gate_count": null,
+    "circuit_depth": null,
+    "qubit_count": null,
+    "native_gate_set": null,
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "pytket": "2.10.3"
+    },
+    "status": "ok",
+    "notes": "pytket stack unavailable: cannot import name 'FakeJakarta' from 'qiskit.providers.fake_provider' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/qiskit/providers/fake_provider/__init__.py)"
+  },
+  {
+    "benchmark_id": "tket-tfim_lcu-n2-J1.0-h0.5-lcu_precision0.01",
+    "language": "tket",
+    "hamiltonian": "TFIM",
+    "method": "LCU",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 1.0,
+      "h": 0.5,
+      "lcu_precision": 0.01
+    },
+    "implementation_path": "programs/tket/tfim_lcu.py",
+    "backend": null,
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.006226708006579429,
+    "total_gate_count": null,
+    "two_qubit_gate_count": null,
+    "circuit_depth": null,
+    "qubit_count": null,
+    "native_gate_set": null,
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "pytket": "2.10.3"
+    },
+    "status": "ok",
+    "notes": "pytket stack unavailable: cannot import name 'FakeJakarta' from 'qiskit.providers.fake_provider' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/qiskit/providers/fake_provider/__init__.py)"
+  },
+  {
+    "benchmark_id": "tket-heis_trotter-n2-J0.8-field0.2-trotter_steps4",
+    "language": "tket",
+    "hamiltonian": "HeisenbergXXX",
+    "method": "Trotter",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 0.8,
+      "field": 0.2,
+      "trotter_steps": 4
+    },
+    "implementation_path": "programs/tket/heis_trotter.py",
+    "backend": null,
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.001419584034010768,
+    "total_gate_count": null,
+    "two_qubit_gate_count": null,
+    "circuit_depth": null,
+    "qubit_count": null,
+    "native_gate_set": null,
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "pytket": "2.10.3"
+    },
+    "status": "ok",
+    "notes": "pytket stack unavailable: cannot import name 'FakeJakarta' from 'qiskit.providers.fake_provider' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/qiskit/providers/fake_provider/__init__.py)"
+  },
+  {
+    "benchmark_id": "tket-heis_lcu-n2-J0.8-field0.2-lcu_precision0.01",
+    "language": "tket",
+    "hamiltonian": "HeisenbergXXX",
+    "method": "LCU",
+    "system_size": 2,
+    "parameter_set": {
+      "time": 0.1,
+      "J": 0.8,
+      "field": 0.2,
+      "lcu_precision": 0.01
+    },
+    "implementation_path": "programs/tket/heis_lcu.py",
+    "backend": null,
+    "compilation_time_seconds": null,
+    "execution_time_seconds": 0.01098133297637105,
+    "total_gate_count": null,
+    "two_qubit_gate_count": null,
+    "circuit_depth": null,
+    "qubit_count": null,
+    "native_gate_set": null,
+    "timestamp_utc": "2025-11-24T15:40:36.288164+00:00",
+    "tool_versions": {
+      "pytket": "2.10.3"
+    },
+    "status": "ok",
+    "notes": "pytket stack unavailable: cannot import name 'FakeJakarta' from 'qiskit.providers.fake_provider' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/qiskit/providers/fake_provider/__init__.py)"
+  }
+]

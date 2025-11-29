@@ -19,6 +19,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
+import math
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -425,7 +426,7 @@ def qiskit_metric_provider(
     num_sites = int(config["num_sites"])
     time_total = float(config["time"])
     params = config.get("params", {})
-    backend = GenericBackendV2(num_qubits=num_sites)
+    backend: Optional[GenericBackendV2] = None
     if case_name == "tfim_trotter":
         steps = int(params.get("trotter_steps", 2))
         circuit, _ = qiskit_common.trotterize_tfim(
@@ -435,6 +436,7 @@ def qiskit_metric_provider(
             time_total,
             steps,
         )
+        backend = GenericBackendV2(num_qubits=num_sites)
     elif case_name == "heis_trotter":
         steps = int(params.get("trotter_steps", 2))
         circuit, _ = qiskit_common.trotterize_heisenberg_xxx(
@@ -444,6 +446,7 @@ def qiskit_metric_provider(
             time_total,
             steps,
         )
+        backend = GenericBackendV2(num_qubits=num_sites)
     elif case_name == "tfim_lcu":
         gamma = pauli_models.taylor_coefficients(
             pauli_models.tfim_pauli_terms(
@@ -455,6 +458,7 @@ def qiskit_metric_provider(
         circuit, _ = qiskit_lcu_common.build_lcu_circuit(
             num_sites, list(weights), list(paulis), list(phases)
         )
+        backend = GenericBackendV2(num_qubits=circuit.num_qubits)
     elif case_name == "heis_lcu":
         gamma = pauli_models.taylor_coefficients(
             pauli_models.heisenberg_pauli_terms(
@@ -466,8 +470,11 @@ def qiskit_metric_provider(
         circuit, _ = qiskit_lcu_common.build_lcu_circuit(
             num_sites, list(weights), list(paulis), list(phases)
         )
+        backend = GenericBackendV2(num_qubits=circuit.num_qubits)
     else:
         return {}, f"Unsupported case {case_name} for Qiskit metrics"
+    if backend is None:
+        backend = GenericBackendV2(num_qubits=circuit.num_qubits)
     start = perf_counter()
     compiled = transpile(circuit, backend=backend, optimization_level=2)
     compilation_time = perf_counter() - start
@@ -524,10 +531,13 @@ def tket_metric_provider(
 def pyquil_metric_provider(
     language: str, case_name: str, config: Dict[str, Any]
 ) -> Tuple[Dict[str, Any], Optional[str]]:
+    if "lcu" in case_name:
+        return {}, "N/A: PyQuil LCU benchmarks suppressed due to long compile/emulation times on the Quil simulator."
     try:
         from pyquil import Program  # type: ignore
         from pyquil.quilbase import Gate  # type: ignore
         from programs.pyquil import common as pyquil_common  # type: ignore
+        from programs.pyquil import lcu_common as pyquil_lcu  # type: ignore
     except Exception as exc:  # pragma: no cover
         return {}, f"PyQuil stack unavailable: {exc}"
     num_sites = int(config["num_sites"])
@@ -551,9 +561,77 @@ def pyquil_metric_provider(
             time_total,
             steps,
         )
+    elif case_name == "tfim_lcu":
+        H = pauli_models.tfim_pauli_terms(
+            num_sites, float(params.get("J", 1.0)), float(params.get("h", 1.0))
+        )
+        gamma = pauli_models.taylor_coefficients(H, time_total)
+        weights, paulis, phases = pauli_models.lcu_weights_from_gamma(gamma)
+        prog, _ = pyquil_lcu.build_lcu_program(num_sites, list(weights), list(paulis), list(phases))
+    elif case_name == "heis_lcu":
+        H = pauli_models.heisenberg_pauli_terms(
+            num_sites, float(params.get("J", 1.0)), float(params.get("field", 0.2))
+        )
+        gamma = pauli_models.taylor_coefficients(H, time_total)
+        weights, paulis, phases = pauli_models.lcu_weights_from_gamma(gamma)
+        prog, _ = pyquil_lcu.build_lcu_program(num_sites, list(weights), list(paulis), list(phases))
     else:
         return {}, f"PyQuil metric extractor not implemented for {case_name}"
     return describe_pyquil_program(prog, Gate), None
+
+
+def _pennylane_lcu_terms(num_sites: int, hamiltonian: Dict[str, complex], total_time: float):
+    gamma = pauli_models.taylor_coefficients(hamiltonian, total_time)
+    return pauli_models.lcu_weights_from_gamma(gamma)
+
+
+def _build_pennylane_lcu_qnode(
+    num_sites: int,
+    weights: List[float],
+    paulis: List[str],
+    phases: List[str],
+    pennylane_lcu_module,
+):
+    import pennylane as qml  # type: ignore
+
+    weights = list(weights)
+    paulis = list(paulis)
+    phases = list(phases)
+    L = len(weights)
+    if L == 0:
+        raise ValueError("No LCU terms provided.")
+    m = max(1, int(math.ceil(math.log2(L))))
+    target_len = 2**m
+    identity = "I" * num_sites
+    if target_len > L:
+        pad = target_len - L
+        weights.extend([0.0] * pad)
+        paulis.extend([identity] * pad)
+        phases.extend(["1"] * pad)
+    amps = pennylane_lcu_module.amps_from_weights(weights)
+    total_wires = num_sites + m + 1
+    system = list(range(num_sites))
+    index = list(range(num_sites, num_sites + m))
+    phase_wire = num_sites + m
+    dev = qml.device("default.qubit", wires=total_wires)
+
+    @qml.qnode(dev)
+    def circuit():
+        qml.PauliX(phase_wire)
+        qml.MottonenStatePreparation(amps, wires=index)
+        controls = index
+        for idx_value, weight in enumerate(weights):
+            pennylane_lcu_module.apply_index_mask(index, idx_value)
+            if weight > 0:
+                pennylane_lcu_module.apply_phase_tag(controls, phase_wire, phases[idx_value])
+                pennylane_lcu_module.apply_controlled_pauli_string(
+                    controls, system, paulis[idx_value]
+                )
+            pennylane_lcu_module.apply_index_mask(index, idx_value)
+        qml.adjoint(qml.MottonenStatePreparation)(amps, wires=index)
+        return qml.state()
+
+    return circuit, total_wires
 
 
 def pennylane_metric_provider(
@@ -561,6 +639,7 @@ def pennylane_metric_provider(
 ) -> Tuple[Dict[str, Any], Optional[str]]:
     try:
         import pennylane as qml  # type: ignore
+        from programs.pennylane import lcu_common as pennylane_lcu  # type: ignore
     except Exception as exc:  # pragma: no cover
         return {}, f"PennyLane unavailable: {exc}"
     num_sites = int(config["num_sites"])
@@ -593,15 +672,39 @@ def pennylane_metric_provider(
                 for i in range(num_sites):
                     qml.PauliRot(2 * field * dt, wires=[i], pauli_word="Z")
 
+    elif case_name == "tfim_lcu":
+        weights, paulis, phases = _pennylane_lcu_terms(
+            num_sites,
+            pauli_models.tfim_pauli_terms(
+                num_sites, float(params.get("J", 1.0)), float(params.get("h", 1.0))
+            ),
+            time_total,
+        )
+        circuit, total_wires = _build_pennylane_lcu_qnode(
+            num_sites, weights, paulis, phases, pennylane_lcu
+        )
+    elif case_name == "heis_lcu":
+        weights, paulis, phases = _pennylane_lcu_terms(
+            num_sites,
+            pauli_models.heisenberg_pauli_terms(
+                num_sites, float(params.get("J", 1.0)), float(params.get("field", 0.2))
+            ),
+            time_total,
+        )
+        circuit, total_wires = _build_pennylane_lcu_qnode(
+            num_sites, weights, paulis, phases, pennylane_lcu
+        )
     else:
         return {}, f"PennyLane metric extractor not implemented for {case_name}"
+        dev = None
+    if case_name not in ("tfim_lcu", "heis_lcu"):
+        dev = qml.device("default.qubit", wires=num_sites)
 
-    dev = qml.device("default.qubit", wires=num_sites)
-
-    @qml.qnode(dev)
-    def circuit():
-        build()
-        return qml.state()
+        @qml.qnode(dev)
+        def circuit():
+            build()
+            return qml.state()
+        total_wires = num_sites
 
     specs = qml.specs(circuit)()
     resources = specs.get("resources")
@@ -609,13 +712,13 @@ def pennylane_metric_provider(
     two_qubit = None
     depth = getattr(resources, "depth", None) if resources else None
     gate_names = None
-    qubit_count = num_sites
+    qubit_count = total_wires
     if resources is not None:
         sizes = getattr(resources, "gate_sizes", {})
         two_qubit = sizes.get(2)
         gate_types = getattr(resources, "gate_types", {})
         gate_names = sorted(gate_types.keys()) if gate_types else None
-        qubit_count = getattr(resources, "num_wires", num_sites)
+        qubit_count = getattr(resources, "num_wires", total_wires)
     metrics = {
         "backend": "qml.default.qubit",
         "compilation_time_seconds": specs.get("execution_time", None),
@@ -1134,14 +1237,13 @@ METRIC_REGISTRY: Dict[
 
 # Languages for which we intentionally suppress circuit metrics, with reasons.
 METRIC_NA_REASONS: Dict[str, str] = {
-    # Silq programs are executed via the Silq CLI only; we do not extract
-    # circuit-level gate counts or depths in this artifact.
     "silq": "N/A: Silq programs run via the Silq CLI; no circuit-level metric extractor is implemented.",
-    # Strawberry Fields uses dual-rail CV encodings with low fidelity versus
-    # the reference qubit TFIM/Heisenberg Hamiltonians, and its LCU programs
-    # are sequential dual-rail CV circuits rather than full 2nd-order Taylor
-    # LCU block encodings. We omit Strawberry Fields metrics in this artifact.
-    "strawberryfields": "N/A: Strawberry Fields uses dual-rail CV encodings with low fidelity versus qubit references; TFIM/Heisenberg and LCU metrics are not reported in this artifact.",
+    "strawberryfields": "N/A: No portable gate-analysis tooling exists for the dual-rail Strawberry Fields circuits.",
+    "tket": "N/A: No portable gate-analysis tooling exists for TKET circuits in this artifact.",
+    "qrisp": "N/A: No portable gate-analysis tooling exists for Qrisp circuits in this artifact.",
+    "hml": "N/A: No portable gate-analysis tooling exists for HML/SimuQ circuits in this artifact.",
+    "qualtran": "N/A: No portable gate-analysis tooling exists for Qualtran bloqs in this artifact.",
+    "quipper": "N/A: No portable gate-analysis tooling exists for Quipper circuits in this artifact.",
 }
 
 
@@ -1307,50 +1409,52 @@ def build_strawberryfields_program(
     return prog, None
 
 
+_LANGUAGE_VERSION_MODULES: Dict[str, Tuple[str, ...]] = {
+    "cirq": ("cirq",),
+    "hml": ("simuq",),
+    "openqasm": ("qiskit",),
+    "pennylane": ("pennylane",),
+    "pyquil": ("pyquil",),
+    "qiskit": ("qiskit",),
+    "qrisp": ("qrisp",),
+    "qualtran": ("qualtran",),
+    "qsharp": ("qsharp",),
+    "strawberryfields": ("strawberryfields",),
+    "tket": ("pytket",),
+}
+
+
+def _module_version(module_name: str) -> Optional[str]:
+    try:
+        module = __import__(module_name)
+    except Exception:
+        return None
+    for attr in ("__version__", "VERSION", "version"):
+        value = getattr(module, attr, None)
+        if value is None:
+            continue
+        if callable(value):
+            try:
+                value = value()
+            except Exception:
+                continue
+        return str(value)
+    return "unknown"
+
+
 def detect_tool_versions(language: str) -> Dict[str, str]:
     versions: Dict[str, str] = {}
-    if language in {"cirq", "openqasm", "hml", "silq", "qualtran"}:
-        try:
-            import cirq  # type: ignore
-
-            versions["cirq"] = getattr(cirq, "__version__", "unknown")
-        except Exception:
-            pass
-    if language in {"qiskit", "quipper", "qrisp"}:
-        try:
-            import qiskit  # type: ignore
-
-            versions["qiskit"] = getattr(qiskit, "__version__", "unknown")
-        except Exception:
-            pass
-    if language == "pyquil":
-        try:
-            import pyquil  # type: ignore
-
-            versions["pyquil"] = getattr(pyquil, "__version__", "unknown")
-        except Exception:
-            pass
-    if language == "pennylane":
-        try:
-            import pennylane as qml  # type: ignore
-
-            versions["pennylane"] = getattr(qml, "__version__", "unknown")
-        except Exception:
-            pass
-    if language == "tket":
-        try:
-            import pytket  # type: ignore
-
-            versions["pytket"] = getattr(pytket, "__version__", "unknown")
-        except Exception:
-            pass
-    if language == "strawberryfields":
-        try:
-            import strawberryfields as sf  # type: ignore
-
-            versions["strawberryfields"] = getattr(sf, "__version__", "unknown")
-        except Exception:
-            pass
+    module_names = _LANGUAGE_VERSION_MODULES.get(language, ())
+    if not module_names:
+        if language in {"quipper", "silq"}:
+            versions[language] = "cli"
+        return versions
+    for module_name in module_names:
+        version = _module_version(module_name)
+        if version is None:
+            versions[module_name] = "unavailable"
+        else:
+            versions[module_name] = version
     return versions
 
 

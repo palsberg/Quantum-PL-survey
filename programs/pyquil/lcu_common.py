@@ -131,7 +131,7 @@ def _simulate_and_project(prog: Program, num_system: int, num_index: int) -> np.
     return vec / norm
 
 
-def _build_lcu_state(num_sites: int, weights: List[float], paulis: List[str], phases: List[str]) -> np.ndarray:
+def build_lcu_program(num_sites: int, weights: List[float], paulis: List[str], phases: List[str]) -> Tuple[Program, int]:
     L = len(weights)
     if L == 0:
         raise ValueError("No LCU terms provided.")
@@ -166,6 +166,11 @@ def _build_lcu_state(num_sites: int, weights: List[float], paulis: List[str], ph
         _mask_index(prog, index, idx_value)
 
     prog += prep_gate(*index)  # Householder is Hermitian, so equals its own inverse.
+    return prog, m
+
+
+def _build_lcu_state(num_sites: int, weights: List[float], paulis: List[str], phases: List[str]) -> np.ndarray:
+    prog, m = build_lcu_program(num_sites, weights, paulis, phases)
     return _simulate_and_project(prog, num_sites, m)
 
 

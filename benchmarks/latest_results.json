@@ -13,8 +13,8 @@
     },
     "implementation_path": "programs/cirq/tfim_trotter.py",
     "backend": "cirq.Simulator",
-    "compilation_time_seconds": 0.025284625007770956,
-    "execution_time_seconds": 0.0024708339478820562,
+    "compilation_time_seconds": 0.023376833996735513,
+    "execution_time_seconds": 0.001789625035598874,
     "total_gate_count": 228,
     "two_qubit_gate_count": 72,
     "circuit_depth": 57,
@@ -24,7 +24,7 @@
       "HPowGate",
       "Rz"
     ],
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
       "cirq": "1.4.0"
     },
@@ -45,8 +45,8 @@
     },
     "implementation_path": "programs/cirq/tfim_lcu.py",
     "backend": "cirq.Simulator",
-    "compilation_time_seconds": 0.04064187500625849,
-    "execution_time_seconds": 0.0030793329933658242,
+    "compilation_time_seconds": 0.05710195901338011,
+    "execution_time_seconds": 0.0022449580719694495,
     "total_gate_count": 2685,
     "two_qubit_gate_count": 0,
     "circuit_depth": 1063,
@@ -56,7 +56,7 @@
       "MatrixGate",
       "_PauliX"
     ],
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
       "cirq": "1.4.0"
     },
@@ -77,8 +77,8 @@
     },
     "implementation_path": "programs/cirq/heis_trotter.py",
     "backend": "cirq.Simulator",
-    "compilation_time_seconds": 0.012839999981224537,
-    "execution_time_seconds": 0.0025935840094462037,
+    "compilation_time_seconds": 0.012728917063213885,
+    "execution_time_seconds": 0.003281082957983017,
     "total_gate_count": 796,
     "two_qubit_gate_count": 216,
     "circuit_depth": 229,
@@ -89,7 +89,7 @@
       "Rz",
       "ZPowGate"
     ],
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
       "cirq": "1.4.0"
     },
@@ -110,8 +110,8 @@
     },
     "implementation_path": "programs/cirq/heis_lcu.py",
     "backend": "cirq.Simulator",
-    "compilation_time_seconds": 0.35205741692334414,
-    "execution_time_seconds": 0.003551832982338965,
+    "compilation_time_seconds": 0.37146762502379715,
+    "execution_time_seconds": 0.003730541095137596,
     "total_gate_count": 12666,
     "two_qubit_gate_count": 0,
     "circuit_depth": 4034,
@@ -121,7 +121,7 @@
       "MatrixGate",
       "_PauliX"
     ],
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
       "cirq": "1.4.0"
     },
@@ -143,18 +143,18 @@
     "implementation_path": "programs/hml/tfim_trotter.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.002356374985538423,
+    "execution_time_seconds": 0.06423966703005135,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
-      "cirq": "1.4.0"
+      "simuq": "unknown"
     },
     "status": "ok",
-    "notes": "N/A: HML programs delegate circuit construction and execution to Cirq; see Cirq metrics."
+    "notes": "N/A: No portable gate-analysis tooling exists for HML/SimuQ circuits in this artifact."
   },
   {
     "benchmark_id": "hml-tfim_lcu-n10-J1.0-h0.5-lcu_precision0.01",
@@ -171,18 +171,18 @@
     "implementation_path": "programs/hml/tfim_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.001849709078669548,
+    "execution_time_seconds": 0.0005019170930609107,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
-      "cirq": "1.4.0"
+      "simuq": "unknown"
     },
     "status": "ok",
-    "notes": "N/A: HML programs delegate circuit construction and execution to Cirq; see Cirq metrics."
+    "notes": "N/A: No portable gate-analysis tooling exists for HML/SimuQ circuits in this artifact."
   },
   {
     "benchmark_id": "hml-heis_trotter-n10-J0.8-field0.2-trotter_steps4",
@@ -199,18 +199,18 @@
     "implementation_path": "programs/hml/heis_trotter.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.002031833049841225,
+    "execution_time_seconds": 0.001528542023152113,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
-      "cirq": "1.4.0"
+      "simuq": "unknown"
     },
     "status": "ok",
-    "notes": "N/A: HML programs delegate circuit construction and execution to Cirq; see Cirq metrics."
+    "notes": "N/A: No portable gate-analysis tooling exists for HML/SimuQ circuits in this artifact."
   },
   {
     "benchmark_id": "hml-heis_lcu-n10-J0.8-field0.2-lcu_precision0.01",
@@ -227,18 +227,18 @@
     "implementation_path": "programs/hml/heis_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.003369833924807608,
+    "execution_time_seconds": 0.0005720419576391578,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
-      "cirq": "1.4.0"
+      "simuq": "unknown"
     },
     "status": "ok",
-    "notes": "N/A: HML programs delegate circuit construction and execution to Cirq; see Cirq metrics."
+    "notes": "N/A: No portable gate-analysis tooling exists for HML/SimuQ circuits in this artifact."
   },
   {
     "benchmark_id": "openqasm-tfim_trotter-n10-J1.0-h0.5-trotter_steps4",
@@ -253,20 +253,24 @@
       "trotter_steps": 4
     },
     "implementation_path": "programs/openqasm/tfim_trotter.py",
-    "backend": null,
-    "compilation_time_seconds": null,
-    "execution_time_seconds": 0.07026433304417878,
-    "total_gate_count": null,
-    "two_qubit_gate_count": null,
-    "circuit_depth": null,
-    "qubit_count": null,
-    "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "backend": "generic_backend_10q",
+    "compilation_time_seconds": 0.22238591697532684,
+    "execution_time_seconds": 0.0028868330409750342,
+    "total_gate_count": 304,
+    "two_qubit_gate_count": 72,
+    "circuit_depth": 65,
+    "qubit_count": 10,
+    "native_gate_set": [
+      "cx",
+      "rz",
+      "sx"
+    ],
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
-      "cirq": "1.4.0"
+      "qiskit": "2.2.3"
     },
     "status": "ok",
-    "notes": "OpenQASM/Qiskit stack unavailable: cannot import name 'FakeJakarta' from 'qiskit.providers.fake_provider' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/qiskit/providers/fake_provider/__init__.py)"
+    "notes": null
   },
   {
     "benchmark_id": "openqasm-tfim_lcu-n10-J1.0-h0.5-lcu_precision0.01",
@@ -283,18 +287,18 @@
     "implementation_path": "programs/openqasm/tfim_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.030515291960909963,
+    "execution_time_seconds": 0.027170958928763866,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
-      "cirq": "1.4.0"
+      "qiskit": "2.2.3"
     },
     "status": "ok",
-    "notes": "OpenQASM/Qiskit stack unavailable: cannot import name 'FakeJakarta' from 'qiskit.providers.fake_provider' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/qiskit/providers/fake_provider/__init__.py)"
+    "notes": "N/A: OpenQASM LCU benchmarks omitted due to slow transpilation on generic Qiskit backends."
   },
   {
     "benchmark_id": "openqasm-heis_trotter-n10-J0.8-field0.2-trotter_steps4",
@@ -309,20 +313,24 @@
       "trotter_steps": 4
     },
     "implementation_path": "programs/openqasm/heis_trotter.py",
-    "backend": null,
-    "compilation_time_seconds": null,
-    "execution_time_seconds": 0.006124499952420592,
-    "total_gate_count": null,
-    "two_qubit_gate_count": null,
-    "circuit_depth": null,
-    "qubit_count": null,
-    "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "backend": "generic_backend_10q",
+    "compilation_time_seconds": 0.0184307909803465,
+    "execution_time_seconds": 0.005898041999898851,
+    "total_gate_count": 511,
+    "two_qubit_gate_count": 108,
+    "circuit_depth": 129,
+    "qubit_count": 10,
+    "native_gate_set": [
+      "cx",
+      "rz",
+      "sx"
+    ],
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
-      "cirq": "1.4.0"
+      "qiskit": "2.2.3"
     },
     "status": "ok",
-    "notes": "OpenQASM/Qiskit stack unavailable: cannot import name 'FakeJakarta' from 'qiskit.providers.fake_provider' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/qiskit/providers/fake_provider/__init__.py)"
+    "notes": null
   },
   {
     "benchmark_id": "openqasm-heis_lcu-n10-J0.8-field0.2-lcu_precision0.01",
@@ -339,18 +347,18 @@
     "implementation_path": "programs/openqasm/heis_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.5179979590466246,
+    "execution_time_seconds": 0.5485317920101807,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
-      "cirq": "1.4.0"
+      "qiskit": "2.2.3"
     },
     "status": "ok",
-    "notes": "OpenQASM/Qiskit stack unavailable: cannot import name 'FakeJakarta' from 'qiskit.providers.fake_provider' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/qiskit/providers/fake_provider/__init__.py)"
+    "notes": "N/A: OpenQASM LCU benchmarks omitted due to slow transpilation on generic Qiskit backends."
   },
   {
     "benchmark_id": "pennylane-tfim_trotter-n10-J1.0-h0.5-trotter_steps4",
@@ -367,7 +375,7 @@
     "implementation_path": "programs/pennylane/tfim_trotter.py",
     "backend": "qml.default.qubit",
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.0018308330327272415,
+    "execution_time_seconds": 0.0018695000326260924,
     "total_gate_count": 76,
     "two_qubit_gate_count": 36,
     "circuit_depth": 19,
@@ -375,7 +383,7 @@
     "native_gate_set": [
       "PauliRot"
     ],
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
       "pennylane": "0.43.1"
     },
@@ -395,20 +403,27 @@
       "lcu_precision": 0.01
     },
     "implementation_path": "programs/pennylane/tfim_lcu.py",
-    "backend": null,
+    "backend": "qml.default.qubit",
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.00537258293479681,
-    "total_gate_count": null,
+    "execution_time_seconds": 0.0051077090902253985,
+    "total_gate_count": 2685,
     "two_qubit_gate_count": null,
-    "circuit_depth": null,
-    "qubit_count": null,
-    "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "circuit_depth": 1063,
+    "qubit_count": 19,
+    "native_gate_set": [
+      "Adjoint(MottonenStatePreparation)",
+      "C(PauliZ)",
+      "C(PhaseShift)",
+      "MottonenStatePreparation",
+      "MultiControlledX",
+      "PauliX"
+    ],
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
       "pennylane": "0.43.1"
     },
     "status": "ok",
-    "notes": "PennyLane metric extractor not implemented for tfim_lcu"
+    "notes": null
   },
   {
     "benchmark_id": "pennylane-heis_trotter-n10-J0.8-field0.2-trotter_steps4",
@@ -425,7 +440,7 @@
     "implementation_path": "programs/pennylane/heis_trotter.py",
     "backend": "qml.default.qubit",
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.0013985419645905495,
+    "execution_time_seconds": 0.0014895829372107983,
     "total_gate_count": 148,
     "two_qubit_gate_count": 108,
     "circuit_depth": 49,
@@ -433,7 +448,7 @@
     "native_gate_set": [
       "PauliRot"
     ],
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
       "pennylane": "0.43.1"
     },
@@ -453,20 +468,28 @@
       "lcu_precision": 0.01
     },
     "implementation_path": "programs/pennylane/heis_lcu.py",
-    "backend": null,
+    "backend": "qml.default.qubit",
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.007333209039643407,
-    "total_gate_count": null,
+    "execution_time_seconds": 0.00817012507468462,
+    "total_gate_count": 12666,
     "two_qubit_gate_count": null,
-    "circuit_depth": null,
-    "qubit_count": null,
-    "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "circuit_depth": 4034,
+    "qubit_count": 21,
+    "native_gate_set": [
+      "Adjoint(MottonenStatePreparation)",
+      "C(PauliY)",
+      "C(PauliZ)",
+      "C(PhaseShift)",
+      "MottonenStatePreparation",
+      "MultiControlledX",
+      "PauliX"
+    ],
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
       "pennylane": "0.43.1"
     },
     "status": "ok",
-    "notes": "PennyLane metric extractor not implemented for heis_lcu"
+    "notes": null
   },
   {
     "benchmark_id": "pyquil-tfim_trotter-n10-J1.0-h0.5-trotter_steps4",
@@ -483,7 +506,7 @@
     "implementation_path": "programs/pyquil/tfim_trotter.py",
     "backend": "pyquil.NumpyWavefunctionSimulator",
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.0008283749921247363,
+    "execution_time_seconds": 0.0006932920077815652,
     "total_gate_count": 148,
     "two_qubit_gate_count": 72,
     "circuit_depth": 49,
@@ -493,7 +516,7 @@
       "RX",
       "RZ"
     ],
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
       "pyquil": "4.17.0"
     },
@@ -515,18 +538,18 @@
     "implementation_path": "programs/pyquil/tfim_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.0043497090227901936,
+    "execution_time_seconds": 0.0042435829527676105,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
       "pyquil": "4.17.0"
     },
     "status": "ok",
-    "notes": "PyQuil metric extractor not implemented for tfim_lcu"
+    "notes": "N/A: PyQuil LCU benchmarks suppressed due to long compile/emulation times on the Quil simulator."
   },
   {
     "benchmark_id": "pyquil-heis_trotter-n10-J0.8-field0.2-trotter_steps4",
@@ -543,7 +566,7 @@
     "implementation_path": "programs/pyquil/heis_trotter.py",
     "backend": "pyquil.NumpyWavefunctionSimulator",
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.0019340841099619865,
+    "execution_time_seconds": 0.001956083928234875,
     "total_gate_count": 796,
     "two_qubit_gate_count": 216,
     "circuit_depth": 229,
@@ -554,7 +577,7 @@
       "PHASE",
       "RZ"
     ],
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
       "pyquil": "4.17.0"
     },
@@ -576,18 +599,18 @@
     "implementation_path": "programs/pyquil/heis_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.0260744170518592,
+    "execution_time_seconds": 0.02671266603283584,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
       "pyquil": "4.17.0"
     },
     "status": "ok",
-    "notes": "PyQuil metric extractor not implemented for heis_lcu"
+    "notes": "N/A: PyQuil LCU benchmarks suppressed due to long compile/emulation times on the Quil simulator."
   },
   {
     "benchmark_id": "qiskit-tfim_trotter-n10-J1.0-h0.5-trotter_steps4",
@@ -602,20 +625,24 @@
       "trotter_steps": 4
     },
     "implementation_path": "programs/qiskit/tfim_trotter.py",
-    "backend": null,
-    "compilation_time_seconds": null,
-    "execution_time_seconds": 0.001201041042804718,
-    "total_gate_count": null,
-    "two_qubit_gate_count": null,
-    "circuit_depth": null,
-    "qubit_count": null,
-    "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "backend": "generic_backend_10q",
+    "compilation_time_seconds": 0.00557508401107043,
+    "execution_time_seconds": 0.0006292500765994191,
+    "total_gate_count": 304,
+    "two_qubit_gate_count": 72,
+    "circuit_depth": 65,
+    "qubit_count": 10,
+    "native_gate_set": [
+      "cx",
+      "rz",
+      "sx"
+    ],
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
       "qiskit": "2.2.3"
     },
     "status": "ok",
-    "notes": "Qiskit stack unavailable: cannot import name 'FakeJakarta' from 'qiskit.providers.fake_provider' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/qiskit/providers/fake_provider/__init__.py)"
+    "notes": null
   },
   {
     "benchmark_id": "qiskit-tfim_lcu-n10-J1.0-h0.5-lcu_precision0.01",
@@ -630,20 +657,25 @@
       "lcu_precision": 0.01
     },
     "implementation_path": "programs/qiskit/tfim_lcu.py",
-    "backend": null,
-    "compilation_time_seconds": null,
-    "execution_time_seconds": 0.010006665950641036,
-    "total_gate_count": null,
-    "two_qubit_gate_count": null,
-    "circuit_depth": null,
-    "qubit_count": null,
-    "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "backend": "generic_backend_19q",
+    "compilation_time_seconds": 4.509656582958996,
+    "execution_time_seconds": 0.010697584017179906,
+    "total_gate_count": 50201,
+    "two_qubit_gate_count": 18043,
+    "circuit_depth": 38208,
+    "qubit_count": 19,
+    "native_gate_set": [
+      "cx",
+      "rz",
+      "sx",
+      "x"
+    ],
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
       "qiskit": "2.2.3"
     },
     "status": "ok",
-    "notes": "Qiskit stack unavailable: cannot import name 'FakeJakarta' from 'qiskit.providers.fake_provider' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/qiskit/providers/fake_provider/__init__.py)"
+    "notes": null
   },
   {
     "benchmark_id": "qiskit-heis_trotter-n10-J0.8-field0.2-trotter_steps4",
@@ -658,20 +690,25 @@
       "trotter_steps": 4
     },
     "implementation_path": "programs/qiskit/heis_trotter.py",
-    "backend": null,
-    "compilation_time_seconds": null,
-    "execution_time_seconds": 0.001079792040400207,
-    "total_gate_count": null,
-    "two_qubit_gate_count": null,
-    "circuit_depth": null,
-    "qubit_count": null,
-    "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "backend": "generic_backend_10q",
+    "compilation_time_seconds": 0.005391250015236437,
+    "execution_time_seconds": 0.0013255419908091426,
+    "total_gate_count": 441,
+    "two_qubit_gate_count": 72,
+    "circuit_depth": 111,
+    "qubit_count": 10,
+    "native_gate_set": [
+      "cx",
+      "rz",
+      "sx",
+      "x"
+    ],
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
       "qiskit": "2.2.3"
     },
     "status": "ok",
-    "notes": "Qiskit stack unavailable: cannot import name 'FakeJakarta' from 'qiskit.providers.fake_provider' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/qiskit/providers/fake_provider/__init__.py)"
+    "notes": null
   },
   {
     "benchmark_id": "qiskit-heis_lcu-n10-J0.8-field0.2-lcu_precision0.01",
@@ -686,20 +723,25 @@
       "lcu_precision": 0.01
     },
     "implementation_path": "programs/qiskit/heis_lcu.py",
-    "backend": null,
-    "compilation_time_seconds": null,
-    "execution_time_seconds": 0.02840133395511657,
-    "total_gate_count": null,
-    "two_qubit_gate_count": null,
-    "circuit_depth": null,
-    "qubit_count": null,
-    "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "backend": "generic_backend_21q",
+    "compilation_time_seconds": 10.92737254104577,
+    "execution_time_seconds": 0.04421695903874934,
+    "total_gate_count": 542441,
+    "two_qubit_gate_count": 199950,
+    "circuit_depth": 508135,
+    "qubit_count": 21,
+    "native_gate_set": [
+      "cx",
+      "rz",
+      "sx",
+      "x"
+    ],
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
       "qiskit": "2.2.3"
     },
     "status": "ok",
-    "notes": "Qiskit stack unavailable: cannot import name 'FakeJakarta' from 'qiskit.providers.fake_provider' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/qiskit/providers/fake_provider/__init__.py)"
+    "notes": null
   },
   {
     "benchmark_id": "qrisp-tfim_trotter-n10-J1.0-h0.5-trotter_steps4",
@@ -716,18 +758,18 @@
     "implementation_path": "programs/qrisp/tfim_trotter.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.6061407499946654,
+    "execution_time_seconds": 0.4599429169902578,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
-      "qiskit": "2.2.3"
+      "qrisp": "unknown"
     },
     "status": "ok",
-    "notes": "N/A: Qrisp native circuit metric extraction not implemented."
+    "notes": "N/A: No portable gate-analysis tooling exists for Qrisp circuits in this artifact."
   },
   {
     "benchmark_id": "qrisp-tfim_lcu-n10-J1.0-h0.5-lcu_precision0.01",
@@ -744,18 +786,18 @@
     "implementation_path": "programs/qrisp/tfim_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.010889999917708337,
+    "execution_time_seconds": 0.011150458944030106,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
-      "qiskit": "2.2.3"
+      "qrisp": "unknown"
     },
     "status": "ok",
-    "notes": "N/A: Qrisp LCU programs delegate to Qiskit; see Qiskit metrics."
+    "notes": "N/A: No portable gate-analysis tooling exists for Qrisp circuits in this artifact."
   },
   {
     "benchmark_id": "qrisp-heis_trotter-n10-J0.8-field0.2-trotter_steps4",
@@ -772,18 +814,18 @@
     "implementation_path": "programs/qrisp/heis_trotter.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.008167959051206708,
+    "execution_time_seconds": 0.00808504200540483,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
-      "qiskit": "2.2.3"
+      "qrisp": "unknown"
     },
     "status": "ok",
-    "notes": "N/A: Qrisp native circuit metric extraction not implemented."
+    "notes": "N/A: No portable gate-analysis tooling exists for Qrisp circuits in this artifact."
   },
   {
     "benchmark_id": "qrisp-heis_lcu-n10-J0.8-field0.2-lcu_precision0.01",
@@ -800,18 +842,18 @@
     "implementation_path": "programs/qrisp/heis_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.028547875001095235,
+    "execution_time_seconds": 0.030471957987174392,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
-      "qiskit": "2.2.3"
+      "qrisp": "unknown"
     },
     "status": "ok",
-    "notes": "N/A: Qrisp LCU programs delegate to Qiskit; see Qiskit metrics."
+    "notes": "N/A: No portable gate-analysis tooling exists for Qrisp circuits in this artifact."
   },
   {
     "benchmark_id": "qsharp-tfim_trotter-n10-J1.0-h0.5-trotter_steps4",
@@ -828,7 +870,7 @@
     "implementation_path": "programs/qsharp/tfim_trotter.py",
     "backend": "qsharp.FullStateSimulator",
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.0008320830529555678,
+    "execution_time_seconds": 0.0005546669708564878,
     "total_gate_count": 86,
     "two_qubit_gate_count": 0,
     "circuit_depth": 20,
@@ -836,8 +878,10 @@
     "native_gate_set": [
       "LogicalCounts"
     ],
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
-    "tool_versions": {},
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "tool_versions": {
+      "qsharp": "unknown"
+    },
     "status": "ok",
     "notes": "Logical counts derived via QDK resource estimation"
   },
@@ -856,7 +900,7 @@
     "implementation_path": "programs/qsharp/tfim_lcu.py",
     "backend": "qsharp.FullStateSimulator",
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.0009326250292360783,
+    "execution_time_seconds": 0.0011556249810382724,
     "total_gate_count": 12174,
     "two_qubit_gate_count": 6213,
     "circuit_depth": 302,
@@ -864,8 +908,10 @@
     "native_gate_set": [
       "LogicalCounts"
     ],
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
-    "tool_versions": {},
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "tool_versions": {
+      "qsharp": "unknown"
+    },
     "status": "ok",
     "notes": "Logical counts derived via QDK resource estimation"
   },
@@ -884,7 +930,7 @@
     "implementation_path": "programs/qsharp/heis_trotter.py",
     "backend": "qsharp.FullStateSimulator",
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.0003662080271169543,
+    "execution_time_seconds": 0.0003275829367339611,
     "total_gate_count": 158,
     "two_qubit_gate_count": 0,
     "circuit_depth": 50,
@@ -892,8 +938,10 @@
     "native_gate_set": [
       "LogicalCounts"
     ],
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
-    "tool_versions": {},
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "tool_versions": {
+      "qsharp": "unknown"
+    },
     "status": "ok",
     "notes": "Logical counts derived via QDK resource estimation"
   },
@@ -912,7 +960,7 @@
     "implementation_path": "programs/qsharp/heis_lcu.py",
     "backend": "qsharp.FullStateSimulator",
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.0024117500288411975,
+    "execution_time_seconds": 0.002481750096194446,
     "total_gate_count": 59103,
     "two_qubit_gate_count": 30102,
     "circuit_depth": 1034,
@@ -920,8 +968,10 @@
     "native_gate_set": [
       "LogicalCounts"
     ],
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
-    "tool_versions": {},
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "tool_versions": {
+      "qsharp": "unknown"
+    },
     "status": "ok",
     "notes": "Logical counts derived via QDK resource estimation"
   },
@@ -938,22 +988,20 @@
       "trotter_steps": 4
     },
     "implementation_path": "programs/qualtran/tfim_trotter.py",
-    "backend": "cirq.Simulator",
+    "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.009376166039146483,
-    "total_gate_count": 8,
-    "two_qubit_gate_count": 0,
-    "circuit_depth": 8,
-    "qubit_count": 10,
-    "native_gate_set": [
-      "BloqAsCirqGate"
-    ],
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "execution_time_seconds": 0.06592675007414073,
+    "total_gate_count": null,
+    "two_qubit_gate_count": null,
+    "circuit_depth": null,
+    "qubit_count": null,
+    "native_gate_set": null,
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
-      "cirq": "1.4.0"
+      "qualtran": "unknown"
     },
     "status": "ok",
-    "notes": null
+    "notes": "N/A: No portable gate-analysis tooling exists for Qualtran bloqs in this artifact."
   },
   {
     "benchmark_id": "qualtran-tfim_lcu-n10-J1.0-h0.5-lcu_precision0.01",
@@ -970,18 +1018,18 @@
     "implementation_path": "programs/qualtran/tfim_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.0024350000312551856,
+    "execution_time_seconds": 20.387403624947183,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
-      "cirq": "1.4.0"
+      "qualtran": "unknown"
     },
     "status": "ok",
-    "notes": "N/A: Qualtran program delegates to Cirq for this case; see Cirq metrics."
+    "notes": "N/A: No portable gate-analysis tooling exists for Qualtran bloqs in this artifact."
   },
   {
     "benchmark_id": "qualtran-heis_trotter-n10-J0.8-field0.2-trotter_steps4",
@@ -998,18 +1046,18 @@
     "implementation_path": "programs/qualtran/heis_trotter.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.002254708088003099,
+    "execution_time_seconds": 0.012963165994733572,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
-      "cirq": "1.4.0"
+      "qualtran": "unknown"
     },
     "status": "ok",
-    "notes": "N/A: Qualtran program delegates to Cirq for this case; see Cirq metrics."
+    "notes": "N/A: No portable gate-analysis tooling exists for Qualtran bloqs in this artifact."
   },
   {
     "benchmark_id": "qualtran-heis_lcu-n10-J0.8-field0.2-lcu_precision0.01",
@@ -1026,18 +1074,18 @@
     "implementation_path": "programs/qualtran/heis_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.003715457976795733,
+    "execution_time_seconds": 4.845613291952759,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
-      "cirq": "1.4.0"
+      "qualtran": "unknown"
     },
     "status": "ok",
-    "notes": "N/A: Qualtran program delegates to Cirq for this case; see Cirq metrics."
+    "notes": "N/A: No portable gate-analysis tooling exists for Qualtran bloqs in this artifact."
   },
   {
     "benchmark_id": "quipper-tfim_trotter-n10-J1.0-h0.5-trotter_steps4",
@@ -1054,18 +1102,18 @@
     "implementation_path": "programs/quipper/tfim_trotter.hs",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.22831025009509176,
+    "execution_time_seconds": 0.23724916600622237,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
-      "qiskit": "2.2.3"
+      "quipper": "cli"
     },
     "status": "ok",
-    "notes": "N/A: Quipper CLI shim delegates execution to Qiskit; see Qiskit metrics."
+    "notes": "N/A: No portable gate-analysis tooling exists for Quipper circuits in this artifact."
   },
   {
     "benchmark_id": "quipper-tfim_lcu-n10-J1.0-h0.5-lcu_precision0.01",
@@ -1082,18 +1130,18 @@
     "implementation_path": "programs/quipper/tfim_lcu.hs",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.24187841708771884,
+    "execution_time_seconds": 0.1836050000274554,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
-      "qiskit": "2.2.3"
+      "quipper": "cli"
     },
     "status": "ok",
-    "notes": "N/A: Quipper CLI shim delegates execution to Qiskit; see Qiskit metrics."
+    "notes": "N/A: No portable gate-analysis tooling exists for Quipper circuits in this artifact."
   },
   {
     "benchmark_id": "quipper-heis_trotter-n10-J0.8-field0.2-trotter_steps4",
@@ -1110,18 +1158,18 @@
     "implementation_path": "programs/quipper/heis_trotter.hs",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.20966220798436552,
+    "execution_time_seconds": 0.18268641596660018,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
-      "qiskit": "2.2.3"
+      "quipper": "cli"
     },
     "status": "ok",
-    "notes": "N/A: Quipper CLI shim delegates execution to Qiskit; see Qiskit metrics."
+    "notes": "N/A: No portable gate-analysis tooling exists for Quipper circuits in this artifact."
   },
   {
     "benchmark_id": "quipper-heis_lcu-n10-J0.8-field0.2-lcu_precision0.01",
@@ -1138,18 +1186,18 @@
     "implementation_path": "programs/quipper/heis_lcu.hs",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.24015912506729364,
+    "execution_time_seconds": 0.19906966702546924,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
-      "qiskit": "2.2.3"
+      "quipper": "cli"
     },
     "status": "ok",
-    "notes": "N/A: Quipper CLI shim delegates execution to Qiskit; see Qiskit metrics."
+    "notes": "N/A: No portable gate-analysis tooling exists for Quipper circuits in this artifact."
   },
   {
     "benchmark_id": "silq-tfim_trotter-n10-J1.0-h0.5-trotter_steps4",
@@ -1166,15 +1214,15 @@
     "implementation_path": "programs/silq/tfim_trotter.slq",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.15181316691450775,
+    "execution_time_seconds": 0.1482009160099551,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
-      "cirq": "1.4.0"
+      "silq": "cli"
     },
     "status": "ok",
     "notes": "N/A: Silq programs run via the Silq CLI; no circuit-level metric extractor is implemented."
@@ -1194,15 +1242,15 @@
     "implementation_path": "programs/silq/tfim_lcu.slq",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.11926575005054474,
+    "execution_time_seconds": 0.11643670802004635,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
-      "cirq": "1.4.0"
+      "silq": "cli"
     },
     "status": "ok",
     "notes": "N/A: Silq programs run via the Silq CLI; no circuit-level metric extractor is implemented."
@@ -1222,15 +1270,15 @@
     "implementation_path": "programs/silq/heis_trotter.slq",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.12389966705814004,
+    "execution_time_seconds": 0.11776470800396055,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
-      "cirq": "1.4.0"
+      "silq": "cli"
     },
     "status": "ok",
     "notes": "N/A: Silq programs run via the Silq CLI; no circuit-level metric extractor is implemented."
@@ -1250,15 +1298,15 @@
     "implementation_path": "programs/silq/heis_lcu.slq",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.11758295900654048,
+    "execution_time_seconds": 0.1172601250000298,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
-      "cirq": "1.4.0"
+      "silq": "cli"
     },
     "status": "ok",
     "notes": "N/A: Silq programs run via the Silq CLI; no circuit-level metric extractor is implemented."
@@ -1278,18 +1326,18 @@
     "implementation_path": "programs/strawberryfields/tfim_trotter.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 2.964478832902387,
+    "execution_time_seconds": 3.0764471670845523,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
       "strawberryfields": "0.19.0"
     },
     "status": "ok",
-    "notes": "N/A: Strawberry Fields uses dual-rail CV prototypes and sequential circuits; no validated qubit TFIM/LCU metrics are reported."
+    "notes": "N/A: No portable gate-analysis tooling exists for the dual-rail Strawberry Fields circuits."
   },
   {
     "benchmark_id": "strawberryfields-tfim_lcu-n10-J1.0-h0.5-lcu_precision0.01",
@@ -1306,18 +1354,18 @@
     "implementation_path": "programs/strawberryfields/tfim_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.01400387508329004,
+    "execution_time_seconds": 0.019393709022551775,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
       "strawberryfields": "0.19.0"
     },
     "status": "ok",
-    "notes": "N/A: Strawberry Fields uses dual-rail CV prototypes and sequential circuits; no validated qubit TFIM/LCU metrics are reported."
+    "notes": "N/A: No portable gate-analysis tooling exists for the dual-rail Strawberry Fields circuits."
   },
   {
     "benchmark_id": "strawberryfields-heis_trotter-n10-J0.8-field0.2-trotter_steps4",
@@ -1334,18 +1382,18 @@
     "implementation_path": "programs/strawberryfields/heis_trotter.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.08686333405785263,
+    "execution_time_seconds": 0.09116108401212841,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
       "strawberryfields": "0.19.0"
     },
     "status": "ok",
-    "notes": "N/A: Strawberry Fields uses dual-rail CV prototypes and sequential circuits; no validated qubit TFIM/LCU metrics are reported."
+    "notes": "N/A: No portable gate-analysis tooling exists for the dual-rail Strawberry Fields circuits."
   },
   {
     "benchmark_id": "strawberryfields-heis_lcu-n10-J0.8-field0.2-lcu_precision0.01",
@@ -1362,18 +1410,18 @@
     "implementation_path": "programs/strawberryfields/heis_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.020530250039882958,
+    "execution_time_seconds": 0.020064958021976054,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
       "strawberryfields": "0.19.0"
     },
     "status": "ok",
-    "notes": "N/A: Strawberry Fields uses dual-rail CV prototypes and sequential circuits; no validated qubit TFIM/LCU metrics are reported."
+    "notes": "N/A: No portable gate-analysis tooling exists for the dual-rail Strawberry Fields circuits."
   },
   {
     "benchmark_id": "tket-tfim_trotter-n10-J1.0-h0.5-trotter_steps4",
@@ -1390,18 +1438,18 @@
     "implementation_path": "programs/tket/tfim_trotter.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.002297583967447281,
+    "execution_time_seconds": 0.3095487499376759,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
       "pytket": "2.10.3"
     },
     "status": "ok",
-    "notes": "pytket stack unavailable: cannot import name 'FakeJakarta' from 'qiskit.providers.fake_provider' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/qiskit/providers/fake_provider/__init__.py)"
+    "notes": "N/A: No portable gate-analysis tooling exists for TKET circuits in this artifact."
   },
   {
     "benchmark_id": "tket-tfim_lcu-n10-J1.0-h0.5-lcu_precision0.01",
@@ -1418,18 +1466,18 @@
     "implementation_path": "programs/tket/tfim_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.005429874989204109,
+    "execution_time_seconds": 0.005620958050712943,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
       "pytket": "2.10.3"
     },
     "status": "ok",
-    "notes": "pytket stack unavailable: cannot import name 'FakeJakarta' from 'qiskit.providers.fake_provider' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/qiskit/providers/fake_provider/__init__.py)"
+    "notes": "N/A: No portable gate-analysis tooling exists for TKET circuits in this artifact."
   },
   {
     "benchmark_id": "tket-heis_trotter-n10-J0.8-field0.2-trotter_steps4",
@@ -1446,18 +1494,18 @@
     "implementation_path": "programs/tket/heis_trotter.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.0013672920176759362,
+    "execution_time_seconds": 0.001425083028152585,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
       "pytket": "2.10.3"
     },
     "status": "ok",
-    "notes": "pytket stack unavailable: cannot import name 'FakeJakarta' from 'qiskit.providers.fake_provider' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/qiskit/providers/fake_provider/__init__.py)"
+    "notes": "N/A: No portable gate-analysis tooling exists for TKET circuits in this artifact."
   },
   {
     "benchmark_id": "tket-heis_lcu-n10-J0.8-field0.2-lcu_precision0.01",
@@ -1474,17 +1522,17 @@
     "implementation_path": "programs/tket/heis_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.008760333992540836,
+    "execution_time_seconds": 0.009581416030414402,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-26T12:08:59.326956+00:00",
+    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
     "tool_versions": {
       "pytket": "2.10.3"
     },
     "status": "ok",
-    "notes": "pytket stack unavailable: cannot import name 'FakeJakarta' from 'qiskit.providers.fake_provider' (/Users/hersh/Desktop/UCLA/Other/Capstone/Hamiltonian_Simulation/.venv/lib/python3.11/site-packages/qiskit/providers/fake_provider/__init__.py)"
+    "notes": "N/A: No portable gate-analysis tooling exists for TKET circuits in this artifact."
   }
 ]

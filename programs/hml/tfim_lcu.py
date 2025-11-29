@@ -1,10 +1,12 @@
-"""TFIM via HML metadata + Cirq LCU backend."""
+"""TFIM via HML / SimuQ sketch + Qiskit backend (single-step evolution)."""
 
 from __future__ import annotations
 
 from typing import Any, Dict
 
-from ..cirq import tfim_lcu as cirq_tfim_lcu
+from simuq.qsystem import QSystem
+from simuq.environment import Qubit
+
 from . import common as hml_common
 
 
@@ -17,7 +19,19 @@ def run_simulation(config: Dict[str, Any]):
 
     spec = hml_common.render_tfim_lcu_spec(num_sites, J, h, total_time)
     hml_common.emit_spec("tfim_lcu", spec, params)
-    return cirq_tfim_lcu.run_simulation(config)
+
+    qs = QSystem()
+    q = [Qubit(qs) for _ in range(num_sites)]
+
+    # Single Hamiltonian H = J Σ ZZ + h Σ X, evolved for total_time.
+    H = 0
+    for i in range(num_sites - 1):
+        H += J * (q[i].Z * q[i + 1].Z)
+    for i in range(num_sites):
+        H += h * q[i].X
+
+    qs.add_evolution(H, total_time)
+    return hml_common.simulate_qsystem_with_qiskit(qs, num_sites)
 
 
 if __name__ == "__main__":

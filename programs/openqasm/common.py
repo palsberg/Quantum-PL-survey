@@ -102,8 +102,8 @@ def render_heis_trotter_qasm(
         }}
 
         gate YY(theta) a, b {{
-            sdag a;
-            sdag b;
+            sdg a;
+            sdg b;
             h a;
             h b;
             cx a, b;
@@ -209,7 +209,7 @@ def _render_lcu_qasm(
         f"// {header_comment}",
         f"qubit[{num_sites}] system;",
         f"qubit[{selection_bits}] selection;",
-        "qubit phase;",
+        "qubit phase_anc;",
         f"qubit[{max(1, selection_bits)}] junk;",
         "",
         "// --- PREPARE block ---",
@@ -280,7 +280,7 @@ def _emit_select(
     controls = [(bit, 1) for bit in range(selection_bits)]
     phase_map = {"-1": math.pi, "i": math.pi / 2, "-i": -math.pi / 2}
     if phase_tag in phase_map:
-        lines.extend(_emit_controlled_gate("rz", phase_map[phase_tag], "phase", controls))
+        lines.extend(_emit_controlled_gate("rz", phase_map[phase_tag], "phase_anc", controls))
 
     for q, axis in enumerate(pauli):
         if axis == "I":
@@ -289,7 +289,8 @@ def _emit_select(
         if axis == "X":
             lines.extend(_emit_controlled_gate("x", math.nan, target, controls))
         elif axis == "Y":
-            lines.extend(_emit_controlled_gate("sdag", math.nan, target, controls))
+            # Y = S.X.Sdg in standard gate sets; use 'sdg' as the inverse S.
+            lines.extend(_emit_controlled_gate("sdg", math.nan, target, controls))
             lines.extend(_emit_controlled_gate("x", math.nan, target, controls))
             lines.extend(_emit_controlled_gate("s", math.nan, target, controls))
         elif axis == "Z":

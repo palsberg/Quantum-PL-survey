@@ -4,7 +4,7 @@ include "stdgates.inc";
 // TFIM LCU block-encoding
 qubit[2] system;
 qubit[3] selection;
-qubit phase;
+qubit phase_anc;
 qubit[3] junk;
 
 // --- PREPARE block ---
@@ -37,7 +37,7 @@ x selection[0];
 // Term 1: weight=2.500000e-03, pauli=XX, phase=-1
 x selection[1];
 x selection[2];
-ctrl @ ctrl @ ctrl @ rz(3.141592653589793) selection[0], selection[1], selection[2], phase;
+ctrl @ ctrl @ ctrl @ rz(3.141592653589793) selection[0], selection[1], selection[2], phase_anc;
 ctrl @ ctrl @ ctrl @ x selection[0], selection[1], selection[2], system[0];
 ctrl @ ctrl @ ctrl @ x selection[0], selection[1], selection[2], system[1];
 x selection[2];
@@ -46,7 +46,7 @@ x selection[1];
 // Term 2: weight=1.000000e-01, pauli=ZZ, phase=-i
 x selection[0];
 x selection[2];
-ctrl @ ctrl @ ctrl @ rz(-1.5707963267948966) selection[0], selection[1], selection[2], phase;
+ctrl @ ctrl @ ctrl @ rz(-1.5707963267948966) selection[0], selection[1], selection[2], phase_anc;
 ctrl @ ctrl @ ctrl @ z selection[0], selection[1], selection[2], system[0];
 ctrl @ ctrl @ ctrl @ z selection[0], selection[1], selection[2], system[1];
 x selection[2];
@@ -54,14 +54,14 @@ x selection[0];
 
 // Term 3: weight=5.000000e-02, pauli=XI, phase=-i
 x selection[2];
-ctrl @ ctrl @ ctrl @ rz(-1.5707963267948966) selection[0], selection[1], selection[2], phase;
+ctrl @ ctrl @ ctrl @ rz(-1.5707963267948966) selection[0], selection[1], selection[2], phase_anc;
 ctrl @ ctrl @ ctrl @ x selection[0], selection[1], selection[2], system[0];
 x selection[2];
 
 // Term 4: weight=5.000000e-02, pauli=IX, phase=-i
 x selection[0];
 x selection[1];
-ctrl @ ctrl @ ctrl @ rz(-1.5707963267948966) selection[0], selection[1], selection[2], phase;
+ctrl @ ctrl @ ctrl @ rz(-1.5707963267948966) selection[0], selection[1], selection[2], phase_anc;
 ctrl @ ctrl @ ctrl @ x selection[0], selection[1], selection[2], system[1];
 x selection[1];
 x selection[0];

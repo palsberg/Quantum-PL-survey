@@ -8,7 +8,6 @@ namespace HamiltonianSimulation.HeisenbergLCU {
         let (coeffs, paulis) = HeisenbergPaulis(numSites, couplingJ, fieldH);
         let (weights, terms, tags) = LcuDataFromHamiltonian(coeffs, paulis, totalTime);
         ApplyLcuBlock(weights, terms, tags, system);
-        DumpMachine();
         ResetAll(system);
     }
 }

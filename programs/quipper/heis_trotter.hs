@@ -1,53 +1,109 @@
+{-# LANGUAGE RecordWildCards #-}
+
+import System.Environment (getArgs)
+
 import Quipper
 import QuipperCommon
+import QuipperSimulationCLI
+  ( CaseParams(..)
+  , SimConfig
+  , emitMetricsJSON
+  , emitStatevectorJSON
+  , numSitesWithDefault
+  , paramWithDefault
+  , readSimConfig
+  , timeWithDefault
+  )
 
 xxxLayer :: Int -> Timestep -> Timestep -> [Qubit] -> Circ [Qubit]
 xxxLayer n jAngle fieldAngle qs = do
-    qs <- applyXX 0 qs
-    qs <- applyYY 0 qs
-    qs <- applyZZ 0 qs
-    qs <- applyGlobalRZ fieldAngle qs
+    qs <- applyGlobalRZ (fieldAngle / 2) qs
+    qs <- applyExchange 0 qs
+    qs <- applyGlobalRZ (fieldAngle / 2) qs
     return qs
   where
-    applyXX i xs
+    applyExchange i xs
       | i >= n - 1 = return xs
       | otherwise = do
           let qi = xs !! i
               qj = xs !! (i + 1)
-          (qi', qj') <- evolveXX jAngle qi qj
+          (qi', qj') <- evolveHeisenbergPair jAngle qi qj
           let xs' = take i xs ++ [qi', qj'] ++ drop (i + 2) xs
-          applyXX (i + 1) xs'
-    applyYY i xs
-      | i >= n - 1 = return xs
-      | otherwise = do
-          let qi = xs !! i
-              qj = xs !! (i + 1)
-          (qi', qj') <- evolveYY jAngle qi qj
-          let xs' = take i xs ++ [qi', qj'] ++ drop (i + 2) xs
-          applyYY (i + 1) xs'
-    applyZZ i xs
-      | i >= n - 1 = return xs
-      | otherwise = do
-          let qi = xs !! i
-              qj = xs !! (i + 1)
-          (qi', qj') <- evolveZZ jAngle qi qj
-          let xs' = take i xs ++ [qi', qj'] ++ drop (i + 2) xs
-          applyZZ (i + 1) xs'
+          applyExchange (i + 1) xs
 
 heisenbergCircuit :: Int -> Double -> Double -> Double -> Int -> Circ [Qubit]
 heisenbergCircuit n j field totalTime steps = do
     qs <- qinit (replicate n False)
-    qs <- initializeTilt qs
-    let dt = totalTime / fromIntegral steps
+    let refine = 8
+        totalSteps = steps * refine
+        dt = totalTime / fromIntegral totalSteps
         layer = xxxLayer n (j * dt) (field * dt)
-    iterateCirc steps layer qs
+    iterateCirc totalSteps layer qs
+
+data HeisenbergArgs = HeisenbergArgs
+    { argSites :: !Int
+    , argJ :: !Double
+    , argField :: !Double
+    , argTotalTime :: !Double
+    , argSteps :: !Int
+    }
+
+defaultArgs :: HeisenbergArgs
+defaultArgs = HeisenbergArgs
+    { argSites = 6
+    , argJ = 1.0
+    , argField = 0.5
+    , argTotalTime = 1.2
+    , argSteps = 40
+    }
+
+resolveArgs :: SimConfig -> HeisenbergArgs
+resolveArgs cfg = HeisenbergArgs
+    { argSites = numSitesWithDefault (argSites defaultArgs) cfg
+    , argJ = paramWithDefault paramJ (argJ defaultArgs) cfg
+    , argField = paramWithDefault paramField (argField defaultArgs) cfg
+    , argTotalTime = timeWithDefault (argTotalTime defaultArgs) cfg
+    , argSteps = paramWithDefault paramTrotterSteps (argSteps defaultArgs) cfg
+    }
+
+buildCircuit :: HeisenbergArgs -> () -> Circ [Qubit]
+buildCircuit HeisenbergArgs{..} () =
+    heisenbergCircuit argSites argJ argField argTotalTime argSteps
 
 main :: IO ()
 main = do
-    let n = 6
-        j = 1.0
-        field = 0.5
-        totalTime = 1.2
-        steps = 40
-    print_simple Preview   (heisenbergCircuit n j field totalTime steps)
-    print_simple GateCount (heisenbergCircuit n j field totalTime steps)
+    args <- getArgs
+    case args of
+        ["--simulate-json"] -> runSimulate
+        ["--metrics-json"] -> runMetrics
+        _ -> runDefault
+  where
+    runSimulate = do
+        cfg <- readSimConfig
+        let params = resolveArgs cfg
+        emitStatevectorJSON (argSites params) (buildCircuit params)
+    runMetrics = do
+        cfg <- readSimConfig
+        let params = resolveArgs cfg
+        emitMetricsJSON (argSites params) (buildCircuit params)
+    runDefault = do
+        let params = defaultArgs
+        print_simple GateCount (buildCircuit params ())
+
+evolveHeisenbergPair :: Timestep -> Qubit -> Qubit -> Circ (Qubit, Qubit)
+evolveHeisenbergPair theta qi qj = do
+    (qi, qj) <- controlled_not qi qj
+    qi <- hadamard qi
+    (qi, qj) <- applyDiagonalPhase (4 * theta) qi qj
+    qi <- hadamard qi
+    (qi, qj) <- controlled_not qi qj
+    return (qi, qj)
+
+applyDiagonalPhase :: Timestep -> Qubit -> Qubit -> Circ (Qubit, Qubit)
+applyDiagonalPhase phi control target = do
+    target <- expZt (phi / 4) target
+    (control, target) <- controlled_not control target
+    target <- expZt (-phi / 4) target
+    (control, target) <- controlled_not control target
+    control <- expZt (phi / 4) control
+    return (control, target)

@@ -8,8 +8,6 @@ This repository accompanies our ACM CSUR-style survey of Hamiltonian simulation 
 - `programs/common/` – Shared utilities for Pauli models and Taylor-series helpers used by several LCU backends.
 - `harness/` – Cross-language correctness runner that compares each program against NumPy reference evolutions.
 - `benchmarks/` – Automated benchmarking scripts plus the latest JSON/CSV output.
-- `Notes/` – Design notes, per-language findings, and Hamiltonian derivations.
-- `Paper/` – LaTeX source for the survey manuscript and companion tables/figures.
 
 ## Getting Started
 
@@ -47,6 +45,20 @@ This repository accompanies our ACM CSUR-style survey of Hamiltonian simulation 
 | Non-Python toolchains                 | **Silq** (requires the Silq compiler toolchain, install from https://silq.ethz.ch).<br>**Quipper** (requires GHC + Quipper libraries, see https://www.mathstat.dal.ca/~selinger/quipper/). | Our CLI wrappers assume those toolchains are on `PATH`. |
 
 Install whichever rows correspond to the languages you intend to execute (e.g., `pip install qsharp==1.22.0` before running the Q# programs). The versions above mirror the ones in our `.venv` and are what we cite in the paper.
+
+### Quipper on Apple Silicon (and how to adapt the CLI elsewhere)
+
+Quipper is the only stack in this repo that depends on our machine-specific setup (Apple Silicon running GHC 8.6.5 under Rosetta). The key points for the harness are:
+
+1. We launch Quipper via Rosetta: `arch -x86_64 zsh --login` and source `~/.zshrc-quipper`, which exports `PATH` (to include `~/.local/bin`), sources `~/.ghcup/env`, and pins `GHC_ENVIRONMENT`.
+2. `programs/quipper/run_cli.py` shells out twice: once to compile each `.hs` file and once to run it, prepending that Rosetta command each time. The relevant snippets are the `command = ("source ~/.zshrc-quipper && ...")` strings inside `compile_case(...)` and `invoke_quipper(...)`.
+
+If you are running on native x86 Linux/Windows, or if your ghcup install lives somewhere else, edit those two command builders:
+
+- Replace `["arch","-x86_64","zsh","--login","-c", "source ~/.zshrc-quipper && ..."]` with whatever launches a shell where `quipper` and its libraries are available (e.g., `["/bin/bash","-lc", "source /opt/quipper/env.sh && ..."]`).
+- Adjust the include/output flags if you store `QuipperCommon.hs` or the build artifacts in a different directory (`-i`, `-odir`, `-hidir` arguments in `compile_case`).
+
+Once you can run `python programs/quipper/run_cli.py tfim_trotter <<< '{}'` successfully, the harness/benchmarks will work on your system as well.
 
 ## Running the Cross-Language Test Harness
 

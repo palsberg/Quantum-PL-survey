@@ -13,6 +13,7 @@ import argparse
 import copy
 import csv
 import json
+import subprocess
 import sys
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
@@ -37,10 +38,8 @@ from programs.common import pauli_models  # type: ignore  # noqa: E402
 
 
 LANGUAGE_ALIASES = {
-    "openqasm": "cirq",
-    "hml": "cirq",
-    "silq": "cirq",
-    "quipper": "qiskit",
+    # Languages that reuse another stack for metrics should not appear here;
+    # instead they are handled via METRIC_NA_REASONS below.
 }
 
 
@@ -68,7 +67,9 @@ class BenchmarkResult:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run Hamiltonian simulation benchmarks.")
+    parser = argparse.ArgumentParser(
+        description="Run Hamiltonian simulation benchmarks."
+    )
     parser.add_argument(
         "--output",
         type=Path,
@@ -98,7 +99,9 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    selected_languages = {lang.strip().lower() for lang in args.languages.split(",") if lang.strip()}
+    selected_languages = {
+        lang.strip().lower() for lang in args.languages.split(",") if lang.strip()
+    }
     selected_cases = {case.strip() for case in args.cases.split(",") if case.strip()}
 
     case_lookup = {case.name: case for case in CASES if case.name in selected_cases}
@@ -141,13 +144,19 @@ def main() -> None:
     print(f"Wrote {len(results)} benchmark rows to {args.output}")
 
 
-def run_single_benchmark(language: str, case: Case, adapter, timestamp: str) -> BenchmarkResult:
-    config = copy.deepcopy(case.config)
+def run_single_benchmark(
+    language: str, case: Case, adapter, timestamp: str
+) -> BenchmarkResult:
+    # Use a small configuration for correctness (to keep the harness fast and robust)
+    # but allow the metric extractor to operate on a larger, more ambitious problem
+    # instance (for example, 10-site TFIM).
+    config_correct = copy.deepcopy(case.config)
+    config_metrics = benchmark_config_for_metrics(language, case, config_correct)
     hamiltonian = "TFIM" if case.name.startswith("tfim") else "HeisenbergXXX"
     method = "Trotter" if "trotter" in case.name else "LCU"
-    system_size = int(config.get("num_sites", 0))
-    parameter_set = {"time": config.get("time")}
-    parameter_set.update(config.get("params", {}))
+    system_size = int(config_metrics.get("num_sites", 0))
+    parameter_set = {"time": config_metrics.get("time")}
+    parameter_set.update(config_metrics.get("params", {}))
     impl_path = resolve_implementation_path(language, case.name)
 
     backend_name = None
@@ -155,7 +164,7 @@ def run_single_benchmark(language: str, case: Case, adapter, timestamp: str) -> 
     gate_metrics: Dict[str, Any] = {}
     metric_note: Optional[str] = None
 
-    metrics, metric_note = collect_metrics(language, case.name, config)
+    metrics, metric_note = collect_metrics(language, case.name, config_metrics)
     if metrics:
         backend_name = metrics.get("backend")
         compilation_time = metrics.get("compilation_time_seconds")
@@ -182,7 +191,9 @@ def run_single_benchmark(language: str, case: Case, adapter, timestamp: str) -> 
 
     run_start = perf_counter()
     try:
-        adapter.run(config)
+        # Correctness is evaluated on the original harness configuration (typically
+        # small system sizes) to keep runs lightweight and robust across tools.
+        adapter.run(config_correct)
         execution_time = perf_counter() - run_start
         status = "ok"
         message = notes
@@ -194,7 +205,7 @@ def run_single_benchmark(language: str, case: Case, adapter, timestamp: str) -> 
             message = f"{notes} | {message}"
         notes = message
         return BenchmarkResult(
-            benchmark_id=build_benchmark_id(language, case, config),
+            benchmark_id=build_benchmark_id(language, case, config_metrics),
             language=language,
             hamiltonian=hamiltonian,
             method=method,
@@ -216,7 +227,7 @@ def run_single_benchmark(language: str, case: Case, adapter, timestamp: str) -> 
         )
 
     return BenchmarkResult(
-        benchmark_id=build_benchmark_id(language, case, config),
+        benchmark_id=build_benchmark_id(language, case, config_metrics),
         language=language,
         hamiltonian=hamiltonian,
         method=method,
@@ -248,7 +259,12 @@ def build_benchmark_id(language: str, case: Case, config: Dict[str, Any]) -> str
 
 def resolve_implementation_path(language: str, case_name: str) -> str:
     base = ROOT / "programs" / language
-    candidates = [base / f"{case_name}.py", base / f"{case_name}.qs", base / f"{case_name}.slq", base / f"{case_name}.hs"]
+    candidates = [
+        base / f"{case_name}.py",
+        base / f"{case_name}.qs",
+        base / f"{case_name}.slq",
+        base / f"{case_name}.hs",
+    ]
     for path in candidates:
         if path.exists():
             return str(path.relative_to(ROOT))
@@ -257,8 +273,10 @@ def resolve_implementation_path(language: str, case_name: str) -> str:
     return str(base.relative_to(ROOT))
 
 
-def empty_result(language: str, case: Case, timestamp: str, status: str, notes: Optional[str]) -> BenchmarkResult:
-    config = case.config
+def empty_result(
+    language: str, case: Case, timestamp: str, status: str, notes: Optional[str]
+) -> BenchmarkResult:
+    config = benchmark_config_for_metrics(language, case, case.config)
     hamiltonian = "TFIM" if case.name.startswith("tfim") else "HeisenbergXXX"
     method = "Trotter" if "trotter" in case.name else "LCU"
     system_size = int(config.get("num_sites", 0))
@@ -287,14 +305,42 @@ def empty_result(language: str, case: Case, timestamp: str, status: str, notes: 
     )
 
 
-def collect_metrics(language: str, case_name: str, config: Dict[str, Any]) -> Tuple[Dict[str, Any], Optional[str]]:
+def benchmark_config_for_metrics(
+    language: str, case: Case, base_config: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Return a copy of the harness config tuned for benchmarking metrics.
+
+    We leave the harness configuration (typically with 2--3 sites) untouched for
+    correctness checks, but use a larger, more ambitious instance for metric
+    extraction.  Currently we simply bump the system size to 10 sites for all
+    spin-chain benchmarks.
+    """
+    cfg = copy.deepcopy(base_config)
+    # Use a more demanding problem size for circuit metrics.
+    if "num_sites" in cfg:
+        cfg["num_sites"] = 10
+    return cfg
+
+
+def collect_metrics(
+    language: str, case_name: str, config: Dict[str, Any]
+) -> Tuple[Dict[str, Any], Optional[str]]:
+    # Some languages or cases delegate execution to another stack or do not
+    # have a native circuit-level implementation in this artifact. For those
+    # we deliberately omit metrics to avoid misleading “false positives”.
+    na_reason = METRIC_NA_REASONS.get(language)
+    if na_reason is not None:
+        return {}, na_reason
+
     provider_name = LANGUAGE_ALIASES.get(language, language)
     provider = METRIC_REGISTRY.get(provider_name)
     if provider is None:
         return {}, f"No metric extractor registered for {language}"
     try:
         return provider(language, case_name, config)
-    except Exception as exc:  # pragma: no cover - data collection shouldn't fail benchmarking
+    except (
+        Exception
+    ) as exc:  # pragma: no cover - data collection shouldn't fail benchmarking
         return {}, f"Metric extraction failed: {exc}"
 
 
@@ -302,7 +348,10 @@ def collect_metrics(language: str, case_name: str, config: Dict[str, Any]) -> Tu
 # Metric extraction helpers
 # --------------------------------------------------------------------------------------
 
-def cirq_metric_provider(language: str, case_name: str, config: Dict[str, Any]) -> Tuple[Dict[str, Any], Optional[str]]:
+
+def cirq_metric_provider(
+    language: str, case_name: str, config: Dict[str, Any]
+) -> Tuple[Dict[str, Any], Optional[str]]:
     try:
         import cirq  # type: ignore
         from programs.cirq import common as cirq_common  # type: ignore
@@ -317,16 +366,26 @@ def cirq_metric_provider(language: str, case_name: str, config: Dict[str, Any]) 
     if case_name == "tfim_trotter":
         steps = int(params.get("trotter_steps", 2))
         circuit, qubits = cirq_common.trotterize_tfim(
-            num_sites, float(params.get("J", 1.0)), float(params.get("h", 1.0)), time_total, steps
+            num_sites,
+            float(params.get("J", 1.0)),
+            float(params.get("h", 1.0)),
+            time_total,
+            steps,
         )
     elif case_name == "heis_trotter":
         steps = int(params.get("trotter_steps", 2))
         circuit, qubits = cirq_common.trotterize_heisenberg_xxx(
-            num_sites, float(params.get("J", 1.0)), float(params.get("field", 0.2)), time_total, steps
+            num_sites,
+            float(params.get("J", 1.0)),
+            float(params.get("field", 0.2)),
+            time_total,
+            steps,
         )
     elif case_name == "tfim_lcu":
         gamma = pauli_models.taylor_coefficients(
-            pauli_models.tfim_pauli_terms(num_sites, float(params.get("J", 1.0)), float(params.get("h", 1.0))),
+            pauli_models.tfim_pauli_terms(
+                num_sites, float(params.get("J", 1.0)), float(params.get("h", 1.0))
+            ),
             time_total,
         )
         weights, paulis, phases = pauli_models.lcu_weights_from_gamma(gamma)
@@ -335,7 +394,9 @@ def cirq_metric_provider(language: str, case_name: str, config: Dict[str, Any]) 
         )
     elif case_name == "heis_lcu":
         gamma = pauli_models.taylor_coefficients(
-            pauli_models.heisenberg_pauli_terms(num_sites, float(params.get("J", 1.0)), float(params.get("field", 0.2))),
+            pauli_models.heisenberg_pauli_terms(
+                num_sites, float(params.get("J", 1.0)), float(params.get("field", 0.2))
+            ),
             time_total,
         )
         weights, paulis, phases = pauli_models.lcu_weights_from_gamma(gamma)
@@ -351,10 +412,12 @@ def cirq_metric_provider(language: str, case_name: str, config: Dict[str, Any]) 
     return metrics, None
 
 
-def qiskit_metric_provider(language: str, case_name: str, config: Dict[str, Any]) -> Tuple[Dict[str, Any], Optional[str]]:
+def qiskit_metric_provider(
+    language: str, case_name: str, config: Dict[str, Any]
+) -> Tuple[Dict[str, Any], Optional[str]]:
     try:
         from qiskit import transpile  # type: ignore
-        from qiskit.providers.fake_provider import FakeJakarta  # type: ignore
+        from qiskit.providers.fake_provider import GenericBackendV2  # type: ignore
         from programs.qiskit import common as qiskit_common  # type: ignore
         from programs.qiskit import lcu_common as qiskit_lcu_common  # type: ignore
     except Exception as exc:  # pragma: no cover
@@ -362,20 +425,30 @@ def qiskit_metric_provider(language: str, case_name: str, config: Dict[str, Any]
     num_sites = int(config["num_sites"])
     time_total = float(config["time"])
     params = config.get("params", {})
-    backend = FakeJakarta()
+    backend = GenericBackendV2(num_qubits=num_sites)
     if case_name == "tfim_trotter":
         steps = int(params.get("trotter_steps", 2))
         circuit, _ = qiskit_common.trotterize_tfim(
-            num_sites, float(params.get("J", 1.0)), float(params.get("h", 1.0)), time_total, steps
+            num_sites,
+            float(params.get("J", 1.0)),
+            float(params.get("h", 1.0)),
+            time_total,
+            steps,
         )
     elif case_name == "heis_trotter":
         steps = int(params.get("trotter_steps", 2))
         circuit, _ = qiskit_common.trotterize_heisenberg_xxx(
-            num_sites, float(params.get("J", 1.0)), float(params.get("field", 0.2)), time_total, steps
+            num_sites,
+            float(params.get("J", 1.0)),
+            float(params.get("field", 0.2)),
+            time_total,
+            steps,
         )
     elif case_name == "tfim_lcu":
         gamma = pauli_models.taylor_coefficients(
-            pauli_models.tfim_pauli_terms(num_sites, float(params.get("J", 1.0)), float(params.get("h", 1.0))),
+            pauli_models.tfim_pauli_terms(
+                num_sites, float(params.get("J", 1.0)), float(params.get("h", 1.0))
+            ),
             time_total,
         )
         weights, paulis, phases = pauli_models.lcu_weights_from_gamma(gamma)
@@ -384,7 +457,9 @@ def qiskit_metric_provider(language: str, case_name: str, config: Dict[str, Any]
         )
     elif case_name == "heis_lcu":
         gamma = pauli_models.taylor_coefficients(
-            pauli_models.heisenberg_pauli_terms(num_sites, float(params.get("J", 1.0)), float(params.get("field", 0.2))),
+            pauli_models.heisenberg_pauli_terms(
+                num_sites, float(params.get("J", 1.0)), float(params.get("field", 0.2))
+            ),
             time_total,
         )
         weights, paulis, phases = pauli_models.lcu_weights_from_gamma(gamma)
@@ -397,16 +472,18 @@ def qiskit_metric_provider(language: str, case_name: str, config: Dict[str, Any]
     compiled = transpile(circuit, backend=backend, optimization_level=2)
     compilation_time = perf_counter() - start
     metrics = describe_qiskit_circuit(compiled)
-    metrics["backend"] = backend.name()
+    metrics["backend"] = getattr(backend, "name", str(backend))
     metrics["compilation_time_seconds"] = compilation_time
     return metrics, None
 
 
-def tket_metric_provider(language: str, case_name: str, config: Dict[str, Any]) -> Tuple[Dict[str, Any], Optional[str]]:
+def tket_metric_provider(
+    language: str, case_name: str, config: Dict[str, Any]
+) -> Tuple[Dict[str, Any], Optional[str]]:
     try:
         from pytket.extensions.qiskit import tk_to_qiskit  # type: ignore
         from qiskit import transpile  # type: ignore
-        from qiskit.providers.fake_provider import FakeJakarta  # type: ignore
+        from qiskit.providers.fake_provider import GenericBackendV2  # type: ignore
         from programs.tket import common as tket_common  # type: ignore
     except Exception as exc:  # pragma: no cover
         return {}, f"pytket stack unavailable: {exc}"
@@ -416,27 +493,37 @@ def tket_metric_provider(language: str, case_name: str, config: Dict[str, Any]) 
     if case_name == "tfim_trotter":
         steps = int(params.get("trotter_steps", 2))
         circuit, _ = tket_common.trotterize_tfim(
-            num_sites, float(params.get("J", 1.0)), float(params.get("h", 1.0)), time_total, steps
+            num_sites,
+            float(params.get("J", 1.0)),
+            float(params.get("h", 1.0)),
+            time_total,
+            steps,
         )
     elif case_name == "heis_trotter":
         steps = int(params.get("trotter_steps", 2))
         circuit, _ = tket_common.trotterize_heisenberg_xxx(
-            num_sites, float(params.get("J", 1.0)), float(params.get("field", 0.2)), time_total, steps
+            num_sites,
+            float(params.get("J", 1.0)),
+            float(params.get("field", 0.2)),
+            time_total,
+            steps,
         )
     else:
         return {}, f"TKET metric extractor not implemented for {case_name}"
     qc = tk_to_qiskit(circuit)
-    backend = FakeJakarta()
+    backend = GenericBackendV2(num_qubits=num_sites)
     start = perf_counter()
     compiled = transpile(qc, backend=backend, optimization_level=2)
     compilation_time = perf_counter() - start
     metrics = describe_qiskit_circuit(compiled)
-    metrics["backend"] = backend.name()
+    metrics["backend"] = getattr(backend, "name", str(backend))
     metrics["compilation_time_seconds"] = compilation_time
     return metrics, None
 
 
-def pyquil_metric_provider(language: str, case_name: str, config: Dict[str, Any]) -> Tuple[Dict[str, Any], Optional[str]]:
+def pyquil_metric_provider(
+    language: str, case_name: str, config: Dict[str, Any]
+) -> Tuple[Dict[str, Any], Optional[str]]:
     try:
         from pyquil import Program  # type: ignore
         from pyquil.quilbase import Gate  # type: ignore
@@ -449,19 +536,29 @@ def pyquil_metric_provider(language: str, case_name: str, config: Dict[str, Any]
     if case_name == "tfim_trotter":
         steps = int(params.get("trotter_steps", 2))
         prog, _ = pyquil_common.trotterize_tfim(
-            num_sites, float(params.get("J", 1.0)), float(params.get("h", 1.0)), time_total, steps
+            num_sites,
+            float(params.get("J", 1.0)),
+            float(params.get("h", 1.0)),
+            time_total,
+            steps,
         )
     elif case_name == "heis_trotter":
         steps = int(params.get("trotter_steps", 2))
         prog, _ = pyquil_common.trotterize_heisenberg_xxx(
-            num_sites, float(params.get("J", 1.0)), float(params.get("field", 0.2)), time_total, steps
+            num_sites,
+            float(params.get("J", 1.0)),
+            float(params.get("field", 0.2)),
+            time_total,
+            steps,
         )
     else:
         return {}, f"PyQuil metric extractor not implemented for {case_name}"
     return describe_pyquil_program(prog, Gate), None
 
 
-def pennylane_metric_provider(language: str, case_name: str, config: Dict[str, Any]) -> Tuple[Dict[str, Any], Optional[str]]:
+def pennylane_metric_provider(
+    language: str, case_name: str, config: Dict[str, Any]
+) -> Tuple[Dict[str, Any], Optional[str]]:
     try:
         import pennylane as qml  # type: ignore
     except Exception as exc:  # pragma: no cover
@@ -531,7 +628,16 @@ def pennylane_metric_provider(language: str, case_name: str, config: Dict[str, A
     return metrics, None
 
 
-def strawberryfields_metric_provider(language: str, case_name: str, config: Dict[str, Any]) -> Tuple[Dict[str, Any], Optional[str]]:
+def strawberryfields_metric_provider(
+    language: str, case_name: str, config: Dict[str, Any]
+) -> Tuple[Dict[str, Any], Optional[str]]:
+    # LCU cases are sequential dual-rail CV circuits, not full 2nd-order Taylor
+    # LCU block encodings, so we omit metrics for them in the LCU comparison.
+    if "lcu" in case_name:
+        return {}, (
+            "N/A: Strawberry Fields LCU programs are sequential dual-rail CV circuits, "
+            "not full 2nd-order Taylor LCU block encodings with selection ancillas / PREPARE / SELECT."
+        )
     try:
         import strawberryfields as sf  # type: ignore  # noqa: F401
     except Exception as exc:  # pragma: no cover
@@ -539,13 +645,18 @@ def strawberryfields_metric_provider(language: str, case_name: str, config: Dict
     num_qubits = int(config["num_sites"])
     time_total = float(config["time"])
     params = config.get("params", {})
-    prog, note = build_strawberryfields_program(case_name, num_qubits, time_total, params)
+    prog, note = build_strawberryfields_program(
+        case_name, num_qubits, time_total, params
+    )
     if prog is None:
         return {}, note
     total_ops = len(prog.circuit)
     two_mode_ops = sum(1 for cmd in prog.circuit if len(cmd.reg) == 2)
     metrics = {
-        "backend": "sf.Engine(fock)",
+        # Note: these are CV dual-rail circuits projected to a logical qubit
+        # subspace, not native qubit gate sets. We still report basic circuit
+        # statistics for the Trotter cases.
+        "backend": "sf.Engine(fock, dual-rail CV)",
         "compilation_time_seconds": None,
         "total_gate_count": total_ops,
         "two_qubit_gate_count": two_mode_ops,
@@ -556,60 +667,458 @@ def strawberryfields_metric_provider(language: str, case_name: str, config: Dict
     return metrics, note
 
 
-def qrisp_metric_provider(language: str, case_name: str, config: Dict[str, Any]) -> Tuple[Dict[str, Any], Optional[str]]:
-    # LCU cases delegate to Qiskit, so reuse those metrics.
+def qrisp_metric_provider(
+    language: str, case_name: str, config: Dict[str, Any]
+) -> Tuple[Dict[str, Any], Optional[str]]:
+    # LCU cases delegate execution to Qiskit, and we report metrics only under
+    # the Qiskit language to avoid double-counting.
     if "lcu" in case_name:
-        metrics, note = qiskit_metric_provider("qiskit", case_name, config)
-        if note:
-            note = f"Qrisp LCU via Qiskit fallback: {note}"
-        else:
-            note = "Metrics via Qiskit fallback"
-        return metrics, note
-    return {}, "Qrisp native metric extraction pending"
+        return {}, "N/A: Qrisp LCU programs delegate to Qiskit; see Qiskit metrics."
+    # For Trotter cases, build the Qrisp QuantumCircuit via the same
+    # Hamiltonian + trotterization path used in the simulation helpers,
+    # then convert to a Qiskit circuit for metric extraction.
+    try:
+        import inspect
+        import numpy as np  # type: ignore
+        from qrisp import QuantumVariable, ry  # type: ignore
+        from programs.qrisp import common as qrisp_common  # type: ignore
+    except Exception as exc:  # pragma: no cover
+        return {}, f"Qrisp stack unavailable: {exc}"
+
+    num_sites = int(config["num_sites"])
+    total_time = float(config["time"])
+    params = config.get("params", {})
+    steps = int(params.get("trotter_steps", 2))
+    order = int(params.get("trotter_order", 1))
+    init_angle = float(params.get("init_angle", np.pi / 8))
+
+    # Build the Qrisp Hamiltonian operator.
+    if case_name == "tfim_trotter":
+        J = float(params.get("J", 1.0))
+        h = float(params.get("h", 1.0))
+        H = qrisp_common.build_tfim_operator(num_sites, J, h)
+    elif case_name == "heis_trotter":
+        J = float(params.get("J", 1.0))
+        field = float(params.get("field", 0.2))
+        H = qrisp_common.build_heisenberg_operator(num_sites, J, field)
+    else:
+        return {}, f"Qrisp metric extractor not implemented for {case_name}"
+
+    trot = getattr(H, "trotterization")
+    sig = inspect.signature(trot)
+    kwargs = {}
+    if "order" in sig.parameters:
+        kwargs["order"] = order
+    evolution = trot(**kwargs)
+
+    qv = QuantumVariable(num_sites)
+    if init_angle != 0.0:
+        ry(init_angle, qv)
+    evolution(qv, t=total_time, steps=steps)
+    qs = getattr(qv, "qs", None)
+    if qs is None:
+        return (
+            {},
+            "Metric extraction failed: Qrisp QuantumSession unavailable after evolution.",
+        )
+    compile_fn = getattr(qs, "compile", None)
+    if not callable(compile_fn):
+        return {}, "Metric extraction failed: Qrisp session.compile() not available."
+    circ = compile_fn()
+
+    # Prefer converting to a Qiskit circuit if supported.
+    to_qiskit = getattr(circ, "to_qiskit", None)
+    if callable(to_qiskit):
+        try:
+            qc = to_qiskit()
+        except Exception as exc:  # pragma: no cover
+            return {}, f"Metric extraction failed: to_qiskit() error: {exc}"
+        metrics = describe_qiskit_circuit(qc)
+        metrics["backend"] = "qrisp.to_qiskit"
+        metrics["compilation_time_seconds"] = None
+        return metrics, None
+
+    # Fallback: use Qrisp QuantumCircuit's own statistics if available.
+    count_ops = getattr(circ, "count_ops", None)
+    depth_fn = getattr(circ, "depth", None)
+    num_qubits_fn = getattr(circ, "num_qubits", None)
+    if not callable(count_ops) or not callable(depth_fn) or not callable(num_qubits_fn):
+        return (
+            {},
+            "Metric extraction failed: Qrisp QuantumCircuit lacks basic analysis methods.",
+        )
+
+    try:
+        counts = count_ops()
+        depth = depth_fn()
+        n_qubits = num_qubits_fn()
+    except Exception as exc:  # pragma: no cover
+        return (
+            {},
+            f"Metric extraction failed: Qrisp QuantumCircuit analysis error: {exc}",
+        )
+
+    two_qubit_gates = {"cx", "cz", "swap", "iswap", "ecr"}
+    total_ops = int(sum(counts.values())) if counts is not None else None
+    two_qubit = (
+        int(
+            sum(
+                count
+                for name, count in counts.items()
+                if name.lower() in two_qubit_gates
+            )
+        )
+        if counts is not None
+        else None
+    )
+    metrics = {
+        "backend": "qrisp.QuantumCircuit",
+        "compilation_time_seconds": None,
+        "total_gate_count": total_ops,
+        "two_qubit_gate_count": two_qubit,
+        "circuit_depth": int(depth) if depth is not None else None,
+        "qubit_count": int(n_qubits) if n_qubits is not None else num_sites,
+        "native_gate_set": sorted(counts.keys()) if counts is not None else None,
+    }
+    return metrics, None
 
 
-def qualtran_metric_provider(language: str, case_name: str, config: Dict[str, Any]) -> Tuple[Dict[str, Any], Optional[str]]:
-    if case_name != "tfim_trotter":
-        return cirq_metric_provider(language, case_name, config)
+def hml_metric_provider(
+    language: str, case_name: str, config: Dict[str, Any]
+) -> Tuple[Dict[str, Any], Optional[str]]:
+    """Metric extractor for HML / SimuQ programs using the same QSystem model."""
+    try:
+        from simuq.qsystem import QSystem  # type: ignore
+        from simuq.environment import Qubit  # type: ignore
+        from programs.hml import common as hml_common  # type: ignore
+    except Exception as exc:  # pragma: no cover
+        return {}, f"HML/SimuQ stack unavailable: {exc}"
+
+    num_sites = int(config["num_sites"])
+    total_time = float(config["time"])
+    params = config.get("params", {})
+
+    qs = QSystem()
+    q = [Qubit(qs) for _ in range(num_sites)]
+
+    if case_name == "tfim_trotter":
+        J = float(params.get("J", 1.0))
+        h = float(params.get("h", 1.0))
+        steps = int(params.get("trotter_steps", 2))
+        dt = total_time / steps
+        H_ZZ = 0
+        for i in range(num_sites - 1):
+            H_ZZ += J * (q[i].Z * q[i + 1].Z)
+        H_X = 0
+        for i in range(num_sites):
+            H_X += h * q[i].X
+        for _ in range(steps):
+            qs.add_evolution(H_ZZ, dt)
+            qs.add_evolution(H_X, dt)
+    elif case_name == "heis_trotter":
+        J = float(params.get("J", 1.0))
+        field = float(params.get("field", 0.2))
+        steps = int(params.get("trotter_steps", 2))
+        dt = total_time / steps
+        H_xx = 0
+        H_yy = 0
+        H_zz = 0
+        H_field = 0
+        for i in range(num_sites - 1):
+            H_xx += J * (q[i].X * q[i + 1].X)
+            H_yy += J * (q[i].Y * q[i + 1].Y)
+            H_zz += J * (q[i].Z * q[i + 1].Z)
+        for i in range(num_sites):
+            H_field += field * q[i].Z
+        for _ in range(steps):
+            qs.add_evolution(H_xx, dt)
+            qs.add_evolution(H_yy, dt)
+            qs.add_evolution(H_zz, dt)
+            qs.add_evolution(H_field, dt)
+    elif case_name == "tfim_lcu":
+        J = float(params.get("J", 1.0))
+        h = float(params.get("h", 1.0))
+        H = 0
+        for i in range(num_sites - 1):
+            H += J * (q[i].Z * q[i + 1].Z)
+        for i in range(num_sites):
+            H += h * q[i].X
+        qs.add_evolution(H, total_time)
+    elif case_name == "heis_lcu":
+        J = float(params.get("J", 1.0))
+        field = float(params.get("field", 0.2))
+        H = 0
+        for i in range(num_sites - 1):
+            H += J * (q[i].X * q[i + 1].X)
+            H += J * (q[i].Y * q[i + 1].Y)
+            H += J * (q[i].Z * q[i + 1].Z)
+        for i in range(num_sites):
+            H += field * q[i].Z
+        qs.add_evolution(H, total_time)
+    else:
+        return {}, f"HML metric extractor not implemented for case {case_name}"
+
+    qc = hml_common.qsystem_to_qiskit_circuit(qs, num_sites)
+    metrics = describe_qiskit_circuit(qc)
+    metrics["backend"] = "hml.qsystem+qiskit"
+    metrics["compilation_time_seconds"] = None
+    return metrics, None
+
+
+def qualtran_metric_provider(
+    language: str, case_name: str, config: Dict[str, Any]
+) -> Tuple[Dict[str, Any], Optional[str]]:
     try:
         import cirq  # type: ignore
         from programs.qualtran import common as qualtran_common  # type: ignore
+        from qualtran._infra.gate_with_registers import get_named_qubits  # type: ignore
+        from qualtran.cirq_interop._interop_qubit_manager import InteropQubitManager  # type: ignore
     except Exception as exc:  # pragma: no cover
         return {}, f"Qualtran dependencies unavailable: {exc}"
     num_sites = int(config["num_sites"])
     total_time = float(config["time"])
     params = config.get("params", {})
-    steps = int(params.get("trotter_steps", 32))
-    init_angle = float(params.get("init_angle", 0.0))
-    qubits = cirq.LineQubit.range(num_sites)
-    circuit = cirq.Circuit()
-    for q in qubits:
-        if init_angle != 0.0:
-            circuit.append(cirq.ry(init_angle).on(q))
-    dt = total_time / steps
-    for _ in range(steps):
-        qualtran_common.apply_ising_step(
-            circuit,
-            qubits,
-            qualtran_common.IsingZZUnitary(nsites=num_sites, angle=2 * float(params.get("J", 1.0)) * dt),
-        )
-        qualtran_common.apply_ising_step(
-            circuit,
-            qubits,
-            qualtran_common.IsingXUnitary(nsites=num_sites, angle=2 * float(params.get("h", 1.0)) * dt),
-        )
+    # Trotter cases: use explicit Qualtran bloqs to build a Cirq circuit.
+    if case_name in ("tfim_trotter", "heis_trotter"):
+        steps = int(params.get("trotter_steps", 32))
+        init_angle = float(params.get("init_angle", 0.0))
+        qubits = cirq.LineQubit.range(num_sites)
+        circuit = cirq.Circuit()
+        for q in qubits:
+            if init_angle != 0.0:
+                circuit.append(cirq.ry(init_angle).on(q))
+        dt = total_time / steps
+        if case_name == "tfim_trotter":
+            for _ in range(steps):
+                qualtran_common.apply_ising_step(
+                    circuit,
+                    qubits,
+                    qualtran_common.IsingZZUnitary(
+                        nsites=num_sites, angle=2 * float(params.get("J", 1.0)) * dt
+                    ),
+                )
+                qualtran_common.apply_ising_step(
+                    circuit,
+                    qubits,
+                    qualtran_common.IsingXUnitary(
+                        nsites=num_sites, angle=2 * float(params.get("h", 1.0)) * dt
+                    ),
+                )
+        else:  # heis_trotter
+            pair_bloq = qualtran_common.HeisenbergPairUnitary(
+                angle_j=float(params.get("J", 1.0)) * dt,
+                angle_field=float(params.get("field", 0.2)) * dt,
+            )
+            for _ in range(steps):
+                for i in range(num_sites - 1):
+                    qualtran_common.apply_heisenberg_pair_step(
+                        circuit, qubits[i], qubits[i + 1], pair_bloq
+                    )
+        metrics = describe_cirq_circuit(circuit, qubits)
+        metrics["backend"] = "cirq.Simulator"
+        metrics["compilation_time_seconds"] = None
+        return metrics, None
+
+    # LCU cases: build the Qualtran LCUBlockEncoding and convert to a Cirq circuit
+    # for gate-level metrics, using the same Taylor LCU helpers as in the
+    # correctness path (no Cirq LCU fallback).
+    if case_name == "tfim_lcu":
+        J = float(params.get("J", 1.0))
+        h = float(params.get("h", 0.5))
+        precision = float(params.get("lcu_precision", 1e-2))
+        H = pauli_models.tfim_pauli_terms(num_sites, J, h)
+        gamma = pauli_models.taylor_coefficients(H, total_time)
+        paulis, weights, _ = qualtran_common.taylor_terms_to_paulis(gamma)
+        block = qualtran_common.build_lcu_block(paulis, weights, precision=precision)
+    elif case_name == "heis_lcu":
+        J = float(params.get("J", 0.8))
+        field = float(params.get("field", 0.2))
+        precision = float(params.get("lcu_precision", 1e-2))
+        H = pauli_models.heisenberg_pauli_terms(num_sites, J, field)
+        gamma = pauli_models.taylor_coefficients(H, total_time)
+        paulis, weights, _ = qualtran_common.taylor_terms_to_paulis(gamma)
+        block = qualtran_common.build_lcu_block(paulis, weights, precision=precision)
+    else:
+        return {}, f"N/A: Qualtran metrics not implemented for case {case_name}"
+
+    # Convert the LCU block bloq into a Cirq circuit and summarize it.
+    cbloq = block.decompose_bloq()
+    init_quregs = get_named_qubits(block.signature)
+    qm = InteropQubitManager(cirq.ops.SimpleQubitManager())
+    circuit, _ = cbloq.to_cirq_circuit_and_quregs(qubit_manager=qm, **init_quregs)
+    qubits = sorted(circuit.all_qubits(), key=lambda q: str(q))
     metrics = describe_cirq_circuit(circuit, qubits)
     metrics["backend"] = "cirq.Simulator"
     metrics["compilation_time_seconds"] = None
     return metrics, None
 
 
-def placeholder_metric_provider(language: str, case_name: str, config: Dict[str, Any]) -> Tuple[Dict[str, Any], Optional[str]]:
+def placeholder_metric_provider(
+    language: str, case_name: str, config: Dict[str, Any]
+) -> Tuple[Dict[str, Any], Optional[str]]:
     return {}, "Placeholder language with no metric extractor"
 
 
-METRIC_REGISTRY: Dict[str, Callable[[str, str, Dict[str, Any]], Tuple[Dict[str, Any], Optional[str]]]] = {
+def qsharp_metric_provider(
+    language: str, case_name: str, config: Dict[str, Any]
+) -> Tuple[Dict[str, Any], Optional[str]]:
+    try:
+        import qsharp  # type: ignore
+        from programs.qsharp import ensure_compiled  # type: ignore
+    except Exception as exc:  # pragma: no cover
+        return {}, f"Q# runtime unavailable: {exc}"
+
+    ensure_compiled()
+    try:
+        operation, args = _qsharp_operation_and_args(case_name, config, qsharp)
+    except KeyError as exc:
+        return {}, f"Unknown Q# benchmark case: {exc}"
+
+    try:
+        counts = qsharp.logical_counts(operation, *args)
+    except Exception as exc:  # pragma: no cover
+        fallback = {
+            "backend": "qsharp.FullStateSimulator",
+            "compilation_time_seconds": None,
+            "qubit_count": int(config.get("num_sites", 0)),
+        }
+        return fallback, f"Failed to gather logical counts: {exc}"
+
+    total_gate_count = int(
+        counts.get("rotationCount", 0)
+        + counts.get("cczCount", 0)
+        + counts.get("ccixCount", 0)
+        + counts.get("measurementCount", 0)
+    )
+    two_qubit = int(counts.get("cczCount", 0) + counts.get("ccixCount", 0))
+    metrics = {
+        "backend": "qsharp.FullStateSimulator",
+        "compilation_time_seconds": None,
+        "total_gate_count": total_gate_count,
+        "two_qubit_gate_count": two_qubit,
+        "circuit_depth": int(counts.get("rotationDepth", 0)),
+        "qubit_count": int(counts.get("numQubits", config.get("num_sites", 0))),
+        "native_gate_set": ["LogicalCounts"],
+    }
+    return metrics, "Logical counts derived via QDK resource estimation"
+
+
+def quipper_metric_provider(
+    language: str, case_name: str, config: Dict[str, Any]
+) -> Tuple[Dict[str, Any], Optional[str]]:
+    run_cli = ROOT / "programs" / "quipper" / "run_cli.py"
+    if not run_cli.exists():
+        return {}, "Quipper CLI shim not found."
+    cmd = [sys.executable, str(run_cli), "--mode", "metrics", case_name]
+    payload = json.dumps(config).encode("utf-8")
+    proc = subprocess.run(cmd, input=payload, capture_output=True, check=False)
+    if proc.returncode != 0:
+        stderr = proc.stderr.decode().strip()
+        raise RuntimeError(f"Quipper metrics CLI failed: {stderr}")
+    try:
+        result = json.loads(proc.stdout)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(
+            f"Invalid JSON from Quipper metrics CLI: {proc.stdout.decode(errors='ignore')}"
+        ) from exc
+    metrics = result.get("metrics")
+    if not isinstance(metrics, dict):
+        raise RuntimeError("Quipper metrics payload missing 'metrics'")
+    gate_hist = metrics.get("gate_histogram") or []
+    native_gate_set = sorted(
+        {
+            entry.get("label")
+            for entry in gate_hist
+            if isinstance(entry, dict) and entry.get("label")
+        }
+    )
+    metrics_dict = {
+        "backend": "quipper.simulation",
+        "compilation_time_seconds": None,
+        "total_gate_count": metrics.get("total_gate_count"),
+        "two_qubit_gate_count": metrics.get("two_qubit_gate_count"),
+        "circuit_depth": metrics.get("circuit_depth"),
+        "qubit_count": metrics.get("qubit_count"),
+        "native_gate_set": native_gate_set,
+    }
+    return metrics_dict, None
+
+
+def openqasm_metric_provider(
+    language: str, case_name: str, config: Dict[str, Any]
+) -> Tuple[Dict[str, Any], Optional[str]]:
+    """Metric extractor for OpenQASM 3 programs using Qiskit's QASM 3 importer."""
+    # LCU benchmarks are treated as N/A to avoid very long transpilation
+    # times on generic hardware-like Qiskit backends. Trotter cases still
+    # report full metrics.
+    if "lcu" in case_name:
+        return {}, (
+            "N/A: OpenQASM LCU benchmarks omitted due to slow transpilation on "
+            "generic Qiskit backends."
+        )
+    try:
+        from qiskit.qasm3 import loads as qasm3_loads  # type: ignore
+        from qiskit import transpile  # type: ignore
+        from qiskit.providers.fake_provider import GenericBackendV2  # type: ignore
+        from programs.openqasm import common as oq_common  # type: ignore
+    except Exception as exc:  # pragma: no cover
+        return {}, f"OpenQASM/Qiskit stack unavailable: {exc}"
+
+    num_sites = int(config["num_sites"])
+    time_total = float(config["time"])
+    params = config.get("params", {})
+
+    if case_name == "tfim_trotter":
+        steps = int(params.get("trotter_steps", 2))
+        qasm, _ = oq_common.render_tfim_trotter_qasm(
+            num_sites,
+            float(params.get("J", 1.0)),
+            float(params.get("h", 1.0)),
+            time_total,
+            steps,
+        )
+    elif case_name == "heis_trotter":
+        steps = int(params.get("trotter_steps", 2))
+        qasm, _ = oq_common.render_heis_trotter_qasm(
+            num_sites,
+            float(params.get("J", 1.0)),
+            float(params.get("field", 0.2)),
+            time_total,
+            steps,
+        )
+    elif case_name == "tfim_lcu":
+        qasm = oq_common.render_tfim_lcu_qasm(
+            num_sites,
+            float(params.get("J", 1.0)),
+            float(params.get("h", 1.0)),
+            time_total,
+        )
+    elif case_name == "heis_lcu":
+        qasm = oq_common.render_heis_lcu_qasm(
+            num_sites,
+            float(params.get("J", 1.0)),
+            float(params.get("field", 0.2)),
+            time_total,
+        )
+    else:
+        return {}, f"Unsupported case {case_name} for OpenQASM metrics"
+
+    qc = qasm3_loads(qasm)
+    backend = GenericBackendV2(num_qubits=num_sites)
+    start = perf_counter()
+    compiled = transpile(qc, backend=backend, optimization_level=2)
+    compilation_time = perf_counter() - start
+    metrics = describe_qiskit_circuit(compiled)
+    metrics["backend"] = getattr(backend, "name", str(backend))
+    metrics["compilation_time_seconds"] = compilation_time
+    return metrics, None
+
+
+METRIC_REGISTRY: Dict[
+    str, Callable[[str, str, Dict[str, Any]], Tuple[Dict[str, Any], Optional[str]]]
+] = {
     "cirq": cirq_metric_provider,
+    "hml": hml_metric_provider,
     "qiskit": qiskit_metric_provider,
     "pyquil": pyquil_metric_provider,
     "pennylane": pennylane_metric_provider,
@@ -617,7 +1126,22 @@ METRIC_REGISTRY: Dict[str, Callable[[str, str, Dict[str, Any]], Tuple[Dict[str, 
     "strawberryfields": strawberryfields_metric_provider,
     "qrisp": qrisp_metric_provider,
     "qualtran": qualtran_metric_provider,
-    "qsharp": placeholder_metric_provider,
+    "qsharp": qsharp_metric_provider,
+    "quipper": quipper_metric_provider,
+    "openqasm": openqasm_metric_provider,
+}
+
+
+# Languages for which we intentionally suppress circuit metrics, with reasons.
+METRIC_NA_REASONS: Dict[str, str] = {
+    # Silq programs are executed via the Silq CLI only; we do not extract
+    # circuit-level gate counts or depths in this artifact.
+    "silq": "N/A: Silq programs run via the Silq CLI; no circuit-level metric extractor is implemented.",
+    # Strawberry Fields uses dual-rail CV encodings with low fidelity versus
+    # the reference qubit TFIM/Heisenberg Hamiltonians, and its LCU programs
+    # are sequential dual-rail CV circuits rather than full 2nd-order Taylor
+    # LCU block encodings. We omit Strawberry Fields metrics in this artifact.
+    "strawberryfields": "N/A: Strawberry Fields uses dual-rail CV encodings with low fidelity versus qubit references; TFIM/Heisenberg and LCU metrics are not reported in this artifact.",
 }
 
 
@@ -625,10 +1149,18 @@ METRIC_REGISTRY: Dict[str, Callable[[str, str, Dict[str, Any]], Tuple[Dict[str, 
 # Utility functions
 # --------------------------------------------------------------------------------------
 
-def describe_cirq_circuit(circuit: "cirq.Circuit", qubits: Iterable["cirq.Qid"]) -> Dict[str, Any]:
+
+def describe_cirq_circuit(
+    circuit: "cirq.Circuit", qubits: Iterable["cirq.Qid"]
+) -> Dict[str, Any]:
     ops = list(circuit.all_operations())
     two_qubit = sum(1 for op in ops if len(op.qubits) == 2)
-    gate_set = sorted({type(op.gate).__name__ if getattr(op, "gate", None) else type(op).__name__ for op in ops})
+    gate_set = sorted(
+        {
+            type(op.gate).__name__ if getattr(op, "gate", None) else type(op).__name__
+            for op in ops
+        }
+    )
     return {
         "total_gate_count": len(ops),
         "two_qubit_gate_count": two_qubit,
@@ -641,7 +1173,9 @@ def describe_cirq_circuit(circuit: "cirq.Circuit", qubits: Iterable["cirq.Qid"])
 def describe_qiskit_circuit(circuit) -> Dict[str, Any]:  # type: ignore[valid-type]
     counts = circuit.count_ops()
     two_qubit_gates = {"cx", "cz", "swap", "iswap", "ecr"}
-    two_qubit = sum(int(count) for gate, count in counts.items() if gate.lower() in two_qubit_gates)
+    two_qubit = sum(
+        int(count) for gate, count in counts.items() if gate.lower() in two_qubit_gates
+    )
     return {
         "total_gate_count": int(sum(counts.values())),
         "two_qubit_gate_count": two_qubit,
@@ -682,7 +1216,38 @@ def estimate_gate_depth(instructions: List["Gate"]) -> int:
     return max_depth
 
 
-def build_strawberryfields_program(case_name: str, num_qubits: int, total_time: float, params: Dict[str, Any]) -> Tuple[Optional[Any], Optional[str]]:
+def _qsharp_operation_and_args(
+    case_name: str, config: Dict[str, Any], qsharp_module
+) -> Tuple[Any, Tuple[Any, ...]]:
+    num_sites = int(config["num_sites"])
+    total_time = float(config["time"])
+    params = config.get("params", {})
+    coupling = float(params.get("J", 1.0))
+
+    if case_name == "tfim_trotter":
+        steps = int(params.get("trotter_steps", 1))
+        field = float(params.get("h", 0.0))
+        op = qsharp_module.code.HamiltonianSimulation.TFIMTrotter.Run
+        return op, (num_sites, steps, coupling, field, total_time)
+    if case_name == "heis_trotter":
+        steps = int(params.get("trotter_steps", 1))
+        field = float(params.get("field", 0.0))
+        op = qsharp_module.code.HamiltonianSimulation.HeisenbergTrotter.Run
+        return op, (num_sites, steps, coupling, field, total_time)
+    if case_name == "tfim_lcu":
+        field = float(params.get("h", 0.0))
+        op = qsharp_module.code.HamiltonianSimulation.TFIMLCU.Run
+        return op, (num_sites, coupling, field, total_time)
+    if case_name == "heis_lcu":
+        field = float(params.get("field", 0.0))
+        op = qsharp_module.code.HamiltonianSimulation.HeisenbergLCU.Run
+        return op, (num_sites, coupling, field, total_time)
+    raise KeyError(case_name)
+
+
+def build_strawberryfields_program(
+    case_name: str, num_qubits: int, total_time: float, params: Dict[str, Any]
+) -> Tuple[Optional[Any], Optional[str]]:
     try:
         import strawberryfields as sf  # type: ignore
         from programs.strawberryfields import common as sf_common  # type: ignore

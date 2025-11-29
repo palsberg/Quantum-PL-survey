@@ -1,4 +1,13 @@
-"""TFIM dual-rail Trotter circuit using Strawberry Fields."""
+"""Dual-rail CV Trotterization of the TFIM in Strawberry Fields.
+
+This module implements a dual-rail continuous-variable encoding of a
+Trotterized transverse-field Ising model using Strawberry Fields. The
+resulting state is projected back onto the logical qubit subspace and
+used as an approximate qubit implementation in the cross-language
+correctness and benchmarking harness; fidelity is evaluated against the
+exact qubit TFIM Hamiltonian, with leakage and finite Fock cutoff
+potentially lowering the achieved fidelity.
+"""
 
 from __future__ import annotations
 

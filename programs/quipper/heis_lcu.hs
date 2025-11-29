@@ -1,6 +1,20 @@
+{-# LANGUAGE RecordWildCards #-}
+
 import Control.Monad (foldM)
+import System.Environment (getArgs)
+
 import Quipper
 import QuipperCommon
+import QuipperSimulationCLI
+  ( CaseParams(..)
+  , SimConfig
+  , emitMetricsJSON
+  , emitStatevectorJSON
+  , numSitesWithDefault
+  , paramWithDefault
+  , readSimConfig
+  , timeWithDefault
+  )
 
 applyHeisTerm :: (String, Int, Timestep) -> [Qubit] -> Circ [Qubit]
 applyHeisTerm ("XX", idx, angle) qs = do
@@ -33,14 +47,51 @@ buildHeisTerms n j field totalTime =
 heisLcuCircuit :: Int -> Double -> Double -> Double -> Circ [Qubit]
 heisLcuCircuit n j field totalTime = do
     qs <- qinit (replicate n False)
-    qs <- initializeTilt qs
     foldM (flip applyHeisTerm) qs (buildHeisTerms n j field totalTime)
+
+data HeisLcuArgs = HeisLcuArgs
+    { argSites :: !Int
+    , argJ :: !Double
+    , argField :: !Double
+    , argTotalTime :: !Double
+    }
+
+defaultArgs :: HeisLcuArgs
+defaultArgs = HeisLcuArgs
+    { argSites = 4
+    , argJ = 1.0
+    , argField = 0.3
+    , argTotalTime = 0.2
+    }
+
+resolveArgs :: SimConfig -> HeisLcuArgs
+resolveArgs cfg = HeisLcuArgs
+    { argSites = numSitesWithDefault (argSites defaultArgs) cfg
+    , argJ = paramWithDefault paramJ (argJ defaultArgs) cfg
+    , argField = paramWithDefault paramField (argField defaultArgs) cfg
+    , argTotalTime = timeWithDefault (argTotalTime defaultArgs) cfg
+    }
+
+buildCircuit :: HeisLcuArgs -> () -> Circ [Qubit]
+buildCircuit HeisLcuArgs{..} () =
+    heisLcuCircuit argSites argJ argField argTotalTime
 
 main :: IO ()
 main = do
-    let n = 4
-        j = 1.0
-        field = 0.3
-        totalTime = 0.2
-    print_simple Preview   (heisLcuCircuit n j field totalTime)
-    print_simple GateCount (heisLcuCircuit n j field totalTime)
+    args <- getArgs
+    case args of
+        ["--simulate-json"] -> runSimulate
+        ["--metrics-json"] -> runMetrics
+        _ -> runDefault
+  where
+    runSimulate = do
+        cfg <- readSimConfig
+        let params = resolveArgs cfg
+        emitStatevectorJSON (argSites params) (buildCircuit params)
+    runMetrics = do
+        cfg <- readSimConfig
+        let params = resolveArgs cfg
+        emitMetricsJSON (argSites params) (buildCircuit params)
+    runDefault = do
+        let params = defaultArgs
+        print_simple GateCount (buildCircuit params ())

@@ -1,44 +1,64 @@
-const pi : real = 3.141592653589793;
+// TFIM time evolution via a simple LCU-style block in Silq.
+// This example uses a single ancilla qubit prepared in superposition to
+// control whether a short TFIM evolution is applied. It is not a full
+// truncated-Taylor implementation, but mirrors the PREPARE–SELECT–UNPREPARE
+// structure used in other languages.
 
-struct Term {
-  gate : int;
-  i : int;
-  j : int;
-  angle : real;
-}
-
-proc apply_term(term : Term, qs : qureg 2) : qureg 2 {
-  var work := qs;
-  if term.gate == 0 {
-    work[term.i] := rotX(2.0 * term.angle, work[term.i]);
-  } else {
-    let (qi, qj) := (work[term.i], work[term.j]);
-    let (a, b) := evolveZZ(term.angle, qi, qj);
-    work[term.i] := a;
-    work[term.j] := b;
+def cnot(const x:𝔹, y:𝔹):𝔹{
+  if x{
+    y := X(y);
   }
-  return work;
+  return y;
 }
 
-proc evolveZZ(theta : real, qi : qubit, qj : qubit) : (qubit, qubit) {
-  (qi, qj) := cnot(qi, qj);
-  qj := rotZ(2.0 * theta, qj);
-  (qi, qj) := cnot(qi, qj);
-  return (qi, qj);
+def evolveZZ(theta:!ℝ, qs:𝔹^2):𝔹^2{
+  (q0,q1) := qs;
+  q1 := cnot(q0,q1);
+  q1 := rotZ(2.0 * theta, q1);
+  q1 := cnot(q0,q1);
+  return (q0,q1);
 }
 
-proc tfim_lcu(total_time : real) {
-  var qs : qureg 2 := |0>^2;
-  let terms : list<Term> := [
-    Term(0, 0, -1, 0.5 * total_time),
-    Term(0, 1, -1, 0.5 * total_time),
-    Term(1, 0, 1, 1.0 * total_time)
-  ];
-  for term in terms {
-    qs := apply_term(term, qs);
+// Apply a short TFIM evolution exp(-i H dt) with
+//   H = J Z_0 Z_1 + h (X_0 + X_1)
+// using the same primitives as the Trotter program.
+def tfim_short_step(J:!ℝ, h:!ℝ, dt:!ℝ, qs:𝔹^2):𝔹^2{
+  qs := evolveZZ(J * dt, qs);
+  angleX := (2.0 * h * dt):!ℝ;
+  qs[0] := rotX(angleX, qs[0]);
+  qs[1] := rotX(angleX, qs[1]);
+  return qs;
+}
+
+// LCU-style block: prepare ancilla in |+>, apply the short TFIM evolution
+// controlled on ancilla = 1, then unprepare ancilla. We return both the
+// ancilla and the system register to satisfy Silq's linearity discipline.
+def tfim_lcu(J:!ℝ, h:!ℝ, total_time:!ℝ, qs:𝔹^2):𝔹 × 𝔹^2{
+  // PREPARE: |0> -> |+> on ancilla.
+  anc := false:𝔹;
+  anc := H(anc);
+
+  // SELECT: apply controlled short evolution when ancilla is |1>.
+  steps := 4:!ℕ;
+  dt := total_time / (steps as !ℝ);
+  if anc{
+    for k in [0..steps){
+      qs := tfim_short_step(J,h,dt,qs);
+    }
   }
+
+  // UNPREPARE ancilla.
+  anc := H(anc);
+
+  return (anc,qs);
 }
 
-proc main() {
-  tfim_lcu(0.2);
+// Example configuration matching the harness parameters (two sites,
+// J = 1.0, h = 0.5, t = 0.1).
+def main():𝔹 × 𝔹^2{
+  qs := vector(2,0:𝔹);
+  J := 1.0:!ℝ;
+  h := 0.5:!ℝ;
+  total_time := 0.1:!ℝ;
+  return tfim_lcu(J,h,total_time,qs);
 }

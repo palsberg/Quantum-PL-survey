@@ -1,4 +1,13 @@
-"""Heisenberg XXX dual-rail Trotter circuit with Strawberry Fields."""
+"""Dual-rail CV Trotterization of the Heisenberg XXX model in Strawberry Fields.
+
+This module implements a dual-rail continuous-variable encoding of a
+Trotterized Heisenberg XXX chain with longitudinal field using
+Strawberry Fields. The resulting state is projected onto the logical
+qubit subspace and used as an approximate qubit implementation in the
+cross-language harness; fidelity is evaluated against the exact qubit
+Heisenberg Hamiltonian, and can be reduced by leakage and finite Fock
+cutoff effects.
+"""
 
 from __future__ import annotations
 

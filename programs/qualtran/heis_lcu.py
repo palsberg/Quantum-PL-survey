@@ -1,4 +1,4 @@
-"""Heisenberg XXX via Qualtran metadata + Cirq LCU fallback."""
+"""Heisenberg XXX via Qualtran-native 2nd-order Taylor LCU block."""
 
 from __future__ import annotations
 
@@ -6,11 +6,17 @@ from typing import Any, Dict
 
 import numpy as np
 
-from ..cirq import heis_lcu as cirq_heis_lcu
+from .common import heis_lcu_state
 
 
 def run_simulation(config: Dict[str, Any]) -> np.ndarray:
-    return cirq_heis_lcu.run_simulation(config)
+    num_sites = int(config["num_sites"])
+    time = float(config["time"])
+    params = config.get("params", {})
+    J = float(params["J"])
+    field = float(params["field"])
+    precision = float(params["lcu_precision"])
+    return heis_lcu_state(num_sites, J, field, time, precision)
 
 
 if __name__ == "__main__":

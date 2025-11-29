@@ -1,10 +1,12 @@
-"""TFIM via HML sketch + Cirq backend."""
+"""TFIM via HML / SimuQ sketch + Qiskit backend."""
 
 from __future__ import annotations
 
 from typing import Any, Dict
 
-from ..cirq import common as cirq_common
+from simuq.qsystem import QSystem
+from simuq.environment import Qubit
+
 from . import common as hml_common
 
 
@@ -19,8 +21,23 @@ def run_simulation(config: Dict[str, Any]):
     spec = hml_common.render_tfim_trotter_spec(num_sites, J, h, total_time, steps)
     hml_common.emit_spec("tfim_trotter", spec, params)
 
-    circuit, qubits = cirq_common.trotterize_tfim(num_sites, J, h, total_time, steps)
-    return cirq_common.simulate_statevector(circuit, qubits)
+    dt = total_time / steps
+    qs = QSystem()
+    q = [Qubit(qs) for _ in range(num_sites)]
+
+    # Match the HML spec: H_ZZ and H_X terms on a chain of qubits.
+    H_ZZ = 0
+    for i in range(num_sites - 1):
+        H_ZZ += J * (q[i].Z * q[i + 1].Z)
+    H_X = 0
+    for i in range(num_sites):
+        H_X += h * q[i].X
+
+    for _ in range(steps):
+        qs.add_evolution(H_ZZ, dt)
+        qs.add_evolution(H_X, dt)
+
+    return hml_common.simulate_qsystem_with_qiskit(qs, num_sites)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,11 @@
-"""Sequential Heisenberg XXX 'LCU' circuit using Strawberry Fields."""
+"""Sequential dual-rail CV circuit over Heisenberg XXX terms (not a full Taylor LCU).
+
+This module applies Heisenberg XXX + field terms sequentially in a
+dual-rail CV encoding using Strawberry Fields. It is *not* a full
+2nd-order Taylor LCU block encoding with selection ancillas and
+PREPARE/SELECT oracles, and is therefore kept N/A in the cross-language
+LCU correctness and metric comparison.
+"""
 
 from __future__ import annotations
 

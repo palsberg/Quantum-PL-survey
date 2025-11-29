@@ -1,59 +1,78 @@
-const pi : real = 3.141592653589793;
+// Heisenberg XXX + field time evolution via a simple LCU-style block
+// in Silq, specialized to two qubits. As in the TFIM case, we use one
+// ancilla qubit in superposition to control whether a short Heisenberg
+// evolution is applied.
 
-struct HTerm {
-  gate : int;
-  i : int;
-  j : int;
-  angle : real;
-}
-
-proc evolveZZ(theta : real, qi : qubit, qj : qubit) : (qubit, qubit) {
-  (qi, qj) := cnot(qi, qj);
-  qj := rotZ(2.0 * theta, qj);
-  (qi, qj) := cnot(qi, qj);
-  return (qi, qj);
-}
-
-proc evolveXX(theta : real, qi : qubit, qj : qubit) : (qubit, qubit) {
-  qi := H(qi);
-  qj := H(qj);
-  let (a, b) := evolveZZ(theta, qi, qj);
-  a := H(a);
-  b := H(b);
-  return (a, b);
-}
-
-proc apply_heis(term : HTerm, qs : qureg 2) : qureg 2 {
-  var work := qs;
-  if term.gate == 0 {
-    work[term.i] := rotZ(2.0 * term.angle, work[term.i]);
-  } else if term.gate == 1 {
-    let (qi, qj) := (work[term.i], work[term.j]);
-    let (a, b) := evolveXX(term.angle, qi, qj);
-    work[term.i] := a;
-    work[term.j] := b;
-  } else {
-    let (qi, qj) := (work[term.i], work[term.j]);
-    let (a, b) := evolveZZ(term.angle, qi, qj);
-    work[term.i] := a;
-    work[term.j] := b;
+def cnot(const x:𝔹, y:𝔹):𝔹{
+  if x{
+    y := X(y);
   }
-  return work;
+  return y;
 }
 
-proc heis_lcu(total_time : real) {
-  var qs : qureg 2 := |0>^2;
-  let terms : list<HTerm> := [
-    HTerm(1, 0, 1, 0.3 * total_time),
-    HTerm(2, 0, 1, 0.3 * total_time),
-    HTerm(0, 0, -1, 0.1 * total_time),
-    HTerm(0, 1, -1, 0.1 * total_time)
-  ];
-  for term in terms {
-    qs := apply_heis(term, qs);
+def evolveZZ(theta:!ℝ, qs:𝔹^2):𝔹^2{
+  (q0,q1) := qs;
+  q1 := cnot(q0,q1);
+  q1 := rotZ(2.0 * theta, q1);
+  q1 := cnot(q0,q1);
+  return (q0,q1);
+}
+
+def evolveXX(theta:!ℝ, qs:𝔹^2):𝔹^2{
+  (q0,q1) := qs;
+  q0 := H(q0);
+  q1 := H(q1);
+  (q0,q1) := evolveZZ(theta, (q0,q1));
+  q0 := H(q0);
+  q1 := H(q1);
+  return (q0,q1);
+}
+
+def evolveYY(theta:!ℝ, qs:𝔹^2):𝔹^2{
+  (q0,q1) := qs;
+  half_pi := 1.5707963267948966:!ℝ;
+  q0 := rotX(-half_pi, q0);
+  q1 := rotX(-half_pi, q1);
+  (q0,q1) := evolveZZ(theta, (q0,q1));
+  q0 := rotX(half_pi, q0);
+  q1 := rotX(half_pi, q1);
+  return (q0,q1);
+}
+
+// One short Heisenberg XXX + field step with
+//   H = J (X_0 X_1 + Y_0 Y_1 + Z_0 Z_1) + B (Z_0 + Z_1).
+def heis_short_step(J:!ℝ, field:!ℝ, dt:!ℝ, qs:𝔹^2):𝔹^2{
+  qs := evolveXX(J * dt, qs);
+  qs := evolveYY(J * dt, qs);
+  qs := evolveZZ(J * dt, qs);
+  angleZ := (2.0 * field * dt):!ℝ;
+  qs[0] := rotZ(angleZ, qs[0]);
+  qs[1] := rotZ(angleZ, qs[1]);
+  return qs;
+}
+
+// LCU-style block with one ancilla controlling a short Heisenberg evolution.
+def heis_lcu(J:!ℝ, field:!ℝ, total_time:!ℝ, qs:𝔹^2):𝔹 × 𝔹^2{
+  anc := false:𝔹;
+  anc := H(anc);
+
+  steps := 4:!ℕ;
+  dt := total_time / (steps as !ℝ);
+  if anc{
+    for k in [0..steps){
+      qs := heis_short_step(J,field,dt,qs);
+    }
   }
+
+  anc := H(anc);
+  return (anc,qs);
 }
 
-proc main() {
-  heis_lcu(0.2);
+// Example configuration: two-site XXX chain with J = 0.8, B = 0.2, t = 0.1.
+def main():𝔹 × 𝔹^2{
+  qs := vector(2,0:𝔹);
+  J := 0.8:!ℝ;
+  field := 0.2:!ℝ;
+  total_time := 0.1:!ℝ;
+  return heis_lcu(J,field,total_time,qs);
 }

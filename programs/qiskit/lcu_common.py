@@ -61,16 +61,37 @@ def apply_controlled_pauli_string(
 
 
 def simulate_block_state(qc: QuantumCircuit, num_system: int, num_index: int) -> np.ndarray:
-    """Simulate and project onto ancilla |0…0>, phase |1>."""
+    """Simulate the block-encoding and post-select on index |0…0>, phase |1>."""
     state = Statevector.from_instruction(qc).data
-    dim_sys = 2**num_system
-    dim_index = 2**num_index
-    state = state.reshape((dim_sys, dim_index, 2))
-    slice_vec = state[:, 0, 1]
-    norm = np.linalg.norm(slice_vec)
+    n_sys = num_system
+    n_idx = num_index
+    total_qubits = n_sys + n_idx + 1
+    expected_dim = 2**total_qubits
+    if state.size != expected_dim:
+        raise ValueError(
+            f"Statevector dimension {state.size} incompatible with "
+            f"{n_sys} system, {n_idx} index qubits."
+        )
+
+    def bits(value: int, width: int) -> list[int]:
+        return [(value >> k) & 1 for k in range(width)]
+
+    success = np.zeros(2**n_sys, dtype=np.complex128)
+    for sys_state in range(2**n_sys):
+        sys_bits = bits(sys_state, n_sys)
+        idx_bits = [0] * n_idx
+        phase_bit = 1
+        basis_index = 0
+        shift = 0
+        for bit in sys_bits + idx_bits + [phase_bit]:
+            basis_index |= (bit << shift)
+            shift += 1
+        success[sys_state] = state[basis_index]
+
+    norm = np.linalg.norm(success)
     if norm == 0:
-        raise ValueError("LCU circuit returned zero amplitude on |0^m 1>.")
-    return slice_vec / norm
+        raise ValueError("LCU circuit returned zero amplitude on |0^m, 1> slice.")
+    return success / norm
 
 
 def build_lcu_circuit(

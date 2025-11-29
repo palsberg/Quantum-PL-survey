@@ -12,8 +12,8 @@
     }
 
     gate YY(theta) a, b {
-        sdag a;
-        sdag b;
+        sdg a;
+        sdg b;
         h a;
         h b;
         cx a, b;

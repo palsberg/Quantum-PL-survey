@@ -1,4 +1,11 @@
-"""Sequential TFIM 'LCU' circuit using Strawberry Fields dual-rail encoding."""
+"""Sequential dual-rail CV circuit over TFIM terms (not a full Taylor LCU).
+
+This module applies TFIM terms sequentially in a dual-rail CV encoding
+using Strawberry Fields. It is *not* a full 2nd-order Taylor LCU block
+encoding: there are no explicit selection ancillas or PREPARE/SELECT
+oracles. In the cross-language comparison, this implementation is kept
+N/A for LCU correctness and gate-count metrics.
+"""
 
 from __future__ import annotations
 

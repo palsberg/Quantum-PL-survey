@@ -1,5 +1,6 @@
 namespace HamiltonianSimulation.Common {
     open Microsoft.Quantum.Intrinsic;
+    open Std.Diagnostics;
     open Std.Math;
     open Std.Convert;
 
@@ -588,6 +589,7 @@ namespace HamiltonianSimulation.Common {
             set idx += 1;
         }
 
+        DumpMachine();
         Adjoint PrepareSelectorState(amplitudes, selector);
         Reset(phase);
         ResetAll(selector);

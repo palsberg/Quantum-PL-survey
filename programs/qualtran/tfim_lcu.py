@@ -1,9 +1,4 @@
-"""TFIM via Qualtran metadata + Cirq LCU fallback.
-
-Qualtran tracks the Hamiltonian/source of truth while the executable LCU circuit
-reuses the Cirq implementation to keep the harness runnable without heavy
-alias-sampling ancillas.
-"""
+"""TFIM via Qualtran-native 2nd-order Taylor LCU block."""
 
 from __future__ import annotations
 
@@ -11,11 +6,17 @@ from typing import Any, Dict
 
 import numpy as np
 
-from ..cirq import tfim_lcu as cirq_tfim_lcu
+from .common import tfim_lcu_state
 
 
 def run_simulation(config: Dict[str, Any]) -> np.ndarray:
-    return cirq_tfim_lcu.run_simulation(config)
+    num_sites = int(config["num_sites"])
+    time = float(config["time"])
+    params = config.get("params", {})
+    J = float(params["J"])
+    h = float(params["h"])
+    precision = float(params["lcu_precision"])
+    return tfim_lcu_state(num_sites, J, h, time, precision)
 
 
 if __name__ == "__main__":

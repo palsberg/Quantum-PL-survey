@@ -8,7 +8,6 @@ namespace HamiltonianSimulation.TFIMLCU {
         let (coeffs, paulis) = TFIMPaulis(numSites, couplingJ, fieldH);
         let (weights, terms, tags) = LcuDataFromHamiltonian(coeffs, paulis, totalTime);
         ApplyLcuBlock(weights, terms, tags, system);
-        DumpMachine();
         ResetAll(system);
     }
 }

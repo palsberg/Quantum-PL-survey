@@ -13,18 +13,16 @@
     },
     "implementation_path": "programs/cirq/tfim_trotter.py",
     "backend": "cirq.Simulator",
-    "compilation_time_seconds": 0.023376833996735513,
-    "execution_time_seconds": 0.001789625035598874,
-    "total_gate_count": 228,
-    "two_qubit_gate_count": 72,
-    "circuit_depth": 57,
+    "compilation_time_seconds": 0.0029748750384896994,
+    "execution_time_seconds": 0.0049855830147862434,
+    "total_gate_count": 76,
+    "two_qubit_gate_count": 36,
+    "circuit_depth": 19,
     "qubit_count": 10,
     "native_gate_set": [
-      "CXPowGate",
-      "HPowGate",
-      "Rz"
+      "PauliStringPhasorGate"
     ],
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "cirq": "1.4.0"
     },
@@ -45,8 +43,8 @@
     },
     "implementation_path": "programs/cirq/tfim_lcu.py",
     "backend": "cirq.Simulator",
-    "compilation_time_seconds": 0.05710195901338011,
-    "execution_time_seconds": 0.0022449580719694495,
+    "compilation_time_seconds": 0.05207037506625056,
+    "execution_time_seconds": 0.0021870419150218368,
     "total_gate_count": 2685,
     "two_qubit_gate_count": 0,
     "circuit_depth": 1063,
@@ -56,7 +54,7 @@
       "MatrixGate",
       "_PauliX"
     ],
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "cirq": "1.4.0"
     },
@@ -77,19 +75,16 @@
     },
     "implementation_path": "programs/cirq/heis_trotter.py",
     "backend": "cirq.Simulator",
-    "compilation_time_seconds": 0.012728917063213885,
-    "execution_time_seconds": 0.003281082957983017,
-    "total_gate_count": 796,
-    "two_qubit_gate_count": 216,
-    "circuit_depth": 229,
+    "compilation_time_seconds": 0.005354042048566043,
+    "execution_time_seconds": 0.007476290920749307,
+    "total_gate_count": 148,
+    "two_qubit_gate_count": 108,
+    "circuit_depth": 35,
     "qubit_count": 10,
     "native_gate_set": [
-      "CXPowGate",
-      "HPowGate",
-      "Rz",
-      "ZPowGate"
+      "PauliStringPhasorGate"
     ],
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "cirq": "1.4.0"
     },
@@ -110,8 +105,8 @@
     },
     "implementation_path": "programs/cirq/heis_lcu.py",
     "backend": "cirq.Simulator",
-    "compilation_time_seconds": 0.37146762502379715,
-    "execution_time_seconds": 0.003730541095137596,
+    "compilation_time_seconds": 0.36541495798155665,
+    "execution_time_seconds": 0.00356749992351979,
     "total_gate_count": 12666,
     "two_qubit_gate_count": 0,
     "circuit_depth": 4034,
@@ -121,7 +116,7 @@
       "MatrixGate",
       "_PauliX"
     ],
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "cirq": "1.4.0"
     },
@@ -143,13 +138,13 @@
     "implementation_path": "programs/hml/tfim_trotter.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.06423966703005135,
+    "execution_time_seconds": 0.06409137498121709,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "simuq": "unknown"
     },
@@ -171,13 +166,13 @@
     "implementation_path": "programs/hml/tfim_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.0005019170930609107,
+    "execution_time_seconds": 0.0002775000175461173,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "simuq": "unknown"
     },
@@ -199,13 +194,13 @@
     "implementation_path": "programs/hml/heis_trotter.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.001528542023152113,
+    "execution_time_seconds": 0.0012287499848753214,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "simuq": "unknown"
     },
@@ -227,13 +222,13 @@
     "implementation_path": "programs/hml/heis_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.0005720419576391578,
+    "execution_time_seconds": 0.00042987498454749584,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "simuq": "unknown"
     },
@@ -254,8 +249,8 @@
     },
     "implementation_path": "programs/openqasm/tfim_trotter.py",
     "backend": "generic_backend_10q",
-    "compilation_time_seconds": 0.22238591697532684,
-    "execution_time_seconds": 0.0028868330409750342,
+    "compilation_time_seconds": 0.1733595000114292,
+    "execution_time_seconds": 0.0027424159925431013,
     "total_gate_count": 304,
     "two_qubit_gate_count": 72,
     "circuit_depth": 65,
@@ -265,7 +260,7 @@
       "rz",
       "sx"
     ],
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "qiskit": "2.2.3"
     },
@@ -287,13 +282,13 @@
     "implementation_path": "programs/openqasm/tfim_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.027170958928763866,
+    "execution_time_seconds": 0.026623249985277653,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "qiskit": "2.2.3"
     },
@@ -314,18 +309,18 @@
     },
     "implementation_path": "programs/openqasm/heis_trotter.py",
     "backend": "generic_backend_10q",
-    "compilation_time_seconds": 0.0184307909803465,
-    "execution_time_seconds": 0.005898041999898851,
-    "total_gate_count": 511,
+    "compilation_time_seconds": 0.01696241705212742,
+    "execution_time_seconds": 0.00577620801050216,
+    "total_gate_count": 500,
     "two_qubit_gate_count": 108,
-    "circuit_depth": 129,
+    "circuit_depth": 128,
     "qubit_count": 10,
     "native_gate_set": [
       "cx",
       "rz",
       "sx"
     ],
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "qiskit": "2.2.3"
     },
@@ -347,13 +342,13 @@
     "implementation_path": "programs/openqasm/heis_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.5485317920101807,
+    "execution_time_seconds": 0.5775496669812128,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "qiskit": "2.2.3"
     },
@@ -375,7 +370,7 @@
     "implementation_path": "programs/pennylane/tfim_trotter.py",
     "backend": "qml.default.qubit",
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.0018695000326260924,
+    "execution_time_seconds": 0.0015878750709816813,
     "total_gate_count": 76,
     "two_qubit_gate_count": 36,
     "circuit_depth": 19,
@@ -383,7 +378,7 @@
     "native_gate_set": [
       "PauliRot"
     ],
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "pennylane": "0.43.1"
     },
@@ -405,7 +400,7 @@
     "implementation_path": "programs/pennylane/tfim_lcu.py",
     "backend": "qml.default.qubit",
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.0051077090902253985,
+    "execution_time_seconds": 0.004292499972507358,
     "total_gate_count": 2685,
     "two_qubit_gate_count": null,
     "circuit_depth": 1063,
@@ -418,7 +413,7 @@
       "MultiControlledX",
       "PauliX"
     ],
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "pennylane": "0.43.1"
     },
@@ -440,7 +435,7 @@
     "implementation_path": "programs/pennylane/heis_trotter.py",
     "backend": "qml.default.qubit",
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.0014895829372107983,
+    "execution_time_seconds": 0.001399958971887827,
     "total_gate_count": 148,
     "two_qubit_gate_count": 108,
     "circuit_depth": 49,
@@ -448,7 +443,7 @@
     "native_gate_set": [
       "PauliRot"
     ],
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "pennylane": "0.43.1"
     },
@@ -470,7 +465,7 @@
     "implementation_path": "programs/pennylane/heis_lcu.py",
     "backend": "qml.default.qubit",
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.00817012507468462,
+    "execution_time_seconds": 0.08565862500108778,
     "total_gate_count": 12666,
     "two_qubit_gate_count": null,
     "circuit_depth": 4034,
@@ -484,7 +479,7 @@
       "MultiControlledX",
       "PauliX"
     ],
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "pennylane": "0.43.1"
     },
@@ -506,17 +501,17 @@
     "implementation_path": "programs/pyquil/tfim_trotter.py",
     "backend": "pyquil.NumpyWavefunctionSimulator",
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.0006932920077815652,
-    "total_gate_count": 148,
+    "execution_time_seconds": 0.0014689170056954026,
+    "total_gate_count": 228,
     "two_qubit_gate_count": 72,
-    "circuit_depth": 49,
+    "circuit_depth": 57,
     "qubit_count": 10,
     "native_gate_set": [
       "CNOT",
-      "RX",
+      "H",
       "RZ"
     ],
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "pyquil": "4.17.0"
     },
@@ -538,13 +533,13 @@
     "implementation_path": "programs/pyquil/tfim_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.0042435829527676105,
+    "execution_time_seconds": 0.004163000034168363,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "pyquil": "4.17.0"
     },
@@ -566,18 +561,18 @@
     "implementation_path": "programs/pyquil/heis_trotter.py",
     "backend": "pyquil.NumpyWavefunctionSimulator",
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.001956083928234875,
-    "total_gate_count": 796,
+    "execution_time_seconds": 0.0026059590745717287,
+    "total_gate_count": 652,
     "two_qubit_gate_count": 216,
-    "circuit_depth": 229,
+    "circuit_depth": 149,
     "qubit_count": 10,
     "native_gate_set": [
       "CNOT",
       "H",
-      "PHASE",
+      "RX",
       "RZ"
     ],
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "pyquil": "4.17.0"
     },
@@ -599,13 +594,13 @@
     "implementation_path": "programs/pyquil/heis_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.02671266603283584,
+    "execution_time_seconds": 0.02624866703990847,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "pyquil": "4.17.0"
     },
@@ -626,8 +621,8 @@
     },
     "implementation_path": "programs/qiskit/tfim_trotter.py",
     "backend": "generic_backend_10q",
-    "compilation_time_seconds": 0.00557508401107043,
-    "execution_time_seconds": 0.0006292500765994191,
+    "compilation_time_seconds": 0.005489833070896566,
+    "execution_time_seconds": 0.00048416596837341785,
     "total_gate_count": 304,
     "two_qubit_gate_count": 72,
     "circuit_depth": 65,
@@ -637,7 +632,7 @@
       "rz",
       "sx"
     ],
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "qiskit": "2.2.3"
     },
@@ -658,11 +653,11 @@
     },
     "implementation_path": "programs/qiskit/tfim_lcu.py",
     "backend": "generic_backend_19q",
-    "compilation_time_seconds": 4.509656582958996,
-    "execution_time_seconds": 0.010697584017179906,
+    "compilation_time_seconds": 4.45470166602172,
+    "execution_time_seconds": 0.01037387503311038,
     "total_gate_count": 50201,
     "two_qubit_gate_count": 18043,
-    "circuit_depth": 38208,
+    "circuit_depth": 38503,
     "qubit_count": 19,
     "native_gate_set": [
       "cx",
@@ -670,7 +665,7 @@
       "sx",
       "x"
     ],
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "qiskit": "2.2.3"
     },
@@ -691,19 +686,18 @@
     },
     "implementation_path": "programs/qiskit/heis_trotter.py",
     "backend": "generic_backend_10q",
-    "compilation_time_seconds": 0.005391250015236437,
-    "execution_time_seconds": 0.0013255419908091426,
-    "total_gate_count": 441,
-    "two_qubit_gate_count": 72,
-    "circuit_depth": 111,
+    "compilation_time_seconds": 0.006183417048305273,
+    "execution_time_seconds": 0.0006270000012591481,
+    "total_gate_count": 513,
+    "two_qubit_gate_count": 108,
+    "circuit_depth": 131,
     "qubit_count": 10,
     "native_gate_set": [
       "cx",
       "rz",
-      "sx",
-      "x"
+      "sx"
     ],
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "qiskit": "2.2.3"
     },
@@ -724,8 +718,8 @@
     },
     "implementation_path": "programs/qiskit/heis_lcu.py",
     "backend": "generic_backend_21q",
-    "compilation_time_seconds": 10.92737254104577,
-    "execution_time_seconds": 0.04421695903874934,
+    "compilation_time_seconds": 10.639865415985696,
+    "execution_time_seconds": 0.04283545899670571,
     "total_gate_count": 542441,
     "two_qubit_gate_count": 199950,
     "circuit_depth": 508135,
@@ -736,7 +730,7 @@
       "sx",
       "x"
     ],
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "qiskit": "2.2.3"
     },
@@ -758,13 +752,13 @@
     "implementation_path": "programs/qrisp/tfim_trotter.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.4599429169902578,
+    "execution_time_seconds": 0.47490729205310345,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "qrisp": "unknown"
     },
@@ -786,13 +780,13 @@
     "implementation_path": "programs/qrisp/tfim_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.011150458944030106,
+    "execution_time_seconds": 0.011200124979950488,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "qrisp": "unknown"
     },
@@ -814,13 +808,13 @@
     "implementation_path": "programs/qrisp/heis_trotter.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.00808504200540483,
+    "execution_time_seconds": 0.007083334028720856,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "qrisp": "unknown"
     },
@@ -842,13 +836,13 @@
     "implementation_path": "programs/qrisp/heis_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.030471957987174392,
+    "execution_time_seconds": 0.028904374921694398,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "qrisp": "unknown"
     },
@@ -870,7 +864,7 @@
     "implementation_path": "programs/qsharp/tfim_trotter.py",
     "backend": "qsharp.FullStateSimulator",
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.0005546669708564878,
+    "execution_time_seconds": 0.00046316697262227535,
     "total_gate_count": 86,
     "two_qubit_gate_count": 0,
     "circuit_depth": 20,
@@ -878,7 +872,7 @@
     "native_gate_set": [
       "LogicalCounts"
     ],
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "qsharp": "unknown"
     },
@@ -900,7 +894,7 @@
     "implementation_path": "programs/qsharp/tfim_lcu.py",
     "backend": "qsharp.FullStateSimulator",
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.0011556249810382724,
+    "execution_time_seconds": 0.0008666670182719827,
     "total_gate_count": 12174,
     "two_qubit_gate_count": 6213,
     "circuit_depth": 302,
@@ -908,7 +902,7 @@
     "native_gate_set": [
       "LogicalCounts"
     ],
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "qsharp": "unknown"
     },
@@ -930,7 +924,7 @@
     "implementation_path": "programs/qsharp/heis_trotter.py",
     "backend": "qsharp.FullStateSimulator",
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.0003275829367339611,
+    "execution_time_seconds": 0.00031979207415133715,
     "total_gate_count": 158,
     "two_qubit_gate_count": 0,
     "circuit_depth": 50,
@@ -938,7 +932,7 @@
     "native_gate_set": [
       "LogicalCounts"
     ],
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "qsharp": "unknown"
     },
@@ -960,7 +954,7 @@
     "implementation_path": "programs/qsharp/heis_lcu.py",
     "backend": "qsharp.FullStateSimulator",
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.002481750096194446,
+    "execution_time_seconds": 0.0024512920062988997,
     "total_gate_count": 59103,
     "two_qubit_gate_count": 30102,
     "circuit_depth": 1034,
@@ -968,7 +962,7 @@
     "native_gate_set": [
       "LogicalCounts"
     ],
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "qsharp": "unknown"
     },
@@ -990,13 +984,13 @@
     "implementation_path": "programs/qualtran/tfim_trotter.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.06592675007414073,
+    "execution_time_seconds": 0.06002087506931275,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "qualtran": "unknown"
     },
@@ -1018,13 +1012,13 @@
     "implementation_path": "programs/qualtran/tfim_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 20.387403624947183,
+    "execution_time_seconds": 19.516930749989115,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "qualtran": "unknown"
     },
@@ -1046,13 +1040,13 @@
     "implementation_path": "programs/qualtran/heis_trotter.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.012963165994733572,
+    "execution_time_seconds": 0.013684457982890308,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "qualtran": "unknown"
     },
@@ -1074,13 +1068,13 @@
     "implementation_path": "programs/qualtran/heis_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 4.845613291952759,
+    "execution_time_seconds": 4.39097170799505,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "qualtran": "unknown"
     },
@@ -1102,13 +1096,13 @@
     "implementation_path": "programs/quipper/tfim_trotter.hs",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.23724916600622237,
+    "execution_time_seconds": 0.20393566694110632,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "quipper": "cli"
     },
@@ -1130,13 +1124,13 @@
     "implementation_path": "programs/quipper/tfim_lcu.hs",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.1836050000274554,
+    "execution_time_seconds": 0.17871091701090336,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "quipper": "cli"
     },
@@ -1158,13 +1152,13 @@
     "implementation_path": "programs/quipper/heis_trotter.hs",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.18268641596660018,
+    "execution_time_seconds": 0.17929862497840077,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "quipper": "cli"
     },
@@ -1186,13 +1180,13 @@
     "implementation_path": "programs/quipper/heis_lcu.hs",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.19906966702546924,
+    "execution_time_seconds": 0.17682929197326303,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "quipper": "cli"
     },
@@ -1214,13 +1208,13 @@
     "implementation_path": "programs/silq/tfim_trotter.slq",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.1482009160099551,
+    "execution_time_seconds": 0.1491222089389339,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "silq": "cli"
     },
@@ -1242,13 +1236,13 @@
     "implementation_path": "programs/silq/tfim_lcu.slq",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.11643670802004635,
+    "execution_time_seconds": 0.11694629199337214,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "silq": "cli"
     },
@@ -1270,13 +1264,13 @@
     "implementation_path": "programs/silq/heis_trotter.slq",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.11776470800396055,
+    "execution_time_seconds": 0.10873116599395871,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "silq": "cli"
     },
@@ -1298,13 +1292,13 @@
     "implementation_path": "programs/silq/heis_lcu.slq",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.1172601250000298,
+    "execution_time_seconds": 0.11842466599773616,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "silq": "cli"
     },
@@ -1326,13 +1320,13 @@
     "implementation_path": "programs/strawberryfields/tfim_trotter.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 3.0764471670845523,
+    "execution_time_seconds": 3.059752583038062,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "strawberryfields": "0.19.0"
     },
@@ -1354,13 +1348,13 @@
     "implementation_path": "programs/strawberryfields/tfim_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.019393709022551775,
+    "execution_time_seconds": 0.015018000034615397,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "strawberryfields": "0.19.0"
     },
@@ -1382,13 +1376,13 @@
     "implementation_path": "programs/strawberryfields/heis_trotter.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.09116108401212841,
+    "execution_time_seconds": 0.07228500000201166,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "strawberryfields": "0.19.0"
     },
@@ -1410,13 +1404,13 @@
     "implementation_path": "programs/strawberryfields/heis_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.020064958021976054,
+    "execution_time_seconds": 0.020656084059737623,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "strawberryfields": "0.19.0"
     },
@@ -1438,13 +1432,13 @@
     "implementation_path": "programs/tket/tfim_trotter.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.3095487499376759,
+    "execution_time_seconds": 0.3036637919722125,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "pytket": "2.10.3"
     },
@@ -1466,13 +1460,13 @@
     "implementation_path": "programs/tket/tfim_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.005620958050712943,
+    "execution_time_seconds": 0.005770582938566804,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "pytket": "2.10.3"
     },
@@ -1494,13 +1488,13 @@
     "implementation_path": "programs/tket/heis_trotter.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.001425083028152585,
+    "execution_time_seconds": 0.001423375098966062,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "pytket": "2.10.3"
     },
@@ -1522,13 +1516,13 @@
     "implementation_path": "programs/tket/heis_lcu.py",
     "backend": null,
     "compilation_time_seconds": null,
-    "execution_time_seconds": 0.009581416030414402,
+    "execution_time_seconds": 0.009641625103540719,
     "total_gate_count": null,
     "two_qubit_gate_count": null,
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "timestamp_utc": "2025-11-29T14:19:57.008481+00:00",
+    "timestamp_utc": "2025-11-29T17:48:48.324871+00:00",
     "tool_versions": {
       "pytket": "2.10.3"
     },

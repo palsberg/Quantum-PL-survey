@@ -7,6 +7,7 @@ from typing import List, Sequence, Tuple
 import numpy as np
 from pyquil import Program
 from pyquil.gates import CNOT, H, PHASE, RX, RY, RZ
+from pyquil.paulis import PauliSum, PauliTerm, exponentiate_commuting_pauli_sum
 from pyquil.simulation import NumpyWavefunctionSimulator
 from pyquil.quilbase import DefGate, Gate
 
@@ -85,25 +86,58 @@ def simulate_statevector(prog: Program, num_qubits: int) -> np.ndarray:
 def trotterize_tfim(
     num_sites: int, J: float, h: float, total_time: float, steps: int
 ) -> Tuple[Program, Sequence[int]]:
+    """First-order Lie–Trotter circuit for the TFIM Hamiltonian using PauliSum tools."""
     prog = Program()
     dt = total_time / steps
+
+    # Build commuting Pauli sums for ZZ couplings and X fields.
+    zz_terms = PauliSum([])
+    for i in range(num_sites - 1):
+        zz_terms += J * (PauliTerm("Z", i) * PauliTerm("Z", i + 1))
+
+    x_terms = PauliSum([])
+    for i in range(num_sites):
+        x_terms += h * PauliTerm("X", i)
+
+    evolve_zz = exponentiate_commuting_pauli_sum(zz_terms)
+    evolve_x = exponentiate_commuting_pauli_sum(x_terms)
+
     for _ in range(steps):
-        for i in range(num_sites - 1):
-            apply_two_qubit_rotation(prog, i, i + 1, J * dt, axis="Z")
-        for i in range(num_sites):
-            apply_single_qubit_rotation(prog, i, h * dt, axis="X")
+        prog += evolve_zz(dt)
+        prog += evolve_x(dt)
+
     return prog, list(range(num_sites))
 
 
 def trotterize_heisenberg_xxx(
     num_sites: int, J: float, field: float, total_time: float, steps: int
 ) -> Tuple[Program, Sequence[int]]:
+    """Lie–Trotter circuit for the Heisenberg XXX chain with a field using PauliSum tools."""
     prog = Program()
     dt = total_time / steps
+
+    # Commuting Pauli sums for each interaction axis and the Z field.
+    xx_terms = PauliSum([])
+    yy_terms = PauliSum([])
+    zz_terms = PauliSum([])
+    for i in range(num_sites - 1):
+        xx_terms += J * (PauliTerm("X", i) * PauliTerm("X", i + 1))
+        yy_terms += J * (PauliTerm("Y", i) * PauliTerm("Y", i + 1))
+        zz_terms += J * (PauliTerm("Z", i) * PauliTerm("Z", i + 1))
+
+    field_terms = PauliSum([])
+    for i in range(num_sites):
+        field_terms += field * PauliTerm("Z", i)
+
+    evolve_xx = exponentiate_commuting_pauli_sum(xx_terms)
+    evolve_yy = exponentiate_commuting_pauli_sum(yy_terms)
+    evolve_zz = exponentiate_commuting_pauli_sum(zz_terms)
+    evolve_field = exponentiate_commuting_pauli_sum(field_terms)
+
     for _ in range(steps):
-        for i in range(num_sites - 1):
-            for axis in ("X", "Y", "Z"):
-                apply_two_qubit_rotation(prog, i, i + 1, J * dt, axis=axis)
-        for i in range(num_sites):
-            apply_single_qubit_rotation(prog, i, field * dt, axis="Z")
+        prog += evolve_xx(dt)
+        prog += evolve_yy(dt)
+        prog += evolve_zz(dt)
+        prog += evolve_field(dt)
+
     return prog, list(range(num_sites))

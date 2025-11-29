@@ -20,7 +20,16 @@ os.environ.setdefault("MPLCONFIGDIR", str(_MPL_DIR))
 _MPL_DIR.mkdir(exist_ok=True)
 
 import cirq
-from qualtran import AddControlledT, Bloq, BQUInt, CtrlSpec, QAny, QBit, Register, Signature
+from qualtran import (
+    AddControlledT,
+    Bloq,
+    BQUInt,
+    CtrlSpec,
+    QAny,
+    QBit,
+    Register,
+    Signature,
+)
 from qualtran._infra.gate_with_registers import get_named_qubits, merge_qubits
 from qualtran.bloqs.block_encoding import LCUBlockEncoding
 from qualtran.bloqs.chemistry.trotter.ising import IsingXUnitary, IsingZZUnitary
@@ -45,7 +54,9 @@ def _dense_pauli(pauli: str, coeff: complex) -> cirq.DensePauliString:
     return cirq.DensePauliString(pauli, coefficient=phase)
 
 
-def _to_tuple_dense(xs: Iterable[cirq.DensePauliString]) -> Tuple[cirq.DensePauliString, ...]:
+def _to_tuple_dense(
+    xs: Iterable[cirq.DensePauliString],
+) -> Tuple[cirq.DensePauliString, ...]:
     """attrs converter for TaylorSelectPauliLCU.select_unitaries."""
     return tuple(xs)
 
@@ -62,7 +73,9 @@ class TaylorSelectPauliLCU(SelectOracle, UnaryIterationGate):  # type: ignore[mi
 
     selection_bitsize: int
     target_bitsize: int
-    select_unitaries: Tuple[cirq.DensePauliString, ...] = attrs.field(converter=_to_tuple_dense)
+    select_unitaries: Tuple[cirq.DensePauliString, ...] = attrs.field(
+        converter=_to_tuple_dense
+    )
     control_val: Optional[int] = None
 
     def __attrs_post_init__(self) -> None:
@@ -83,7 +96,11 @@ class TaylorSelectPauliLCU(SelectOracle, UnaryIterationGate):  # type: ignore[mi
 
     @cached_property
     def selection_registers(self) -> Tuple[Register, ...]:
-        return (Register("selection", BQUInt(self.selection_bitsize, len(self.select_unitaries))),)
+        return (
+            Register(
+                "selection", BQUInt(self.selection_bitsize, len(self.select_unitaries))
+            ),
+        )
 
     @cached_property
     def target_registers(self) -> Tuple[Register, ...]:
@@ -177,25 +194,35 @@ def build_lcu_block(
         target_bitsize=target_bitsize,
         select_unitaries=paulis,
     )
-    prepare = StatePreparationAliasSampling.from_probabilities(weights, precision=precision)
-    return LCUBlockEncoding(select=BlackBoxSelect(select), prepare=BlackBoxPrepare(prepare))
+    prepare = StatePreparationAliasSampling.from_probabilities(
+        weights, precision=precision
+    )
+    return LCUBlockEncoding(
+        select=BlackBoxSelect(select), prepare=BlackBoxPrepare(prepare)
+    )
 
 
 def _simulate_block(block: LCUBlockEncoding) -> Tuple[np.ndarray, List[int]]:
     cbloq = block.decompose_bloq()
     init_quregs = get_named_qubits(block.signature)
     qm = InteropQubitManager(cirq.ops.SimpleQubitManager())
-    circuit, quregs_out = cbloq.to_cirq_circuit_and_quregs(qubit_manager=qm, **init_quregs)
+    circuit, quregs_out = cbloq.to_cirq_circuit_and_quregs(
+        qubit_manager=qm, **init_quregs
+    )
 
     # Qubits corresponding to the named registers in the block signature.
     sig_qubits = merge_qubits(block.signature, **quregs_out)
     sig_set = set(sig_qubits)
 
     # Include all additional ancillas introduced during decomposition.
-    extra_qubits = sorted([q for q in circuit.all_qubits() if q not in sig_set], key=lambda q: str(q))
+    extra_qubits = sorted(
+        [q for q in circuit.all_qubits() if q not in sig_set], key=lambda q: str(q)
+    )
     qubit_order = list(sig_qubits) + extra_qubits
 
-    result = cirq.Simulator(dtype=np.complex128).simulate(circuit, qubit_order=qubit_order)
+    result = cirq.Simulator(dtype=np.complex128).simulate(
+        circuit, qubit_order=qubit_order
+    )
     bits_per_register = [reg.total_bits() for reg in block.signature]
     if extra_qubits:
         # Treat remaining qubits as a single extra ancilla register projected to |0...0⟩.
@@ -203,7 +230,9 @@ def _simulate_block(block: LCUBlockEncoding) -> Tuple[np.ndarray, List[int]]:
     return np.asarray(result.final_state_vector, dtype=np.complex128), bits_per_register
 
 
-def _extract_system_state(state: np.ndarray, bits_per_register: List[int], system_index: int) -> np.ndarray:
+def _extract_system_state(
+    state: np.ndarray, bits_per_register: List[int], system_index: int
+) -> np.ndarray:
     shape = [1 << bits for bits in bits_per_register]
     reshaped = state.reshape(shape)
     indexer = [0] * len(bits_per_register)
@@ -211,7 +240,9 @@ def _extract_system_state(state: np.ndarray, bits_per_register: List[int], syste
     vec = reshaped[tuple(indexer)].reshape(-1)
     norm = np.linalg.norm(vec)
     if norm == 0:
-        raise ValueError("LCU block returned zero amplitude on the |0...0> ancilla subspace.")
+        raise ValueError(
+            "LCU block returned zero amplitude on the |0...0> ancilla subspace."
+        )
     return vec / norm
 
 
@@ -225,7 +256,9 @@ def simulate_lcu_state(block: LCUBlockEncoding, num_system: int) -> np.ndarray:
     return vec
 
 
-def tfim_lcu_state(num_sites: int, J: float, h: float, time: float, precision: float) -> np.ndarray:
+def tfim_lcu_state(
+    num_sites: int, J: float, h: float, time: float, precision: float
+) -> np.ndarray:
     H = pauli_models.tfim_pauli_terms(num_sites, J, h)
     gamma = pauli_models.taylor_coefficients(H, time)
     paulis, weights, alpha = taylor_terms_to_paulis(gamma)
@@ -234,7 +267,9 @@ def tfim_lcu_state(num_sites: int, J: float, h: float, time: float, precision: f
     return state * alpha / np.linalg.norm(state * alpha)
 
 
-def heis_lcu_state(num_sites: int, J: float, field: float, time: float, precision: float) -> np.ndarray:
+def heis_lcu_state(
+    num_sites: int, J: float, field: float, time: float, precision: float
+) -> np.ndarray:
     H = pauli_models.heisenberg_pauli_terms(num_sites, J, field)
     gamma = pauli_models.taylor_coefficients(H, time)
     paulis, weights, alpha = taylor_terms_to_paulis(gamma)
@@ -263,7 +298,9 @@ class HeisenbergPairUnitary(Bloq):
         # Two-qubit system register.
         return Signature.build(system=2)
 
-    def build_composite_bloq(self, bb: "BloqBuilder", system: "Soquet") -> Dict[str, "Soquet"]:
+    def build_composite_bloq(
+        self, bb: "BloqBuilder", system: "Soquet"
+    ) -> Dict[str, "Soquet"]:
         system = bb.split(system)
         q0, q1 = system
 
@@ -335,7 +372,9 @@ def tfim_trotter_state(
     init_angle: float,
 ) -> np.ndarray:
     if order != 1:
-        raise ValueError("Qualtran TFIM Trotter currently supports only first-order evolution.")
+        raise ValueError(
+            "Qualtran TFIM Trotter currently supports only first-order evolution."
+        )
     qubits = cirq.LineQubit.range(num_sites)
     circuit = cirq.Circuit()
     dt = total_time / steps
@@ -343,8 +382,12 @@ def tfim_trotter_state(
     for q in qubits:
         circuit.append(cirq.ry(init_angle).on(q))
     for _ in range(steps):
-        apply_ising_step(circuit, qubits, IsingZZUnitary(nsites=num_sites, angle=2 * J * dt))
-        apply_ising_step(circuit, qubits, IsingXUnitary(nsites=num_sites, angle=2 * h * dt))
+        apply_ising_step(
+            circuit, qubits, IsingZZUnitary(nsites=num_sites, angle=2 * J * dt)
+        )
+        apply_ising_step(
+            circuit, qubits, IsingXUnitary(nsites=num_sites, angle=2 * h * dt)
+        )
     result = cirq.Simulator(dtype=np.complex128).simulate(circuit, qubit_order=qubits)
     return np.asarray(result.final_state_vector, dtype=np.complex128)
 

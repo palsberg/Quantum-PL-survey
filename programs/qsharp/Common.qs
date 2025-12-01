@@ -3,6 +3,7 @@ namespace HamiltonianSimulation.Common {
     open Std.Diagnostics;
     open Std.Math;
     open Std.Convert;
+    open Std.StatePreparation;
 
     operation ApplyZZ(angle : Double, q1 : Qubit, q2 : Qubit) : Unit is Adj + Ctl {
         CNOT(q1, q2);
@@ -106,13 +107,6 @@ namespace HamiltonianSimulation.Common {
         }
 
         return (coeffs, paulis);
-    }
-
-    function AbsValue(value : Double) : Double {
-        if (value < 0.0) {
-            return -value;
-        }
-        return value;
     }
 
     function ComplexAdd(a : (Double, Double), b : (Double, Double)) : (Double, Double) {
@@ -267,6 +261,13 @@ namespace HamiltonianSimulation.Common {
         return (gammaPaulis, gammaCoeffs);
     }
 
+    function AbsValue(value : Double) : Double {
+        if (value < 0.0) {
+            return -value;
+        }
+        return value;
+    }
+
     function ExtractLcuData(paulis : Pauli[][], coeffs : (Double, Double)[]) : (Double[], Pauli[][], Int[]) {
         if (Length(paulis) != Length(coeffs)) {
             fail "Gamma arrays must have equal length.";
@@ -371,96 +372,6 @@ namespace HamiltonianSimulation.Common {
             }
         }
         return amplitudes;
-    }
-
-    function ClampUnit(value : Double) : Double {
-        if (value < 0.0) {
-            return 0.0;
-        }
-        if (value > 1.0) {
-            return 1.0;
-        }
-        return value;
-    }
-
-    function SumOfSquares(values : Double[]) : Double {
-        mutable total = 0.0;
-        for value in values {
-            set total += value * value;
-        }
-        return total;
-    }
-
-    function NormalizeSegment(values : Double[], norm : Double) : Double[] {
-        mutable scaled : Double[] = [];
-        if (norm <= 0.0) {
-            for _ in values {
-                set scaled += [0.0];
-            }
-            return scaled;
-        }
-        for value in values {
-            set scaled += [value / norm];
-        }
-        return scaled;
-    }
-
-    operation PrepareSelectorRecursive(amplitudes : Double[], register : Qubit[]) : Unit is Adj + Ctl {
-        body (...) {
-            let qubitCount = Length(register);
-            let required = PowerOfTwo(qubitCount);
-            if (Length(amplitudes) != required) {
-                fail "Amplitude count must match selector register size.";
-            }
-            if (qubitCount == 0) {
-                ()
-            } elif (qubitCount == 1) {
-                let alpha0 = amplitudes[0];
-                let alpha1 = amplitudes[1];
-                let norm = Sqrt(alpha0 * alpha0 + alpha1 * alpha1);
-                if (norm > 0.0) {
-                    let normalized0 = ClampUnit(alpha0 / norm);
-                    let theta = 2.0 * ArcCos(normalized0);
-                    Ry(theta, register[0]);
-                }
-            } else {
-                let half = Length(amplitudes) / 2;
-                let firstHalf = amplitudes[0 .. half - 1];
-                let secondHalf = amplitudes[half .. Length(amplitudes) - 1];
-                let normFirst = Sqrt(SumOfSquares(firstHalf));
-                let normSecond = Sqrt(SumOfSquares(secondHalf));
-                let totalNorm = Sqrt(normFirst * normFirst + normSecond * normSecond);
-                if (totalNorm > 0.0) {
-                    let normalizedFirst = ClampUnit(normFirst / totalNorm);
-                    let theta = 2.0 * ArcCos(normalizedFirst);
-                    Ry(theta, register[0]);
-                    let rest = register[1 .. qubitCount - 1];
-                    if (Length(rest) > 0) {
-                        if (normFirst > 1e-12) {
-                            let scaledFirst = NormalizeSegment(firstHalf, normFirst);
-                            within { X(register[0]); }
-                            apply {
-                                Controlled PrepareSelectorRecursive([register[0]], (scaledFirst, rest));
-                            }
-                        }
-                        if (normSecond > 1e-12) {
-                            let scaledSecond = NormalizeSegment(secondHalf, normSecond);
-                            Controlled PrepareSelectorRecursive([register[0]], (scaledSecond, rest));
-                        }
-                    }
-                }
-            }
-        }
-        adjoint auto;
-        controlled auto;
-    }
-
-    operation PrepareSelectorState(amplitudes : Double[], register : Qubit[]) : Unit is Adj + Ctl {
-        body (...) {
-            PrepareSelectorRecursive(amplitudes, register);
-        }
-        adjoint auto;
-        controlled auto;
     }
 
     function PhasePlusOneTag() : Int { return 0; }
@@ -577,7 +488,7 @@ namespace HamiltonianSimulation.Common {
         use phase = Qubit();
 
         X(phase);
-        PrepareSelectorState(amplitudes, selector);
+        PreparePureStateD(amplitudes, selector);
 
         mutable idx = 0;
         for term in paddedPaulis {
@@ -590,7 +501,7 @@ namespace HamiltonianSimulation.Common {
         }
 
         DumpMachine();
-        Adjoint PrepareSelectorState(amplitudes, selector);
+        Adjoint PreparePureStateD(amplitudes, selector);
         Reset(phase);
         ResetAll(selector);
     }

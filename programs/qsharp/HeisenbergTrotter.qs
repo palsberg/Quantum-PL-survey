@@ -7,7 +7,7 @@ namespace HamiltonianSimulation.HeisenbergTrotter {
 
     operation Run(numSites : Int, steps : Int, couplingJ : Double, fieldH : Double, totalTime : Double) : Unit {
         use qs = Qubit[numSites];
-        InitializeTilt(qs, PI() / 8.0);
+        InitializeTilt(qs, 0.0);
         let dt = totalTime / IntAsDouble(steps);
 
         for _ in 1..steps {

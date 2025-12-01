@@ -8,7 +8,7 @@ namespace HamiltonianSimulation.TFIMTrotter {
     operation Run(numSites : Int, steps : Int, couplingJ : Double, fieldH : Double, totalTime : Double) : Unit {
         use qs = Qubit[numSites];
         let dt = totalTime / IntAsDouble(steps);
-        InitializeTilt(qs, PI() / 8.0);
+        InitializeTilt(qs, 0.0);
 
         for _ in 1..steps {
             for i in 0 .. numSites - 2 {

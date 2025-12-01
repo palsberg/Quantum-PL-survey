@@ -75,7 +75,9 @@ def build_python_helper_defs(mod_paths: List[Path]) -> Dict[str, List[str]]:
     return helpers
 
 
-def discover_used_helpers(texts: List[str], helper_defs: Dict[str, List[str]]) -> Dict[str, List[str]]:
+def discover_used_helpers(
+    texts: List[str], helper_defs: Dict[str, List[str]]
+) -> Dict[str, List[str]]:
     """Recursively discover helper defs whose names appear in the given texts."""
     used: Dict[str, List[str]] = {}
     queue: List[str] = list(texts)
@@ -369,7 +371,10 @@ def main() -> None:
         "heis_trotter": quipper_dir / "heis_trotter.hs",
         "heis_lcu": quipper_dir / "heis_lcu.hs",
     }
-    quipper_helpers = [quipper_dir / "QuipperCommon.hs"]
+    quipper_helpers = [
+        quipper_dir / "QuipperCommon.hs",
+        quipper_dir / "QuipperLcuCommon.hs",
+    ]
     for case_name, ham, method in cases:
         loc = haskell_case_loc(quipper_entry[case_name], quipper_helpers)
         quipper_res[f"{ham}_{method}"] = loc
@@ -407,7 +412,7 @@ def main() -> None:
     ]
 
     # Pretty-print to LaTeX table.
-    out_path = ROOT / "Paper" / "program_size_table.tex"
+    out_path = ROOT / "Paper" / "program_size_table_new.tex"
     with out_path.open("w", encoding="utf-8") as f:
         f.write("\\begin{table*}[t]\n")
         f.write("  \\centering\n")
@@ -422,7 +427,9 @@ def main() -> None:
         f.write("  \\label{tab:program-size}\n")
         f.write("  \\begin{tabular}{l|rr|rr}\n")
         f.write("    \\toprule\n")
-        f.write("             & \\multicolumn{2}{c|}{TFIM} & \\multicolumn{2}{c}{Heisenberg} \\\\\n")
+        f.write(
+            "             & \\multicolumn{2}{c|}{TFIM} & \\multicolumn{2}{c}{Heisenberg} \\\\\n"
+        )
         f.write("    Language & Trotter & LCU & Trotter & LCU \\\\\n")
         f.write("    \\midrule\n")
 

@@ -1,10 +1,21 @@
 {-# LANGUAGE RecordWildCards #-}
 
-import Control.Monad (foldM)
+import Control.Monad (forM_)
 import System.Environment (getArgs)
 
 import Quipper
-import QuipperCommon
+import QuipperLcuCommon
+  ( PhaseTag(..)
+  , ampsFromWeights
+  , applyPauliWord
+  , applyPhaseTag
+  , lcuDataFromHamiltonian
+  , maskIndex
+  , padLcuTerms
+  , prepareAmplitudes
+  , unmaskIndex
+  , unprepareAmplitudes
+  )
 import QuipperSimulationCLI
   ( CaseParams(..)
   , SimConfig
@@ -16,39 +27,53 @@ import QuipperSimulationCLI
   , timeWithDefault
   )
 
-applyTFIMTerm :: (String, Int, Timestep) -> [Qubit] -> Circ [Qubit]
-applyTFIMTerm ("X", idx, angle) qs = do
-    let (prefix, target:rest) = splitAt idx qs
-    target' <- evolveX angle target
-    return (prefix ++ target' : rest)
-applyTFIMTerm ("ZZ", idx, angle) qs = do
-    let (prefix, qi:rest) = splitAt idx qs
-        (mid, qj:post) = splitAt 0 rest
-    (qi', qj') <- evolveZZ angle qi qj
-    return (prefix ++ qi' : mid ++ qj' : post)
-applyTFIMTerm _ qs = return qs
+tfimHamiltonian :: Int -> Double -> Double -> ([Double], [String])
+tfimHamiltonian n j h =
+  let zzTerms =
+        [ (j, term)
+        | i <- [0 .. n - 2]
+        , let term = replicate i 'I' ++ "ZZ" ++ replicate (n - i - 2) 'I'
+        ]
+      xTerms =
+        [ (h, term)
+        | i <- [0 .. n - 1]
+        , let term = replicate i 'I' ++ "X" ++ replicate (n - i - 1) 'I'
+        ]
+      (coeffs, paulis) = unzip (zzTerms ++ xTerms)
+   in (coeffs, paulis)
 
-buildTFIMTerms :: Int -> Double -> Double -> Double -> [(String, Int, Timestep)]
-buildTFIMTerms n j h totalTime =
-    let linear = [ ("X", i, h * totalTime) | i <- [0..n-1] ]
-        zz     = [ ("ZZ", i, j * totalTime) | i <- [0..n-2] ]
-    in linear ++ zz
-
--- | Sequential LCU-like application of all TFIM terms.
 tfimLcuCircuit :: Int -> Double -> Double -> Double -> Circ [Qubit]
 tfimLcuCircuit n j h totalTime = do
-    qs <- qinit (replicate n False)
-    foldM (flip applyTFIMTerm) qs (buildTFIMTerms n j h totalTime)
+  let (coeffs, pauliTerms) = tfimHamiltonian n j h
+      (weights, terms, tags) = lcuDataFromHamiltonian coeffs pauliTerms totalTime
+      (pWeights, pTerms, pTags, selectorBits) = padLcuTerms weights terms tags n
+      amps = ampsFromWeights pWeights
+  system <- qinit (replicate n False)
+  selector <- qinit (replicate selectorBits False)
+  phase <- qinit False
+  gate_X_at phase
+  prepareAmplitudes amps selector
+  let ctrls = selector
+  forM_ (zip [0 ..] (zip pTerms pTags)) $ \(idx, (pw, tag)) -> do
+    maskIndex idx selector
+    applyPhaseTag tag ctrls phase
+    applyPauliWord pw ctrls system
+    unmaskIndex idx selector
+  unprepareAmplitudes amps selector
+  qdiscard phase
+  mapM_ qdiscard selector
+  return system
 
 data TFIMLcuArgs = TFIMLcuArgs
-    { argSites :: !Int
-    , argJ :: !Double
-    , argH :: !Double
-    , argTotalTime :: !Double
-    }
+  { argSites :: !Int
+  , argJ :: !Double
+  , argH :: !Double
+  , argTotalTime :: !Double
+  }
 
 defaultArgs :: TFIMLcuArgs
-defaultArgs = TFIMLcuArgs
+defaultArgs =
+  TFIMLcuArgs
     { argSites = 4
     , argJ = 1.0
     , argH = 0.5
@@ -56,7 +81,8 @@ defaultArgs = TFIMLcuArgs
     }
 
 resolveArgs :: SimConfig -> TFIMLcuArgs
-resolveArgs cfg = TFIMLcuArgs
+resolveArgs cfg =
+  TFIMLcuArgs
     { argSites = numSitesWithDefault (argSites defaultArgs) cfg
     , argJ = paramWithDefault paramJ (argJ defaultArgs) cfg
     , argH = paramWithDefault paramH (argH defaultArgs) cfg
@@ -64,24 +90,25 @@ resolveArgs cfg = TFIMLcuArgs
     }
 
 buildCircuit :: TFIMLcuArgs -> () -> Circ [Qubit]
-buildCircuit TFIMLcuArgs{..} () = tfimLcuCircuit argSites argJ argH argTotalTime
+buildCircuit TFIMLcuArgs {..} () =
+  tfimLcuCircuit argSites argJ argH argTotalTime
 
 main :: IO ()
 main = do
-    args <- getArgs
-    case args of
-        ["--simulate-json"] -> runSimulate
-        ["--metrics-json"] -> runMetrics
-        _ -> runDefault
+  args <- getArgs
+  case args of
+    ["--simulate-json"] -> runSimulate
+    ["--metrics-json"] -> runMetrics
+    _ -> runDefault
   where
     runSimulate = do
-        cfg <- readSimConfig
-        let params = resolveArgs cfg
-        emitStatevectorJSON (argSites params) (buildCircuit params)
+      cfg <- readSimConfig
+      let params = resolveArgs cfg
+      emitStatevectorJSON (argSites params) (buildCircuit params)
     runMetrics = do
-        cfg <- readSimConfig
-        let params = resolveArgs cfg
-        emitMetricsJSON (argSites params) (buildCircuit params)
+      cfg <- readSimConfig
+      let params = resolveArgs cfg
+      emitMetricsJSON (argSites params) (buildCircuit params)
     runDefault = do
-        let params = defaultArgs
-        print_simple GateCount (buildCircuit params ())
+      let params = defaultArgs
+      print_simple GateCount (buildCircuit params ())

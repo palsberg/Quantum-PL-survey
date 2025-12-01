@@ -17,7 +17,7 @@ def run_simulation(config: Dict[str, Any]) -> np.ndarray:
     h = float(params.get("h", 1.0))
     steps = int(params.get("trotter_steps", 32))
     order = 1
-    angle = float(params.get("init_angle", np.pi / 8))
+    angle = float(params.get("init_angle", 0.0))
     return common.tfim_trotter_state(num_sites, J, h, total_time, steps, order, angle)
 
 

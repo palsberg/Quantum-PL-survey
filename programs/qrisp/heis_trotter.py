@@ -17,7 +17,7 @@ def run_simulation(config: Dict[str, Any]) -> np.ndarray:
     field = float(params.get("field", 0.2))
     steps = int(params.get("trotter_steps", 32))
     order = int(params.get("trotter_order", 1))
-    angle = float(params.get("init_angle", np.pi / 8))
+    angle = float(params.get("init_angle", 0.0))
 
     def builder():
         return common.build_heisenberg_operator(num_sites, J, field)
@@ -33,4 +33,3 @@ if __name__ == "__main__":
     }
     state = run_simulation(cfg)
     print(state)
-

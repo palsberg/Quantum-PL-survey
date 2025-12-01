@@ -16,7 +16,7 @@ def run_simulation(config: Dict[str, Any]) -> np.ndarray:
     J = float(params.get("J", 1.0))
     field = float(params.get("field", 0.2))
     steps = int(params.get("trotter_steps", 32))
-    angle = float(params.get("init_angle", np.pi / 8))
+    angle = float(params.get("init_angle", 0.0))
     return common.heis_trotter_state(num_sites, J, field, total_time, steps, angle)
 
 

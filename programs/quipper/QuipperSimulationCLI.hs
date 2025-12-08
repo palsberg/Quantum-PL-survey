@@ -24,6 +24,7 @@ import Data.List (foldl', intercalate)
 import Data.Maybe (fromMaybe)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import Data.Bits (shiftL)
 import System.Random (mkStdGen)
 import Text.ParserCombinators.ReadP
 
@@ -232,9 +233,9 @@ paramWithDefault accessor def SimConfig {cfgParams} =
   fromMaybe def (accessor cfgParams)
 
 emitStatevectorJSON :: Int -> (() -> Circ [Qubit]) -> IO ()
-emitStatevectorJSON numSites builder = do
-  let amplitudes = amplitudeEntries numSites (simulateStatevector builder)
-  putStrLn (renderStatePayload numSites amplitudes)
+emitStatevectorJSON totalQubits builder = do
+  let amplitudes = amplitudeEntries totalQubits (simulateStatevector builder)
+  putStrLn (renderStatePayload totalQubits amplitudes)
 
 emitMetricsJSON :: Int -> (() -> Circ [Qubit]) -> IO ()
 emitMetricsJSON numSites builder = do
@@ -251,12 +252,13 @@ amplitudeEntries :: Int -> Map.Map [Bool] (Cplx Double) -> [AmplitudeEntry]
 amplitudeEntries n amps =
   zipWith entry [0 ..] (basisStates n)
   where
-    entry idx bits =
+    entry _ bits =
       let value = Map.findWithDefault (Cplx 0 0) bits amps
           (r, i) = cplxToPair value
+          idxBE = bitsToIndexBE bits
        in AmplitudeEntry
             { bitstring = bitsToString bits
-            , index = idx
+            , index = idxBE
             , re = r
             , im = i
             }
@@ -266,6 +268,10 @@ basisStates n = replicateM n [False, True]
 
 bitsToString :: [Bool] -> String
 bitsToString = map (\b -> if b then '1' else '0')
+
+bitsToIndexBE :: [Bool] -> Int
+bitsToIndexBE bits =
+  foldl (\acc b -> (acc `shiftL` 1) + if b then 1 else 0) 0 bits
 
 cplxToPair :: Cplx Double -> (Double, Double)
 cplxToPair (Cplx r i) = (realToFrac r, realToFrac i)

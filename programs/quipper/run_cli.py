@@ -46,7 +46,7 @@ def main() -> None:
         amplitudes = payload.get("amplitudes")
         if amplitudes is None:
             raise SystemExit("Quipper simulation payload missing 'amplitudes'.")
-        state = amplitudes_to_statevector(amplitudes)
+        state = process_amplitudes(args.case, config, amplitudes)
         json.dump({"statevector": state}, sys.stdout)
     else:
         metrics = payload.get("metrics")
@@ -81,21 +81,57 @@ def invoke_quipper(case: str, mode: str, config: Dict[str, Any]) -> Dict[str, An
         ) from exc
 
 
-def amplitudes_to_statevector(amplitudes: Iterable[Dict[str, Any]]) -> List[Dict[str, float]]:
-    def entry_index(item: Dict[str, Any]) -> int:
-        value = item.get("index")
-        return int(value) if value is not None else 0
+def process_amplitudes(case: str, config: Dict[str, Any], amplitudes: Iterable[Dict[str, Any]]) -> List[Dict[str, float]]:
+    """Slice Quipper amplitudes to match harness expectations (postselect for LCU)."""
+    num_sites = int(config.get("num_sites", 0))
 
-    ordered = sorted(amplitudes, key=entry_index)
-    state = []
-    for amp in ordered:
-        try:
-            real = float(amp["re"])
-            imag = float(amp["im"])
-        except (KeyError, TypeError, ValueError) as exc:  # pragma: no cover - defensive
-            raise SystemExit(f"Malformed amplitude entry: {amp}") from exc
-        state.append({"re": real, "im": imag})
-    return state
+    def bits_to_index_be(bits: str) -> int:
+        acc = 0
+        for ch in bits:
+            acc = (acc << 1) | (1 if ch == "1" else 0)
+        return acc
+
+    amps = list(amplitudes)
+    if not amps:
+        raise SystemExit("Empty amplitude list from Quipper.")
+
+    bitlen = len(amps[0].get("bitstring", ""))
+    if any(len(a.get("bitstring", "")) != bitlen for a in amps):
+        raise SystemExit("Inconsistent bitstring lengths in amplitudes.")
+
+    if case in {"tfim_lcu", "heis_lcu"}:
+        ancilla = bitlen - num_sites
+        if ancilla > 0:
+            selector_bits = ancilla - 1  # remaining qubit is the phase wire (last)
+            if selector_bits < 0:
+                raise SystemExit("Invalid ancilla layout for LCU circuit.")
+            slice_vec = [0j] * (2**num_sites)
+            for amp in amps:
+                bits = amp["bitstring"]
+                system_bits = bits[:num_sites]
+                selector_str = bits[num_sites : num_sites + selector_bits]
+                phase_bit = bits[-1]
+                if phase_bit != "1":
+                    continue
+                if any(b == "1" for b in selector_str):
+                    continue
+                idx = bits_to_index_be(system_bits)
+                slice_vec[idx] = complex(float(amp["re"]), float(amp["im"]))
+            norm = sum(abs(z) ** 2 for z in slice_vec) ** 0.5
+            if norm == 0:
+                raise SystemExit("Postselection slice has zero norm.")
+            slice_vec = [z / norm for z in slice_vec]
+            return [{"re": float(z.real), "im": float(z.imag)} for z in slice_vec]
+        # No ancillas present: fall through to dense path.
+
+    dense = [0j] * (2**num_sites)
+    for amp in amps:
+        bits = amp["bitstring"]
+        if len(bits) != num_sites:
+            raise SystemExit("Amplitude bitstrings do not match num_sites.")
+        idx = bits_to_index_be(bits)
+        dense[idx] = complex(float(amp["re"]), float(amp["im"]))
+    return [{"re": float(z.real), "im": float(z.imag)} for z in dense]
 
 
 def ensure_binary(case: str) -> Path:

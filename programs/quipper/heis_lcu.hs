@@ -61,9 +61,7 @@ heisLcuCircuit n j field totalTime = do
     applyPauliWord pw ctrls system
     unmaskIndex idx selector
   unprepareAmplitudes amps selector
-  qdiscard phase
-  mapM_ qdiscard selector
-  return system
+  return (system ++ selector ++ [phase])
 
 data HeisLcuArgs = HeisLcuArgs
   { argSites :: !Int
@@ -94,6 +92,13 @@ buildCircuit :: HeisLcuArgs -> () -> Circ [Qubit]
 buildCircuit HeisLcuArgs {..} () =
   heisLcuCircuit argSites argJ argField argTotalTime
 
+selectorBitsFor :: Int -> Double -> Double -> Double -> Int
+selectorBitsFor n j field totalTime =
+  let (coeffs, pauliTerms) = heisenbergHamiltonian n j field
+      (weights, terms, tags) = lcuDataFromHamiltonian coeffs pauliTerms totalTime
+      (_, _, _, selectorBits) = padLcuTerms weights terms tags n
+   in selectorBits
+
 main :: IO ()
 main = do
   args <- getArgs
@@ -105,7 +110,9 @@ main = do
     runSimulate = do
       cfg <- readSimConfig
       let params = resolveArgs cfg
-      emitStatevectorJSON (argSites params) (buildCircuit params)
+          selBits = selectorBitsFor (argSites params) (argJ params) (argField params) (argTotalTime params)
+          totalQubits = argSites params + selBits + 1
+      emitStatevectorJSON totalQubits (buildCircuit params)
     runMetrics = do
       cfg <- readSimConfig
       let params = resolveArgs cfg

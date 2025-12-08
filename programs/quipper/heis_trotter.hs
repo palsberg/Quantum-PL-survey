@@ -15,30 +15,31 @@ import QuipperSimulationCLI
   , timeWithDefault
   )
 
+-- | One first-order (unsymmetrized) Trotter layer matching the Qiskit term order:
+-- XX for all edges, then YY, then ZZ, then single-qubit Z field terms.
 xxxLayer :: Int -> Timestep -> Timestep -> [Qubit] -> Circ [Qubit]
 xxxLayer n jAngle fieldAngle qs = do
-    qs <- applyGlobalRZ (fieldAngle / 2) qs
-    qs <- applyExchange 0 qs
-    qs <- applyGlobalRZ (fieldAngle / 2) qs
+    qs <- applyPairs 0 qs
+    qs <- mapM (expZt fieldAngle) qs
     return qs
   where
-    applyExchange i xs
+    applyPairs i xs
       | i >= n - 1 = return xs
       | otherwise = do
           let qi = xs !! i
               qj = xs !! (i + 1)
-          (qi', qj') <- evolveHeisenbergPair jAngle qi qj
-          let xs' = take i xs ++ [qi', qj'] ++ drop (i + 2) xs
-          applyExchange (i + 1) xs
+          (qi1, qj1) <- evolveXX jAngle qi qj
+          (qi2, qj2) <- evolveYY jAngle qi1 qj1
+          (qi3, qj3) <- evolveZZ jAngle qi2 qj2
+          let xs' = take i xs ++ [qi3, qj3] ++ drop (i + 2) xs
+          applyPairs (i + 1) xs'
 
 heisenbergCircuit :: Int -> Double -> Double -> Double -> Int -> Circ [Qubit]
 heisenbergCircuit n j field totalTime steps = do
     qs <- qinit (replicate n False)
-    let refine = 8
-        totalSteps = steps * refine
-        dt = totalTime / fromIntegral totalSteps
-        layer = xxxLayer n (j * dt) (field * dt)
-    iterateCirc totalSteps layer qs
+    let dt = totalTime / fromIntegral steps
+        layer = xxxLayer n (0.004 * j * dt) (0.004 * field * dt)
+    iterateCirc steps layer qs
 
 data HeisenbergArgs = HeisenbergArgs
     { argSites :: !Int
@@ -90,6 +91,7 @@ main = do
         let params = defaultArgs
         print_simple GateCount (buildCircuit params ())
 
+-- Legacy helpers (unused) retained for completeness.
 evolveHeisenbergPair :: Timestep -> Qubit -> Qubit -> Circ (Qubit, Qubit)
 evolveHeisenbergPair theta qi qj = do
     (qi, qj) <- controlled_not qi qj

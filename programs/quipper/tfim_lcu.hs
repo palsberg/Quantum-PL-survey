@@ -60,9 +60,7 @@ tfimLcuCircuit n j h totalTime = do
     applyPauliWord pw ctrls system
     unmaskIndex idx selector
   unprepareAmplitudes amps selector
-  qdiscard phase
-  mapM_ qdiscard selector
-  return system
+  return (system ++ selector ++ [phase])
 
 data TFIMLcuArgs = TFIMLcuArgs
   { argSites :: !Int
@@ -93,6 +91,13 @@ buildCircuit :: TFIMLcuArgs -> () -> Circ [Qubit]
 buildCircuit TFIMLcuArgs {..} () =
   tfimLcuCircuit argSites argJ argH argTotalTime
 
+selectorBitsFor :: Int -> Double -> Double -> Double -> Int
+selectorBitsFor n j h totalTime =
+  let (coeffs, pauliTerms) = tfimHamiltonian n j h
+      (weights, terms, tags) = lcuDataFromHamiltonian coeffs pauliTerms totalTime
+      (_, _, _, selectorBits) = padLcuTerms weights terms tags n
+   in selectorBits
+
 main :: IO ()
 main = do
   args <- getArgs
@@ -104,7 +109,9 @@ main = do
     runSimulate = do
       cfg <- readSimConfig
       let params = resolveArgs cfg
-      emitStatevectorJSON (argSites params) (buildCircuit params)
+          selBits = selectorBitsFor (argSites params) (argJ params) (argH params) (argTotalTime params)
+          totalQubits = argSites params + selBits + 1
+      emitStatevectorJSON totalQubits (buildCircuit params)
     runMetrics = do
       cfg <- readSimConfig
       let params = resolveArgs cfg

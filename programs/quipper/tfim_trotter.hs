@@ -15,12 +15,11 @@ import QuipperSimulationCLI
   , timeWithDefault
   )
 
--- | One Suzuki–Trotter layer for TFIM.
+-- | First-order (unsymmetrized) Trotter layer: all ZZ terms, then all X terms.
 trotterLayer :: Int -> Timestep -> Timestep -> [Qubit] -> Circ [Qubit]
 trotterLayer n jAngle hAngle qs = do
-    qs <- mapM (evolveX (hAngle / 2)) qs
     qs <- applyZZ 0 qs
-    qs <- mapM (evolveX (hAngle / 2)) qs
+    qs <- mapM (evolveX hAngle) qs
     return qs
   where
     applyZZ i xs

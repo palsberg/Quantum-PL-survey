@@ -17,6 +17,7 @@ from typing import Any, Dict
 import numpy as np
 import subprocess
 import ast
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -145,14 +146,75 @@ def _parse_silq_output(output: str, case: str, num_sites: int) -> np.ndarray:
     return vec
 
 
-def _run_case(case: str, config: Dict[str, Any]) -> np.ndarray:
-    filename = CASE_FILES.get(case)
-    if filename is None:
-        raise SystemExit(f"unknown Silq case '{case}'")
+def _instantiate_trotter_template(case: str, config: Dict[str, Any]) -> Path:
+    """Instantiate a Silq Trotter template with numeric parameters.
+
+    We treat the .slq file as a template containing placeholders that are
+    substituted with concrete literals derived from the JSON config.
+    """
+    filename = CASE_FILES[case]
+    template_path = ROOT / "programs" / "silq" / filename
+    template = template_path.read_text()
+
     num_sites = int(config.get("num_sites", 2))
-    slq_path = ROOT / "programs" / "silq" / filename
+    total_time = float(config.get("time", 0.1))
+    params = config.get("params", {})
+    steps = int(params.get("trotter_steps", 1))
+
+    if case == "tfim_trotter":
+        J = float(params.get("J", 1.0))
+        h = float(params.get("h", 1.0))
+        replacements = {
+            "__NUM_SITES__": str(num_sites),
+            "__J__": repr(J),
+            "__H__": repr(h),
+            "__TOTAL_TIME__": repr(total_time),
+            "__STEPS__": str(steps),
+        }
+    elif case == "heis_trotter":
+        J = float(params.get("J", 1.0))
+        field = float(params.get("field", 0.0))
+        replacements = {
+            "__NUM_SITES__": str(num_sites),
+            "__J__": repr(J),
+            "__FIELD__": repr(field),
+            "__TOTAL_TIME__": repr(total_time),
+            "__STEPS__": str(steps),
+        }
+    else:
+        raise RuntimeError(f"Unexpected Trotter case for templating: {case}")
+
+    for key, value in replacements.items():
+        template = template.replace(key, value)
+
+    tmp = tempfile.NamedTemporaryFile("w", suffix=".slq", delete=False)
+    tmp.write(template)
+    tmp.flush()
+    tmp.close()
+    return Path(tmp.name)
+
+
+def _run_case(case: str, config: Dict[str, Any]) -> np.ndarray:
+    num_sites = int(config.get("num_sites", 2))
+    if case in ("tfim_trotter", "heis_trotter"):
+        # Use the Trotter template mechanism to specialise to the requested
+        # number of sites and parameters.
+        slq_path = _instantiate_trotter_template(case, config)
+        cleanup = True
+    else:
+        filename = CASE_FILES.get(case)
+        if filename is None:
+            raise SystemExit(f"unknown Silq case '{case}'")
+        slq_path = ROOT / "programs" / "silq" / filename
+        cleanup = False
+
     cmd = ["silq", "--run", str(slq_path)]
     proc = subprocess.run(cmd, capture_output=True, text=True, cwd=str(ROOT))
+    if cleanup:
+        try:
+            slq_path.unlink()
+        except OSError:
+            pass
     if proc.returncode != 0:
         raise RuntimeError(
             f"silq exited with code {proc.returncode}: {proc.stderr.strip()}"

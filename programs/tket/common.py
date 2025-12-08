@@ -23,9 +23,13 @@ def trotterize_tfim(
     dt = total_time / steps
     for _ in range(steps):
         for i in range(num_sites - 1):
-            circ.ZZPhase(2 * J * dt, i, i + 1)
+            # ZZPhase(α) implements exp(-i (π/2) α Z⊗Z); choose α so that
+            # (π/2) α = J * dt, i.e. α = 2 J dt / π.
+            circ.ZZPhase(2 * J * dt / np.pi, i, i + 1)
         for i in range(num_sites):
-            circ.Rx(2 * h * dt, i)
+            # Rx(α) implements exp(-i (π/2) α X); choose α so that
+            # (π/2) α = h * dt, i.e. α = 2 h dt / π.
+            circ.Rx(2 * h * dt / np.pi, i)
     return circ, list(range(num_sites))
 
 

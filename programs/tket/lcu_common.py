@@ -7,8 +7,9 @@ from typing import List, Sequence, Tuple
 
 import numpy as np
 from pytket import Circuit
-from pytket.circuit import CircBox, StatePreparationBox
+from pytket.circuit import CircBox, StatePreparationBox, QControlBox
 from pytket.extensions.qiskit import tk_to_qiskit
+from pytket.passes import DecomposeBoxes
 from qiskit.quantum_info import Statevector
 
 from ..common import pauli_models
@@ -58,24 +59,56 @@ def _phase_box(tag: str) -> CircBox:
 def _apply_controlled_box(
     circ: Circuit, box: CircBox, controls: Sequence[int], targets: Sequence[int]
 ) -> None:
-    # TODO: replace with genuine multi-controlled application once pytket exposes the API.
-    # For now we pessimistically ignore the controls so that the harness can run end-to-end.
-    circ.add_circbox(box, list(targets))
+    """Apply `box` controlled on all `controls` being |1>.
+
+    If `controls` is empty, apply the box unconditionally.
+    """
+    target_list = list(targets)
+    if not controls:
+        circ.add_circbox(box, target_list)
+        return
+
+    control_list = list(controls)
+    n_controls = len(control_list)
+
+    qcb = QControlBox(box, n_controls)
+    qubits = control_list + target_list
+    circ.add_qcontrolbox(qcb, qubits)
 
 
 def _simulate_block(circ: Circuit, num_system: int, num_index: int) -> np.ndarray:
+    """Simulate the full LCU block and project onto index=0, phase=1."""
+    circ = circ.copy()
+    # Decompose CircBox / QControlBox constructs so that the Qiskit translator
+    # only sees primitive gates that it natively supports.
+    DecomposeBoxes().apply(circ)
     qc = tk_to_qiskit(circ)
     state = Statevector.from_instruction(qc).data
+
     dim_sys = 2**num_system
-    dim_index = 2**num_index
-    state = state.reshape((dim_sys, dim_index, 2))
-    vec = state[:, 0, 1]
-    norm = np.linalg.norm(vec)
+
+    def bits(value: int, width: int) -> list[int]:
+        # Least-significant-bit first, matching Qiskit's convention.
+        return [(value >> k) & 1 for k in range(width)]
+
+    success = np.zeros(dim_sys, dtype=np.complex128)
+    for sys_state in range(dim_sys):
+        sys_bits = bits(sys_state, num_system)
+        idx_bits = [0] * num_index
+        phase_bit = 1
+        basis_index = 0
+        shift = 0
+        for bit in sys_bits + idx_bits + [phase_bit]:
+            basis_index |= (bit << shift)
+            shift += 1
+        success[sys_state] = state[basis_index]
+
+    norm = np.linalg.norm(success)
     if norm == 0:
         vec = np.zeros(dim_sys, dtype=np.complex128)
         vec[0] = 1.0
         return vec
-    return vec / norm
+    return success / norm
 
 
 def _build_lcu_state(

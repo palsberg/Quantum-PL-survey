@@ -1,7 +1,12 @@
-// Heisenberg XXX chain with longitudinal field via first-order
-// Trotterization for a two-qubit system in Silq.
-// The Hamiltonian is
-//   H = J (X_0 X_1 + Y_0 Y_1 + Z_0 Z_1) + B (Z_0 + Z_1).
+// Heisenberg XXX chain with longitudinal field via first-order Trotterization
+// in Silq. This file is used as a template: the Python CLI adapter substitutes
+// all occurrences of __NUM_SITES__, __J__, __FIELD__, __TOTAL_TIME__, and
+// __STEPS__ with concrete numeric literals before invoking `silq --run`. The
+// instantiated program implements first-order Trotterization on a chain of
+// __NUM_SITES__ qubits with Hamiltonian
+//   H = J ∑_{i=0}^{N-2} (X_i X_{i+1} + Y_i Y_{i+1} + Z_i Z_{i+1})
+//       + B ∑_{i=0}^{N-1} Z_i
+// and dt = total_time / steps.
 
 def cnot(const x:𝔹, y:𝔹):𝔹{
   if x{
@@ -10,53 +15,73 @@ def cnot(const x:𝔹, y:𝔹):𝔹{
   return y;
 }
 
-def evolveZZ(theta:!ℝ, qs:𝔹^2):𝔹^2{
-  (q0,q1) := qs;
+def evolveZZ_pair(theta:!ℝ, q0:𝔹, q1:𝔹):𝔹 × 𝔹{
   q1 := cnot(q0,q1);
   q1 := rotZ(2.0 * theta, q1);
   q1 := cnot(q0,q1);
   return (q0,q1);
 }
 
-def evolveXX(theta:!ℝ, qs:𝔹^2):𝔹^2{
-  (q0,q1) := qs;
+def evolveXX_pair(theta:!ℝ, q0:𝔹, q1:𝔹):𝔹 × 𝔹{
   q0 := H(q0);
   q1 := H(q1);
-  (q0,q1) := evolveZZ(theta, (q0,q1));
+  (q0,q1) := evolveZZ_pair(theta, q0, q1);
   q0 := H(q0);
   q1 := H(q1);
   return (q0,q1);
 }
 
-def evolveYY(theta:!ℝ, qs:𝔹^2):𝔹^2{
-  (q0,q1) := qs;
+def evolveYY_pair(theta:!ℝ, q0:𝔹, q1:𝔹):𝔹 × 𝔹{
   half_pi := 1.5707963267948966:!ℝ;
   q0 := rotX(-half_pi, q0);
   q1 := rotX(-half_pi, q1);
-  (q0,q1) := evolveZZ(theta, (q0,q1));
+  (q0,q1) := evolveZZ_pair(theta, q0, q1);
   q0 := rotX(half_pi, q0);
   q1 := rotX(half_pi, q1);
   return (q0,q1);
 }
 
-def heis_step(J:!ℝ, field:!ℝ, dt:!ℝ, qs:𝔹^2):𝔹^2{
-  qs := evolveXX(J * dt, qs);
-  qs := evolveYY(J * dt, qs);
-  qs := evolveZZ(J * dt, qs);
+// One first-order Trotter step for the N-site Heisenberg Hamiltonian.
+def heis_step(J:!ℝ, field:!ℝ, dt:!ℝ, qs:𝔹^__NUM_SITES__):𝔹^__NUM_SITES__{
+  pair_angle := (J * dt):!ℝ;
+
+  // XX layer on all nearest neighbours.
+  for i in [0..__NUM_SITES__){
+    if i + 1 < __NUM_SITES__{
+      (qs[i],qs[i+1]) := evolveXX_pair(pair_angle, qs[i], qs[i+1]);
+    }
+  }
+
+  // YY layer.
+  for i in [0..__NUM_SITES__){
+    if i + 1 < __NUM_SITES__{
+      (qs[i],qs[i+1]) := evolveYY_pair(pair_angle, qs[i], qs[i+1]);
+    }
+  }
+
+  // ZZ layer.
+  for i in [0..__NUM_SITES__){
+    if i + 1 < __NUM_SITES__{
+      (qs[i],qs[i+1]) := evolveZZ_pair(pair_angle, qs[i], qs[i+1]);
+    }
+  }
+
+  // Local field layer.
   angleZ := (2.0 * field * dt):!ℝ;
-  qs[0] := rotZ(angleZ, qs[0]);
-  qs[1] := rotZ(angleZ, qs[1]);
+  for i in [0..__NUM_SITES__){
+    qs[i] := rotZ(angleZ, qs[i]);
+  }
   return qs;
 }
 
-// Example circuit: two-site XXX chain with J=0.8, B=0.2, t=0.1 and four steps.
-def main():𝔹^2{
-  qs := vector(2,0:𝔹);
+// Entry point used by the harness after templating.
+def main():𝔹^__NUM_SITES__{
+  qs := vector(__NUM_SITES__,0:𝔹);
 
-  J := 0.8:!ℝ;
-  field := 0.2:!ℝ;
-  total_time := 0.1:!ℝ;
-  steps := 4:!ℕ;
+  J := __J__:!ℝ;
+  field := __FIELD__:!ℝ;
+  total_time := __TOTAL_TIME__:!ℝ;
+  steps := __STEPS__:!ℕ;
   dt := total_time / (steps as !ℝ);
 
   for k in [0..steps){
@@ -65,3 +90,4 @@ def main():𝔹^2{
 
   return qs;
 }
+

@@ -153,17 +153,3 @@ def trotterize_heisenberg_xxx(
         circuit.append(cirq.PauliSumExponential(ps_field, exponent=-dt))
     return circuit, qubits
 
-
-def extract_state_from_lcu_result(
-    state_vector: np.ndarray, num_system: int, num_index: int, phase_target: int = 1
-) -> np.ndarray:
-    """Project onto ancilla |0...0> and phase qubit |phase_target>."""
-    dim_sys = 2**num_system
-    dim_index = 2**num_index
-    dim_phase = 2
-    reshaped = state_vector.reshape((dim_sys, dim_index, dim_phase))
-    slice_vec = reshaped[:, 0, phase_target]
-    norm = np.linalg.norm(slice_vec)
-    if norm == 0:
-        raise ValueError("LCU block returned zero amplitude on the target ancilla state.")
-    return slice_vec / norm

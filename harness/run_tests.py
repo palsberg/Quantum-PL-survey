@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import importlib
 import json
 import os
@@ -107,7 +108,9 @@ class CliAdapter(Adapter):
         state = payload.get("statevector")
         if state is None:
             raise RuntimeError("CLI result missing 'statevector' key")
-        vec = np.array([complex(entry["re"], entry["im"]) for entry in state], dtype=np.complex128)
+        vec = np.array(
+            [complex(entry["re"], entry["im"]) for entry in state], dtype=np.complex128
+        )
         return vec
 
 
@@ -220,6 +223,7 @@ for lang, reason in NON_PYTHON.items():
     ADAPTERS[lang] = {case.name: UnavailableAdapter(reason) for case in CASES}
 
 ALL_LANGUAGES = sorted(ADAPTERS.keys())
+ALL_CASE_NAMES = [case.name for case in CASES]
 
 
 @dataclass
@@ -238,30 +242,107 @@ TOLERANCE = 1e-6
 # (e.g., Cirq or Qiskit) or use only a simplified LCU-style circuit.
 NA_CASES: Dict[tuple[str, str], str] = {
     # Qrisp LCU delegates to Qiskit.
-    ("qrisp", "tfim_lcu"): "Qrisp tfim_lcu delegates to Qiskit LCU; correctness covered under Qiskit.",
-    ("qrisp", "heis_lcu"): "Qrisp heis_lcu delegates to Qiskit LCU; correctness covered under Qiskit.",
+    (
+        "qrisp",
+        "tfim_lcu",
+    ): "Qrisp tfim_lcu delegates to Qiskit LCU; correctness covered under Qiskit.",
+    (
+        "qrisp",
+        "heis_lcu",
+    ): "Qrisp heis_lcu delegates to Qiskit LCU; correctness covered under Qiskit.",
     # Silq LCU programs are only simplified ancilla-controlled blocks and do
     # not implement the full 2nd-order Taylor LCU used in the primary stacks.
-    ("silq", "tfim_lcu"): "Silq tfim_lcu uses a simplified ancilla-controlled block; no full 2nd-order LCU implementation in this artifact.",
-    ("silq", "heis_lcu"): "Silq heis_lcu uses a simplified ancilla-controlled block; no full 2nd-order LCU implementation in this artifact.",
+    (
+        "silq",
+        "tfim_lcu",
+    ): "Silq tfim_lcu uses a simplified ancilla-controlled block; no full 2nd-order LCU implementation in this artifact.",
+    (
+        "silq",
+        "heis_lcu",
+    ): "Silq heis_lcu uses a simplified ancilla-controlled block; no full 2nd-order LCU implementation in this artifact.",
     # Strawberry Fields Trotter programs use dual-rail CV Trotterization as an
     # approximate qubit implementation and currently achieve low fidelity
     # against the reference qubit Hamiltonians. We exclude them from formal
     # correctness checks in this artifact.
-    ("strawberryfields", "tfim_trotter"): "Strawberry Fields tfim_trotter uses a dual-rail CV Trotterization with low fidelity versus the reference qubit TFIM; excluded from correctness checks in this artifact.",
-    ("strawberryfields", "heis_trotter"): "Strawberry Fields heis_trotter uses a dual-rail CV Trotterization with low fidelity versus the reference qubit Heisenberg model; excluded from correctness checks in this artifact.",
+    (
+        "strawberryfields",
+        "tfim_trotter",
+    ): "Strawberry Fields tfim_trotter uses a dual-rail CV Trotterization with low fidelity versus the reference qubit TFIM; excluded from correctness checks in this artifact.",
+    (
+        "strawberryfields",
+        "heis_trotter",
+    ): "Strawberry Fields heis_trotter uses a dual-rail CV Trotterization with low fidelity versus the reference qubit Heisenberg model; excluded from correctness checks in this artifact.",
     # Strawberry Fields LCU programs are sequential dual-rail CV circuits, not
     # full 2nd-order Taylor LCU block encodings with selection ancillas and
     # PREPARE/SELECT oracles. We keep them N/A in the cross-language LCU
     # comparison to avoid conflating them with true Taylor LCU implementations.
-    ("strawberryfields", "tfim_lcu"): "Strawberry Fields tfim_lcu is a sequential dual-rail CV circuit, not a full 2nd-order Taylor LCU block encoding with selection ancillas and PREPARE/SELECT.",
-    ("strawberryfields", "heis_lcu"): "Strawberry Fields heis_lcu is a sequential dual-rail CV circuit, not a full 2nd-order Taylor LCU block encoding with selection ancillas and PREPARE/SELECT.",
+    (
+        "strawberryfields",
+        "tfim_lcu",
+    ): "Strawberry Fields tfim_lcu is a sequential dual-rail CV circuit, not a full 2nd-order Taylor LCU block encoding with selection ancillas and PREPARE/SELECT.",
+    (
+        "strawberryfields",
+        "heis_lcu",
+    ): "Strawberry Fields heis_lcu is a sequential dual-rail CV circuit, not a full 2nd-order Taylor LCU block encoding with selection ancillas and PREPARE/SELECT.",
 }
 
-def main():
+
+def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run cross-language Hamiltonian simulation tests.")
+    parser.add_argument(
+        "--languages",
+        nargs="+",
+        metavar="LANG",
+        help="Subset of languages to run (default: all).",
+    )
+    parser.add_argument(
+        "--cases",
+        nargs="+",
+        metavar="CASE",
+        help="Subset of cases to run (default: all).",
+    )
+    parser.add_argument(
+        "--list",
+        action="store_true",
+        help="List available languages and cases, then exit.",
+    )
+    return parser.parse_args(argv)
+
+
+def resolve_selection(
+    requested: Optional[List[str]], available: List[str], kind: str
+) -> List[str]:
+    if not requested:
+        return available
+    unknown = [item for item in requested if item not in available]
+    if unknown:
+        raise SystemExit(f"Unknown {kind}: {', '.join(unknown)}. Available: {', '.join(available)}")
+    # Preserve user-specified order, drop duplicates.
+    seen = set()
+    ordered: List[str] = []
+    for item in requested:
+        if item in seen:
+            continue
+        seen.add(item)
+        ordered.append(item)
+    return ordered
+
+
+def main(argv: Optional[List[str]] = None):
+    args = parse_args(argv)
+
+    if args.list:
+        print("Languages:", ", ".join(ALL_LANGUAGES))
+        print("Cases:", ", ".join(ALL_CASE_NAMES))
+        return
+
+    selected_languages = resolve_selection(args.languages, ALL_LANGUAGES, "language")
+    selected_cases_names = resolve_selection(args.cases, ALL_CASE_NAMES, "case")
+    selected_cases = [case for case in CASES if case.name in selected_cases_names]
+
     results: List[Result] = []
-    for language in ALL_LANGUAGES:
-        for case in CASES:
+    for language in selected_languages:
+        for case in selected_cases:
             # Handle N/A cases up front (delegations or partial implementations).
             na_reason = NA_CASES.get((language, case.name))
             if na_reason is not None:

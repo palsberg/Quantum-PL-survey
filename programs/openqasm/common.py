@@ -7,16 +7,10 @@ from pathlib import Path
 from textwrap import dedent
 from typing import Dict, List, Sequence, Tuple
 
-import cirq
-
-from ..cirq import common as cirq_common
 from ..common import pauli_models
 
 _DEFAULT_DIR = Path("programs/openqasm/generated")
 _DEFAULT_DIR.mkdir(parents=True, exist_ok=True)
-
-Operation = Dict[str, float | int]
-
 
 def _resolve_output_path(dest: str | None, default_name: str) -> Path:
     if dest:
@@ -37,19 +31,16 @@ def _write_qasm(name: str, qasm: str, params: dict) -> Path:
 
 def render_tfim_trotter_qasm(
     num_sites: int, J: float, h: float, total_time: float, steps: int
-) -> Tuple[str, List[Operation]]:
+) -> str:
     dt = total_time / steps
     body: List[str] = []
-    operations: List[Operation] = []
     for _ in range(steps):
         for i in range(num_sites - 1):
             theta = 2 * J * dt
             body.append(f"ZZ({theta}) q[{i}], q[{i + 1}];")
-            operations.append({"gate": "ZZ", "i": i, "j": i + 1, "theta": theta})
         for i in range(num_sites):
             theta = 2 * h * dt
             body.append(f"rx({theta}) q[{i}];")
-            operations.append({"gate": "RX", "i": i, "theta": theta})
     ops = "\n    ".join(body)
     qasm = dedent(
         f"""\
@@ -66,25 +57,22 @@ def render_tfim_trotter_qasm(
         {ops}
         """
     )
-    return qasm, operations
+    return qasm
 
 
 def render_heis_trotter_qasm(
     num_sites: int, J: float, field: float, total_time: float, steps: int
-) -> Tuple[str, List[Operation]]:
+) -> str:
     dt = total_time / steps
     body: List[str] = []
-    operations: List[Operation] = []
     for _ in range(steps):
         for i in range(num_sites - 1):
             theta = 2 * J * dt
             for gate in ("XX", "YY", "ZZ"):
                 body.append(f"{gate}({theta}) q[{i}], q[{i + 1}];")
-                operations.append({"gate": gate, "i": i, "j": i + 1, "theta": theta})
         for i in range(num_sites):
             theta = 2 * field * dt
             body.append(f"rz({theta}) q[{i}];")
-            operations.append({"gate": "RZ", "i": i, "theta": theta})
     ops = "\n    ".join(body)
     qasm = dedent(
         f"""\
@@ -125,7 +113,7 @@ def render_heis_trotter_qasm(
         {ops}
         """
     )
-    return qasm, operations
+    return qasm
 
 
 def render_tfim_lcu_qasm(num_sites: int, J: float, h: float, total_time: float) -> str:
@@ -148,38 +136,12 @@ def render_heis_lcu_qasm(num_sites: int, J: float, field: float, total_time: flo
     )
 
 
-def build_circuit_from_operations(num_sites: int, ops: List[Operation]) -> Tuple[cirq.Circuit, List[cirq.Qid]]:
-    qubits = cirq.LineQubit.range(num_sites)
-    circuit = cirq.Circuit()
-    for op in ops:
-        gate = op["gate"]
-        if gate in {"ZZ", "XX", "YY"}:
-            i = int(op["i"])
-            j = int(op["j"])
-            theta = float(op["theta"])
-            axis = gate[0]
-            axis = "Z" if axis == "Z" else axis
-            cirq_common.apply_two_qubit_rotation(circuit, qubits[i], qubits[j], theta, axis=axis)
-        elif gate == "RX":
-            i = int(op["i"])
-            theta = float(op["theta"])
-            cirq_common.apply_single_qubit_rotation(circuit, qubits[i], theta, axis="X")
-        elif gate == "RZ":
-            i = int(op["i"])
-            theta = float(op["theta"])
-            cirq_common.apply_single_qubit_rotation(circuit, qubits[i], theta, axis="Z")
-        else:
-            raise ValueError(f"Unsupported gate in QASM replay: {gate}")
-    return circuit, list(qubits)
-
-
 __all__ = [
     "_write_qasm",
     "render_tfim_trotter_qasm",
     "render_heis_trotter_qasm",
     "render_tfim_lcu_qasm",
     "render_heis_lcu_qasm",
-    "build_circuit_from_operations",
 ]
 
 

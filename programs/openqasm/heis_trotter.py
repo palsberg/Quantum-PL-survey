@@ -17,7 +17,7 @@ def run_simulation(config: Dict[str, Any]):
     steps = int(params.get("trotter_steps", 32))
 
     # Emit OpenQASM 3 program and persist it for artifacts.
-    qasm, operations = oq_common.render_heis_trotter_qasm(num_sites, J, field, total_time, steps)
+    qasm = oq_common.render_heis_trotter_qasm(num_sites, J, field, total_time, steps)
     oq_common._write_qasm("heis_trotter", qasm, params)
 
     # Execute the QASM program using Qiskit's OpenQASM 3 importer and

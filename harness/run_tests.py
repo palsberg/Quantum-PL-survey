@@ -21,6 +21,9 @@ try:
         time_evolve,
         zero_state,
     )
+    from harness.reference_shors import (
+        make_shors
+    )
 except ImportError:  # pragma: no cover
     import pathlib
     import sys
@@ -32,6 +35,9 @@ except ImportError:  # pragma: no cover
         tfim_hamiltonian,
         time_evolve,
         zero_state,
+    )
+    from harness.reference_shors import (
+        make_shors
     )
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -134,10 +140,20 @@ def compute_reference(case: Case) -> np.ndarray:
     h = float(params.get("h", 0.5))
     field = float(params.get("field", 0.2))
 
+    t=9
+    N=21
+    a=2
+
     if case.model == "tfim":
         H = tfim_hamiltonian(num_sites, J, h)
-    else:
+    elif case.model == "heis":
         H = heis_xxx_hamiltonian(num_sites, J, field)
+    else:
+
+        U = make_shors(t, N,a)
+        m=np.ceil(np.log(2,21))
+        psi0 = zero_state(t+m)   # make sure num_sites == t+m
+        return U @ psi0
 
     psi0 = zero_state(num_sites)
     return time_evolve(H, psi0, total_time)

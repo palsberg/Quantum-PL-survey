@@ -140,7 +140,7 @@ def compute_reference(case: Case) -> np.ndarray:
     h = float(params.get("h", 0.5))
     field = float(params.get("field", 0.2))
 
-    t=9
+    t=8 # keep it small so that our computer don't explode :)
     N=21
     a=2
 
@@ -149,9 +149,8 @@ def compute_reference(case: Case) -> np.ndarray:
     elif case.model == "heis":
         H = heis_xxx_hamiltonian(num_sites, J, field)
     else:
-
         U = make_shors(t, N,a)
-        m=np.ceil(np.log(2,21))
+        m = int(np.ceil(np.log2(N)))
         psi0 = zero_state(t+m)   # make sure num_sites == t+m
         return U @ psi0
 

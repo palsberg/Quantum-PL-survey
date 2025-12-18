@@ -136,31 +136,165 @@ def make_shors(t:int, N:int, a:int)->np.ndarray:
     """
     Given counting qubits length t, generate a (t+m)*(t+m) np array that represents the shor's algorithm of factoring 21 with a=2. 
     """
+    # working qubit at the bottom
     m = int(np.ceil(np.log2(N)))  # 5
-    t = 9 # can't hold matrix too large, or we could run on a server
     n = t + m
     Ma = Ma_matrix(N=N,a=a)  # 32x32
 
     # Initialize state
     # start in |00...0> then apply X on qubit t
-    U = np.eye(2**n, dtype=np.complex128)
+    state = np.zeros(2**n, dtype=np.complex128)
+    state[0] = 1.0
+    # U = np.eye(2**n, dtype=np.complex128)
     
     for q in range(t):
-        U = one_qubit_U(n, q, HADAMARD) @ U
+        state = one_qubit_U(n, q, HADAMARD) @ state
     
-    # X on qubit t 
-    U = one_qubit_U(n, t, PAULI_X) @ U
+    # X on qubit t + m - 1
+    # We are using |00..01> as 1
+    state = one_qubit_U(n, t + m - 1, PAULI_X) @ state
 
     # treat counting qubtis as binary, apply corresponding number of Ma
     for idx in range(t):
         U_pow = np.linalg.matrix_power(Ma, 1 << idx)
         CU = controlled_U_on_block(n, control=idx, target_offset=t, U_block=U_pow)
-        U = CU @ U
+        state = CU @ state
 
     # inverse QFT on counting register
-    U = iqft_on_counting_register(n, t) @ U
+    state = iqft_on_counting_register(n, t) @ state
 
-    return U 
+    return state 
+
+
+###########################################
+# The following are only for testing validity of the ground truth.
+def test_Ma_is_unitary(N=21, a=2):
+    U = Ma_matrix(N, a)
+    I = np.eye(U.shape[0], dtype=np.complex128)
+    assert np.allclose(U.conj().T @ U, I, atol=1e-12, rtol=0)
+    assert np.allclose(U @ U.conj().T, I, atol=1e-12, rtol=0)
+
+def test_Ma_action_on_basis(N=21, a=2):
+    m = int(np.ceil(np.log2(N)))
+    dim = 1 << m
+    U = Ma_matrix(N, a)
+
+    for x in range(dim):
+        e = np.zeros(dim, dtype=np.complex128)
+        e[x] = 1.0
+        y_state = U @ e
+        y = int(np.argmax(np.abs(y_state)))   # permutation => single 1
+
+        expected = (a * x) % N if x < N else x
+        assert y == expected
+
+def shor_qpe_statevector_small(t: int, N: int, a: int) -> np.ndarray:
+    """
+    Exact final statevector of QPE for modular multiplication oracle,
+    using only:
+      - Ma_matrix(N,a)
+      - iqft_matrix(t)
+    No huge (2^(t+m) x 2^(t+m)) matrix is built.
+    """
+    m = int(np.ceil(np.log2(N)))
+    dim_c = 1 << t
+    dim_w = 1 << m
+
+    U = Ma_matrix(N, a)
+
+    # state as (counting, work)
+    psi = np.zeros((dim_c, dim_w), dtype=np.complex128)
+    psi[0, 1] = 1.0  # |0...0> ⊗ |1>
+
+    # H on counting (do it as a dense QFT-free row transform)
+    inv_sqrt2 = 1 / np.sqrt(2)
+    for q in range(t):
+        mask = 1 << (t - 1 - q)
+        for r in range(dim_c):
+            if (r & mask) == 0:
+                r0 = r
+                r1 = r | mask
+                a0 = psi[r0, :].copy()
+                a1 = psi[r1, :].copy()
+                psi[r0, :] = (a0 + a1) * inv_sqrt2
+                psi[r1, :] = (a0 - a1) * inv_sqrt2
+
+    # controlled-U^(2^idx)
+    rows = np.arange(dim_c)
+    for idx in range(t):
+        U_pow = np.linalg.matrix_power(U, 1 << idx)
+        sel = (rows & (1 << (t - 1 - idx))) != 0
+        psi[sel, :] = psi[sel, :] @ U_pow.T
+
+    # IQFT on counting
+    psi = iqft_matrix(t) @ psi
+
+    return psi.reshape(-1)
+
+
+def counting_marginal_probs(state: np.ndarray, t: int, N: int) -> np.ndarray:
+    """
+    Marginalize probabilities onto counting register.
+    state has length 2^(t+m), with m=ceil(log2 N).
+    """
+    m = int(np.ceil(np.log2(N)))
+    dim_c = 1 << t
+    dim_w = 1 << m
+    psi = state.reshape(dim_c, dim_w)
+    probs = np.sum(np.abs(psi)**2, axis=1)
+    return probs / probs.sum()
+
+
+def test_qpe_peaks_small():
+    N, a = 21, 2
+    t = 7  # small enough for numpy
+    state = shor_qpe_statevector_small(t, N, a)
+    probs = counting_marginal_probs(state, t, N)
+
+    top = np.argsort(probs)[-8:][::-1]
+    print("Top outcomes:", [(format(i, f"0{t}b"), probs[i]) for i in top])
+
+    # For N=21, a=2 the order r is 6.
+    # QPE peaks near k/2^t ≈ s/r for s=0..r-1.
+    r = 6
+    expected_peaks = [round((s/r) * (1<<t)) % (1<<t) for s in range(r)]
+    # just check at least a few expected peaks appear in top results
+    assert len(set(top) & set(expected_peaks)) >= 3
+
+def test_make_shors_matches_reference():
+    N, a = 21, 2
+    t = 6  # keep small; your make_shors builds big matrices internally
+
+    psi_ref = shor_qpe_statevector_small(t, N, a)
+    psi_me  = make_shors(t, N, a)
+
+    # 1) same length
+    assert psi_me.shape == psi_ref.shape
+
+    # 2) normalized (numerical tolerance)
+    assert np.allclose(np.vdot(psi_me, psi_me), 1.0, atol=1e-10)
+
+    # 3) global phase invariant comparison
+    # align phases using the largest-magnitude amplitude
+    k = int(np.argmax(np.abs(psi_ref)))
+    if np.abs(psi_ref[k]) > 1e-14:
+        phase = psi_me[k] / psi_ref[k]
+        psi_me_aligned = psi_me / phase
+    else:
+        psi_me_aligned = psi_me
+
+    assert np.allclose(psi_me_aligned, psi_ref, atol=1e-10, rtol=0)
+
+def main():
+    test_Ma_is_unitary()
+    test_Ma_action_on_basis()
+    shor_qpe_statevector_small(6,21,2)
+    test_make_shors_matches_reference()
+    print("All tests passed")
+
+if __name__ == "__main__":
+    main()
+
 
 
 

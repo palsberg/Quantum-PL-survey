@@ -131,7 +131,6 @@ def Ma_matrix(N:int,a:int):
     return M
 
 
-
 def make_shors(t:int, N:int, a:int)->np.ndarray:
     """
     Given counting qubits length t, generate a (t+m)*(t+m) np array that represents the shor's algorithm of factoring 21 with a=2. 
@@ -166,8 +165,9 @@ def make_shors(t:int, N:int, a:int)->np.ndarray:
     return state 
 
 
-###########################################
-# The following are only for testing validity of the ground truth.
+#################################################################
+# The following are only for testing validity of the tester.
+#################################################################
 def test_Ma_is_unitary(N=21, a=2):
     U = Ma_matrix(N, a)
     I = np.eye(U.shape[0], dtype=np.complex128)

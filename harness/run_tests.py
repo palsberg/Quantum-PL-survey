@@ -217,7 +217,7 @@ CASE_SUFFIX = {
     "tfim_lcu": "tfim_lcu",
     "heis_trotter": "heis_trotter",
     "heis_lcu": "heis_lcu",
-    "shors21_2":"shors21_2",
+    "shors21_2":"shors", # general shor's file
 }
 
 PYTHON_BASES = {

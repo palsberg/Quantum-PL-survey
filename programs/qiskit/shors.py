@@ -20,6 +20,7 @@ from qiskit.circuit.library import QFT
 from qiskit.circuit.library.generalized_gates import UnitaryGate
 from qiskit.quantum_info import Statevector
 
+import sys
 
 def _mul_mod_N_gate(a: int, N: int, m: int) -> UnitaryGate:
     """
@@ -53,17 +54,20 @@ def _build_qpe_circuit(a:int, N:int, t:int)-> Tuple[QuantumCircuit,int]:
     qc.h(range(t))
 
     # Target register initialized to |1>
-    qc.x(t) # least-significant target qubit because counting qubits are 0..t-1
+    qc.x(t+m-1) # least-significant target qubit
+
+    targets=range(t,t+m)
 
     # Controlled-U^(2^k). Instead of powering U, directly use a^(2^k) mod N to save unnecessary gates
-    for k in range(t):
-        a_k=pow(a,1<<k,N)
+    for idx in range(t):
+        a_k=pow(a,1<<idx,N)
         U_k=_mul_mod_N_gate(a_k,N,m)
         cU_k=U_k.control(1)
-        qc.append(cU_k,[k]+list(range(t,t+m))) # effect on target quits
+        qc.append(cU_k,[idx]+list(targets)) # effect on target quits
 
-    # Inverse QFT on counting register
-    qc.append(QFT(t,do_swaps=True).inverse(),range(t))
+    # Inverse QFT on reversed counting register to match the reference codes
+    qc.append(QFT(t, do_swaps=False).inverse(), list(range(t)))
+    
     return qc, m
 
 
@@ -79,7 +83,11 @@ def _statevector_from_circuit(qc:QuantumCircuit)->np.ndarray:
     
     return np.asarray(sv,dtype=np.complex128)
 
-
+def qiskit_to_reference_order(sv: np.ndarray, n: int) -> np.ndarray:
+    # Qiskit: index bit k corresponds to qubit k (qubit 0 is LSB).
+    # Reference: opposite qubit significance.
+    # Convert by reversing qubit axes.
+    return sv.reshape([2] * n).transpose(list(range(n))[::-1]).reshape(-1)
 
 def run_simulation(config: Dict[str, Any]):
     """
@@ -97,7 +105,16 @@ def run_simulation(config: Dict[str, Any]):
         )
 
     qc, m = _build_qpe_circuit(a, N, t)
-    return _statevector_from_circuit(qc)
+    sv=_statevector_from_circuit(qc)
+    sv = qiskit_to_reference_order(sv, qc.num_qubits)
+
+
+    print("qiskit code:")
+    np.set_printoptions(threshold=sys.maxsize, linewidth=np.inf)
+    p = np.abs(sv)**2
+    print(np.sum(p > 1e-12), np.max(p[p <= 1e-12]) if np.any(p <= 1e-12) else 0.0)
+
+    return sv
 
 
 
@@ -238,7 +255,7 @@ def factor_integer(N: int) -> List[int]:
     return factors
 
 if __name__ == "__main__":
-    # Example: N=21
-    print("Order candidate r for a=2, N=21:", FindOrderCandidate(2, 21, t=12))
-    print("One factor from Shor(21):", Shor(21, max_tries=5, t=12))
-    print("Full factorization of 21:", factor_integer(21))
+    N=21
+    print(f"Order candidate r for a=2, N={N}:", FindOrderCandidate(2, N, t=12))
+    print(f"One factor from Shor({N}):", Shor(N, max_tries=5, t=12))
+    print(f"Full factorization of {N}:", factor_integer(N))

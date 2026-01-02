@@ -54,22 +54,42 @@ def _build_qpe_circuit(a:int, N:int, t:int)-> Tuple[QuantumCircuit,int]:
     qc.h(range(t))
 
     # Target register initialized to |1>
-    qc.x(t+m-1) # least-significant target qubit
+    qc.x(t+m-1) # treat last bit as least-significant target qubit
 
-    targets=range(t,t+m)
+    # Targets: Reference expects bit t to be MSB, t+m-1 to be LSB.
+    # We pass them in descending order so UnitaryGate treats t+m-1 as bit 0.
+    # targets = list(range(t, t + m))[::-1]
+
+
+    # targets = list(range(t, t + m))
+    targets = list(range(t, t + m))[::-1]   # [t+m-1, ..., t]
 
     # Controlled-U^(2^k). Instead of powering U, directly use a^(2^k) mod N to save unnecessary gates
     for idx in range(t):
         a_k=pow(a,1<<idx,N)
         U_k=_mul_mod_N_gate(a_k,N,m)
         cU_k=U_k.control(1)
-        qc.append(cU_k,[idx]+list(targets)) # effect on target quits
+        # qc.append(cU_k,[t - 1 - idx]+list(targets)) # effect on target quits
+
+        qc.append(cU_k,[idx] + targets)
 
     # Inverse QFT on reversed counting register to match the reference codes
-    qc.append(QFT(t, do_swaps=False).inverse(), list(range(t)))
+    # qc.append(QFT(t, do_swaps=True).inverse(), list(range(t)))
+
+
+    # Append LSB-first qubit order for Qiskit matrices:
+    iqft_gate = UnitaryGate(iqft_matrix(t), label=f"iqft_{t}")
+    qc.append(iqft_gate, list(range(t))[::-1]) #avoids Qiskit’s internal ordering/swap conventions entirely.
     
     return qc, m
 
+def iqft_matrix(t: int) -> np.ndarray:
+    dim = 1 << t
+    omega = np.exp(2j * np.pi / dim)
+    x = np.arange(dim)
+    W = omega ** (np.outer(x, x))
+    Q = W / np.sqrt(dim)
+    return Q.conj().T
 
 def _statevector_from_circuit(qc:QuantumCircuit)->np.ndarray:
     """
@@ -83,11 +103,31 @@ def _statevector_from_circuit(qc:QuantumCircuit)->np.ndarray:
     
     return np.asarray(sv,dtype=np.complex128)
 
-def qiskit_to_reference_order(sv: np.ndarray, n: int) -> np.ndarray:
-    # Qiskit: index bit k corresponds to qubit k (qubit 0 is LSB).
-    # Reference: opposite qubit significance.
-    # Convert by reversing qubit axes.
-    return sv.reshape([2] * n).transpose(list(range(n))[::-1]).reshape(-1)
+def bit_reverse_int(i, n):
+    return int(format(i, f'0{n}b')[::-1], 2)
+
+# def reorder_qiskit_to_reference(sv_qiskit, t, m):
+#     """
+#     Qiskit: |Target>_m ⊗ |Count>_t  (Count is LSB, Target is MSB)
+#     Ref:    |Count>_t ⊗ |Target>_m  (Count is MSB, Target is LSB)
+#     We need to swap the registers to match Reference.
+#     """
+    # n = t + m
+    # new_sv = np.zeros_like(sv_qiskit)
+    # for i in range(len(sv_qiskit)):
+    #     new_sv[bit_reverse_int(i, n)] = sv_qiskit[i]
+    # return new_sv
+
+    # t_dim=1<<t
+    # m_dim=1<<m
+    # new_sv=sv_qiskit.reshape(t_dim,m_dim)
+    # new_sv=new_sv[::-1]
+    # return new_sv
+    
+def reorder_qiskit_to_reference(sv: np.ndarray, n: int) -> np.ndarray:
+    return sv.reshape([2]*n).transpose(list(range(n))[::-1]).reshape(-1)
+
+
 
 def run_simulation(config: Dict[str, Any]):
     """
@@ -106,11 +146,11 @@ def run_simulation(config: Dict[str, Any]):
 
     qc, m = _build_qpe_circuit(a, N, t)
     sv=_statevector_from_circuit(qc)
-    sv = qiskit_to_reference_order(sv, qc.num_qubits)
-
+    
+    n = t + m
+    sv = reorder_qiskit_to_reference(sv, n)
 
     print("qiskit code:")
-    np.set_printoptions(threshold=sys.maxsize, linewidth=np.inf)
     p = np.abs(sv)**2
     print(np.sum(p > 1e-12), np.max(p[p <= 1e-12]) if np.any(p <= 1e-12) else 0.0)
 

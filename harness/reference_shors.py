@@ -167,8 +167,10 @@ def make_shors(t:int, N:int, a:int)->np.ndarray:
     print("reference state:")
     p = np.abs(state)**2
     print(np.sum(p > 1e-12), np.max(p[p <= 1e-12]) if np.any(p <= 1e-12) else 0.0)
-    
+
     return state 
+
+
 
 
 #################################################################

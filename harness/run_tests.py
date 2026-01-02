@@ -21,6 +21,9 @@ try:
         time_evolve,
         zero_state,
     )
+    from harness.reference_shors import (
+        make_shors
+    )
 except ImportError:  # pragma: no cover
     import pathlib
     import sys
@@ -32,6 +35,9 @@ except ImportError:  # pragma: no cover
         tfim_hamiltonian,
         time_evolve,
         zero_state,
+    )
+    from harness.reference_shors import (
+        make_shors
     )
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -127,17 +133,32 @@ def ensure_statevector(obj: Any) -> np.ndarray:
 
 def compute_reference(case: Case) -> np.ndarray:
     cfg = case.config
-    num_sites = int(cfg["num_sites"])
-    params = cfg.get("params", {})
-    total_time = float(cfg["time"])
-    J = float(params.get("J", 1.0))
-    h = float(params.get("h", 0.5))
-    field = float(params.get("field", 0.2))
-
+    
     if case.model == "tfim":
+        num_sites = int(cfg["num_sites"])
+        params = cfg.get("params", {})
+        total_time = float(cfg["time"])
+        J = float(params.get("J", 1.0))
+        h = float(params.get("h", 0.5))
+        field = float(params.get("field", 0.2))
+
         H = tfim_hamiltonian(num_sites, J, h)
-    else:
+    elif case.model == "heis":
+        num_sites = int(cfg["num_sites"])
+        params = cfg.get("params", {})
+        total_time = float(cfg["time"])
+        J = float(params.get("J", 1.0))
+        h = float(params.get("h", 0.5))
+        field = float(params.get("field", 0.2))
+
         H = heis_xxx_hamiltonian(num_sites, J, field)
+    else:
+        # shor's case, get corresponding parameters
+        t=cfg.get("t",8) 
+        N=cfg.get("N",21)
+        a=cfg.get("a",2)
+        state = make_shors(t, N, a)
+        return state # final state vector for shor's
 
     psi0 = zero_state(num_sites)
     return time_evolve(H, psi0, total_time)
@@ -180,6 +201,15 @@ CASES: List[Case] = [
             "params": {"J": 0.8, "field": 0.2, "lcu_precision": 1e-2},
         },
     ),
+    Case(
+        name="shors21_2",
+        model="shors21_2",
+        config={
+            "t":8, # keep it small so that our computer don't explode :)
+            "N":21,
+            "a":2
+        }
+    )
 ]
 
 CASE_SUFFIX = {
@@ -187,6 +217,7 @@ CASE_SUFFIX = {
     "tfim_lcu": "tfim_lcu",
     "heis_trotter": "heis_trotter",
     "heis_lcu": "heis_lcu",
+    "shors21_2":"shors", # general shor's file
 }
 
 PYTHON_BASES = {

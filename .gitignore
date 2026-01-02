@@ -205,3 +205,12 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# vscode settings
+.vscode/
+
+# mpl config
+.mplconfig/
+
+# qiskit order testing
+programs/qiskit/test.py

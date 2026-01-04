@@ -142,7 +142,7 @@ def make_shors(t:int, N:int, a:int)->np.ndarray:
     Ma = Ma_matrix(N=N,a=a)  # 32x32
 
     # Initialize state
-    # start in |00...0> then apply X on qubit t
+    # start in |00...0> then apply X on qubit t + m - 1
     state = np.zeros(2**n, dtype=np.complex128)
     state[0] = 1.0
     # U = np.eye(2**n, dtype=np.complex128)
@@ -156,7 +156,8 @@ def make_shors(t:int, N:int, a:int)->np.ndarray:
 
     # treat counting qubtis as binary, apply corresponding number of Ma
     for idx in range(t):
-        U_pow = np.linalg.matrix_power(Ma, 1 << idx)
+        # U_pow = np.linalg.matrix_power(Ma, 1 << idx)
+        U_pow = np.linalg.matrix_power(Ma, 1 << (t - 1 - idx)) # Big Endian! first bit gives largest exponent!
         CU = controlled_U_on_block(n, control=idx, target_offset=t, U_block=U_pow)
         state = CU @ state
 
@@ -230,7 +231,8 @@ def shor_qpe_statevector_small(t: int, N: int, a: int) -> np.ndarray:
     # controlled-U^(2^idx)
     rows = np.arange(dim_c)
     for idx in range(t):
-        U_pow = np.linalg.matrix_power(U, 1 << idx)
+        # U_pow = np.linalg.matrix_power(U, 1 << idx)
+        U_pow = np.linalg.matrix_power(U, 1 << (t - 1 - idx))
         sel = (rows & (1 << (t - 1 - idx))) != 0
         psi[sel, :] = psi[sel, :] @ U_pow.T
 
@@ -267,7 +269,7 @@ def test_qpe_peaks_small():
     r = 6
     expected_peaks = [round((s/r) * (1<<t)) % (1<<t) for s in range(r)]
     # just check at least a few expected peaks appear in top results
-    assert len(set(top) & set(expected_peaks)) >= 3
+    assert len(set(top) & set(expected_peaks)) >= 6
 
 def test_make_shors_matches_reference():
     N, a = 21, 2
@@ -298,6 +300,8 @@ def main():
     test_Ma_action_on_basis()
     shor_qpe_statevector_small(6,21,2)
     test_make_shors_matches_reference()
+
+    print(np.array(one_qubit_U(3,0,PAULI_X))@np.array([1,0,0,0,0,0,0,0]))
     print("All tests passed")
 
 if __name__ == "__main__":

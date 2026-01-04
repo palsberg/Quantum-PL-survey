@@ -61,7 +61,7 @@ def _build_qpe_circuit(a:int, N:int, t:int)-> Tuple[QuantumCircuit,int]:
 
     # Controlled-U^(2^k). Instead of powering U, directly use a^(2^k) mod N to save unnecessary gates
     for idx in range(t):
-        a_k=pow(a,1<<idx,N)
+        a_k = pow(a, 1 << (t - 1 - idx), N)  # big-endian: MSB gets largest power
         U_k=_mul_mod_N_gate(a_k,N,m)
         cU_k=U_k.control(1)
         qc.append(cU_k,[idx] + targets)
@@ -266,7 +266,8 @@ def factor_integer(N: int) -> List[int]:
     return factors
 
 if __name__ == "__main__":
-    N=21
-    print(f"Order candidate r for a=2, N={N}:", FindOrderCandidate(2, N, t=12))
+    N=27
+    a=2
+    print(f"Order candidate r for a={a}, N={N}:", FindOrderCandidate(a, N, t=12))
     print(f"One factor from Shor({N}):", Shor(N, max_tries=5, t=12))
     print(f"Full factorization of {N}:", factor_integer(N))

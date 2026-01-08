@@ -9,9 +9,9 @@ import numpy as np
 from math import ceil, gcd, log2
 from typing import Callable, Sequence
 from typing import Any, Dict, List, Optional, Tuple
-from shor.modularexponentiation import ModularExp
-from shor.quantumorderfinding import quantum_order_finder
-from shor.common import classical_order_finder
+from .shor.modularexponentiation import ModularExp
+from .shor.quantumorderfinding import quantum_order_finder
+from .shor.common import classical_order_finder
 
 """Functions for factoring from start to finish."""
 def find_factor_of_prime_power(n: int) -> int | None:
@@ -92,10 +92,11 @@ def find_factor(
     print(f"Failed to find a non-trivial factor in {max_attempts} attempts.")
     return None
 
-def _build_qpe_circuit(*, t: int, N: int, a: int) -> tuple[cirq.Circuit, list[cirq.Qid]]:
+def _build_qpe_circuit(t: int, N: int, a: int) -> tuple[cirq.Circuit, list[cirq.Qid]]:
     """
     Build QPE circuit for the Ma: |x>->|a*x mod N> with NO measurements
     returns (circuit, qubit_order)
+    **Cirq requires an explicit qubit order
     """
     if N<=1:
         raise ValueError("N must be >1")
@@ -113,7 +114,7 @@ def _build_qpe_circuit(*, t: int, N: int, a: int) -> tuple[cirq.Circuit, list[ci
         cirq.H.on_each(*counting),
         cirq.X(target[-1]),
         mod_exp.on(*target, *counting),
-        cirq.qft(*counting, inverse=True, without_reverse=Falseq),
+        cirq.qft(*counting, inverse=True, without_reverse=False),
     )
 
     qubit_order = counting + target
@@ -126,8 +127,7 @@ def run_simulation(config: Dict[str, Any]):
     Returns the full final statevector.
     Expected config keys: t, N, a
     """
-    print("--------Running Shor in Cirq--------")
-    t=int(config.get("t",8))
+    t=int(config.get("t",6))
     N=int(config.get("N",21))
     a=int(config.get("a",2))
     if N != 21 or a != 2:
@@ -135,8 +135,10 @@ def run_simulation(config: Dict[str, Any]):
         raise ValueError(
             f"This implementation is specialized for N=21, a=2 (got N={N}, a={a})."
         )
-        
+    
+    print(f"\t**Building QPE Circuit for N={N}, a={a}, t={t}...")
     circuit, qubit_order = _build_qpe_circuit(t=t, N=N, a=a)
+    print("\t**QPE Circuit built")
     sv = cirq.final_state_vector(
         circuit,
         qubit_order=qubit_order,
@@ -147,7 +149,7 @@ def run_simulation(config: Dict[str, Any]):
 
 
 if __name__ == "__main__":
-    n = 15
+    n = 21
     factor = find_factor(n, order_finder=classical_order_finder)
     if factor is not None:
         print(f"A non-trivial factor of n = {n} is {factor}.")

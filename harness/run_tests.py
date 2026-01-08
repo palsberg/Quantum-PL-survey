@@ -154,10 +154,12 @@ def compute_reference(case: Case) -> np.ndarray:
         H = heis_xxx_hamiltonian(num_sites, J, field)
     else:
         # shor's case, get corresponding parameters
-        t=cfg.get("t",8) 
+        t=cfg.get("t",6) 
         N=cfg.get("N",21)
         a=cfg.get("a",2)
+        print("\t**Making Shor's circuit...")
         state = make_shors(t, N, a)
+        print("\t**Shor's circuit made")
         return state # final state vector for shor's
 
     psi0 = zero_state(num_sites)
@@ -205,7 +207,7 @@ CASES: List[Case] = [
         name="shors21_2",
         model="shors21_2",
         config={
-            "t":8, # keep it small so that our computer don't explode :)
+            "t":6, # keep it small so that our computer don't explode :)
             "N":21,
             "a":2
         }
@@ -374,6 +376,7 @@ def main(argv: Optional[List[str]] = None):
     results: List[Result] = []
     for language in selected_languages:
         for case in selected_cases:
+            print(f"Running \'{case.name}\' in \'{language}\'")
             # Handle N/A cases up front (delegations or partial implementations).
             na_reason = NA_CASES.get((language, case.name))
             if na_reason is not None:
@@ -388,6 +391,7 @@ def main(argv: Optional[List[str]] = None):
             try:
                 state = adapter.run(case.config)
                 expected = compute_reference(case)
+                print("\t**Computing fidelity...")
                 fidelity = compute_fidelity(state, expected)
                 success = fidelity >= 1 - TOLERANCE
                 message = "ok" if success else "low fidelity"
@@ -412,6 +416,7 @@ def normalize(vec: np.ndarray) -> np.ndarray:
 
 
 def print_summary(results: List[Result]):
+    print("\n")
     header = f"{'Language':<20}{'Case':<15}{'Status':<8}{'Fidelity':<12}Message"
     print(header)
     print("-" * len(header))

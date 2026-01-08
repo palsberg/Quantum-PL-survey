@@ -47,7 +47,8 @@ def classical_order_finder(x: int, n: int) -> int | None:
     return r
 
 
-"""Example of a multiplicative group."""
-n = 15
-print(f"The multiplicative group modulo n = {n} is:")
-print(multiplicative_group(n))
+if __name__ == "__main__":
+    """Example of a multiplicative group."""
+    n = 15
+    print(f"The multiplicative group modulo n = {n} is:")
+    print(multiplicative_group(n))

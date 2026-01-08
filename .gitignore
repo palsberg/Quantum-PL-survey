@@ -214,3 +214,8 @@ __marimo__/
 
 # qiskit order testing
 programs/qiskit/test.py
+
+# Quipper 
+
+my-quipper-project/*
+.DS_Store

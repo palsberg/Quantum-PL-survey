@@ -109,11 +109,6 @@ def run_simulation(config: Dict[str, Any]):
     t=int(config.get("t",8))
     N=int(config.get("N",21))
     a=int(config.get("a",2))
-    if N != 21 or a != 2:
-        # using the wrong code, raise error
-        raise ValueError(
-            f"This implementation is specialized for N=21, a=2 (got N={N}, a={a})."
-        )
 
     qc, m = _build_qpe_circuit(a, N, t)
     sv=_statevector_from_circuit(qc)
@@ -121,9 +116,9 @@ def run_simulation(config: Dict[str, Any]):
     n = t + m
     sv = reorder_qiskit_to_reference(sv, n)
 
-    print("qiskit code:")
-    p = np.abs(sv)**2
-    print(np.sum(p > 1e-12), np.max(p[p <= 1e-12]) if np.any(p <= 1e-12) else 0.0)
+    # print("qiskit code:")
+    # p = np.abs(sv)**2
+    # print(np.sum(p > 1e-12), np.max(p[p <= 1e-12]) if np.any(p <= 1e-12) else 0.0)
 
     return sv
 

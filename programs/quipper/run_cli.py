@@ -21,6 +21,7 @@ HS_SOURCES = {
     "tfim_lcu": "tfim_lcu.hs",
     "heis_trotter": "heis_trotter.hs",
     "heis_lcu": "heis_lcu.hs",
+    "shors21_2":"shors.hs"
 }
 
 

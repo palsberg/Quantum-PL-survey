@@ -28,6 +28,7 @@ CASE_FILES = {
     "tfim_lcu": "tfim_lcu.slq",
     "heis_trotter": "heis_trotter.slq",
     "heis_lcu": "heis_lcu.slq",
+    "shors21_2":"shors.slq"
 }
 
 

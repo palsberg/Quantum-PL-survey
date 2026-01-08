@@ -5,10 +5,13 @@ import cirq
 import math
 import random
 import sympy
+import numpy as np
+from math import ceil, gcd, log2
 from typing import Callable, Sequence
-from modularexponentiation import ModularExp
-from quantumorderfinding import quantum_order_finder
-from common import classical_order_finder
+from typing import Any, Dict, List, Optional, Tuple
+from shor.modularexponentiation import ModularExp
+from shor.quantumorderfinding import quantum_order_finder
+from shor.common import classical_order_finder
 
 """Functions for factoring from start to finish."""
 def find_factor_of_prime_power(n: int) -> int | None:
@@ -88,6 +91,60 @@ def find_factor(
 
     print(f"Failed to find a non-trivial factor in {max_attempts} attempts.")
     return None
+
+def _build_qpe_circuit(*, t: int, N: int, a: int) -> tuple[cirq.Circuit, list[cirq.Qid]]:
+    """
+    Build QPE circuit for the Ma: |x>->|a*x mod N> with NO measurements
+    returns (circuit, qubit_order)
+    """
+    if N<=1:
+        raise ValueError("N must be >1")
+    if gcd(a,N)!=1:
+        raise ValueError("QPE requires gcd(a,N)==1 for order finding")
+    
+    m = int(ceil(log2(N)))
+    counting = list(cirq.LineQubit.range(t))
+    target = list(cirq.LineQubit.range(t, t + m))
+
+    # ModularExp expects registers as (target, exponent, base, modulus).
+    mod_exp = ModularExp([2] * m, [2] * t, a, N)
+
+    circuit = cirq.Circuit(
+        cirq.H.on_each(*counting),
+        cirq.X(target[-1]),
+        mod_exp.on(*target, *counting),
+        cirq.qft(*counting, inverse=True, without_reverse=Falseq),
+    )
+
+    qubit_order = counting + target
+    return circuit, qubit_order
+
+
+def run_simulation(config: Dict[str, Any]):
+    """
+    Build Shor QPE circuit for factoring 21 with a=2, without measurement.
+    Returns the full final statevector.
+    Expected config keys: t, N, a
+    """
+    print("--------Running Shor in Cirq--------")
+    t=int(config.get("t",8))
+    N=int(config.get("N",21))
+    a=int(config.get("a",2))
+    if N != 21 or a != 2:
+        # using the wrong code, raise error
+        raise ValueError(
+            f"This implementation is specialized for N=21, a=2 (got N={N}, a={a})."
+        )
+        
+    circuit, qubit_order = _build_qpe_circuit(t=t, N=N, a=a)
+    sv = cirq.final_state_vector(
+        circuit,
+        qubit_order=qubit_order,
+        dtype=np.complex128,
+    )
+
+    return np.asarray(sv, dtype=np.complex128)
+
 
 if __name__ == "__main__":
     n = 15

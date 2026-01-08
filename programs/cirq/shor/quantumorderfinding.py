@@ -3,6 +3,7 @@ Source: https://quantumai.google/cirq/experiments/shor
 """
 import cirq
 import math
+import fractions
 from typing import Sequence, Iterable
 from modularexponentiation import ModularExp
 

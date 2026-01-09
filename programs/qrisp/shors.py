@@ -8,10 +8,10 @@ from qrisp.simulator import statevector_sim
 from qiskit.quantum_info import Statevector
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 
-def find_order(a, N):
+def find_order(a, N, t):
     qg = QuantumModulus(N)
     qg[:] = 1
-    qpe_res = QuantumFloat(8, exponent=-(8))
+    qpe_res = QuantumFloat(t, exponent=-(t))
     h(qpe_res)
     for i in range(len(qpe_res)):
         with control(qpe_res[i]):
@@ -56,14 +56,14 @@ def run_simulation(config: Dict[str, Any]):
     a=int(config.get("a",2))
     m = int(np.ceil(np.log2(N))) 
 
-    qpe_res,qg = find_order(a, N) # This returns the QuantumFloat
+    qpe_res,qg = find_order(a, N, t) # This returns the QuantumFloat
     qs = qpe_res.qs            # Get the session
     qc = qs.compile().to_qiskit()
     full_state = Statevector(qc).data
     dim_target = 1 << m   # Qubits 0-4  (LSBs -> Last Axis)
     dim_count  = 1 << t   # Qubits 5-10 (Middle -> Middle Axis)
     dim_work   = 1 << 10  # Qubits 11-20 (MSBs -> First Axis)
-    psi_tensor = full_state.reshape((dim_work, dim_count, dim_target))
+    psi_tensor = full_state.reshape((-1, dim_count, dim_target))
     psi_clean_tensor = psi_tensor[0, :, :]
     psi_final = psi_clean_tensor.reshape(-1)
     return psi_final
@@ -71,7 +71,8 @@ def run_simulation(config: Dict[str, Any]):
 if __name__ == "__main__":
     # 1. Setup and Run
     N, a = 21, 2
-    qpe_res,qg = find_order(a, N) # This returns the QuantumFloat
+    t=6
+    qpe_res,qg = find_order(a, N,t) # This returns the QuantumFloat
     qs = qpe_res.qs            # Get the session
 
     qc = qs.compile().to_qiskit()
@@ -80,7 +81,7 @@ if __name__ == "__main__":
     
     # 3. Define Dimensions based on your circuit layout
     dim_target = 1 << 5   # Qubits 0-4  (LSBs -> Last Axis)
-    dim_count  = 1 << 8   # Qubits 5-10 (Middle -> Middle Axis)
+    dim_count  = 1 << t   # Qubits 5-10 (Middle -> Middle Axis)
     dim_work   = 1 << 10  # Qubits 11-20 (MSBs -> First Axis)
 
     # 4. Reshape: (MSB Axis, Middle Axis, LSB Axis)
@@ -97,14 +98,14 @@ if __name__ == "__main__":
     #    and Axis 1 (Target) becomes the "lower" bits.
     psi_final = psi_clean_tensor.reshape(-1)
     # print(f"psi_final: {psi_final}")
-    ref=make_shors(t=8, N=21, a=2)
+    ref=make_shors(t=6, N=21, a=2)
     # print(f"ref: {ref}")
 
-    psi_tensor = ref.reshape(2**8, -1)
+    psi_tensor = ref.reshape(2**t, -1)
     probs_array = np.sum(np.abs(psi_tensor)**2, axis=1)
     print("Printing ref probs")
     results = {}
-    normalization = 1 << 8
+    normalization = 1 << t
     for k, p in enumerate(probs_array):
         if p > 1e-9:  # Filter out numerical noise
             phase_val = k / normalization
@@ -115,7 +116,7 @@ if __name__ == "__main__":
     probs_array = np.sum(np.abs(psi_tensor)**2, axis=(0,2))
     print("Printing qrisp probs")
     results = {}
-    normalization = 1 << 8
+    normalization = 1 << t
     for k, p in enumerate(probs_array):
         if p > 1e-9:  # Filter out numerical noise
             phase_val = k / normalization

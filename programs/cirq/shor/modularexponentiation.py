@@ -92,24 +92,25 @@ class ModularExp(cirq.ArithmeticGate):
         wire_symbols[0] = f'ModularExp(t*{self.base}**{e_str} % {self.modulus})'
         return cirq.CircuitDiagramInfo(wire_symbols=tuple(wire_symbols))
     
-"""Create the target and exponent registers for phase estimation,
-and see the number of qubits needed for Shor's algorithm.
-"""
-n = 15
-L = n.bit_length()
+if __name__ == "__main__":
+    """Create the target and exponent registers for phase estimation,
+    and see the number of qubits needed for Shor's algorithm.
+    """
+    n = 15
+    L = n.bit_length()
 
-# The target register has L qubits.
-target = cirq.LineQubit.range(L)
+    # The target register has L qubits.
+    target = cirq.LineQubit.range(L)
 
-# The exponent register has 2L + 3 qubits.
-exponent = cirq.LineQubit.range(L, 3 * L + 3)
+    # The exponent register has 2L + 3 qubits.
+    exponent = cirq.LineQubit.range(L, 3 * L + 3)
 
-# Display the total number of qubits to factor this n.
-print(f"To factor n = {n} which has L = {L} bits, we need 3L + 3 = {3 * L + 3} qubits.")
+    # Display the total number of qubits to factor this n.
+    print(f"To factor n = {n} which has L = {L} bits, we need 3L + 3 = {3 * L + 3} qubits.")
 
-"""See (part of) the unitary for a modular exponential gate."""
-# Pick some element of the multiplicative group modulo n.
-x = 5
+    """See (part of) the unitary for a modular exponential gate."""
+    # Pick some element of the multiplicative group modulo n.
+    x = 5
 
-# Display (part of) the unitary. Uncomment if n is small enough.
-# cirq.unitary(ModularExp([2] * L, [2] * (2 * L * 3), x, n))
+    # Display (part of) the unitary. Uncomment if n is small enough.
+    # cirq.unitary(ModularExp([2] * L, [2] * (2 * L * 3), x, n))

@@ -3,8 +3,9 @@ Source: https://quantumai.google/cirq/experiments/shor
 """
 import cirq
 import math
+import fractions
 from typing import Sequence, Iterable
-from modularexponentiation import ModularExp
+from .modularexponentiation import ModularExp
 
 def process_measurement(result: cirq.Result, x: int, n: int) -> int | None:
     """Interprets the output of the order finding circuit.
@@ -97,18 +98,19 @@ def quantum_order_finder(x: int, n: int) -> int | None:
     # Return the processed measurement result.
     return process_measurement(measurement, x, n)
     
-"""Example of the quantum circuit for period finding."""
-n = 15
-x = 7
-circuit = make_order_finding_circuit(x, n)
-print(circuit)
+if __name__ == "__main__":
+    """Example of the quantum circuit for period finding."""
+    n = 15
+    x = 7
+    circuit = make_order_finding_circuit(x, n)
+    print(circuit)
 
-"""Measuring Shor's period finding circuit."""
-circuit = make_order_finding_circuit(x=5, n=6)
-res = cirq.sample(circuit, repetitions=8)
+    """Measuring Shor's period finding circuit."""
+    circuit = make_order_finding_circuit(x=5, n=6)
+    res = cirq.sample(circuit, repetitions=8)
 
-print("Raw measurements:")
-print(res)
+    print("Raw measurements:")
+    print(res)
 
-print("\nInteger in exponent register:")
-print(res.data)
+    print("\nInteger in exponent register:")
+    print(res.data)

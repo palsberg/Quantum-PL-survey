@@ -46,6 +46,7 @@ def classical_order_finder(x: int, n: int) -> int | None:
         r += 1
     return r
 
+
 if __name__ == "__main__":
     """Example of a multiplicative group."""
     n = 15

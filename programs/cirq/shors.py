@@ -149,9 +149,9 @@ def run_simulation(config: Dict[str, Any]):
 
 
 if __name__ == "__main__":
-    N = 21
-    factor = find_factor(N, order_finder=classical_order_finder)
+    n = 21
+    factor = find_factor(n, order_finder=classical_order_finder)
     if factor is not None:
-        print(f"A non-trivial factor of N = {N} is {factor}.")
+        print(f"A non-trivial factor of n = {n} is {factor}.")
     else:
-        print(f"Failed to find a non-trivial factor of N = {N}.")
+        print(f"Failed to find a non-trivial factor of n = {n}.")

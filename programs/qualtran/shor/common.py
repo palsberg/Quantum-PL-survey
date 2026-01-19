@@ -3,20 +3,6 @@ Source: https://quantumai.google/cirq/experiments/shor
 """
 import math
 
-"""Function to compute the elements of Z_n."""
-def multiplicative_group(n: int) -> list[int]:
-    """Returns the multiplicative group modulo n.
-
-    Args:
-        n: Modulus of the multiplicative group.
-    """
-    assert n > 1
-    group = [1]
-    for x in range(2, n):
-        if math.gcd(x, n) == 1:
-            group.append(x)
-    return group
-
 """Function for classically computing the order of an element of Z_n."""
 def classical_order_finder(x: int, n: int) -> int | None:
     """Computes smallest positive r such that x**r mod n == 1.
@@ -45,9 +31,3 @@ def classical_order_finder(x: int, n: int) -> int | None:
         y = (x * y) % n
         r += 1
     return r
-
-if __name__ == "__main__":
-    """Example of a multiplicative group."""
-    n = 15
-    print(f"The multiplicative group modulo n = {n} is:")
-    print(multiplicative_group(n))

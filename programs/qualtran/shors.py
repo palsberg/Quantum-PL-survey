@@ -17,6 +17,9 @@ from .shor.shors_common import classical_order_finder
 from qualtran import BloqBuilder, QUInt
 from qualtran.bloqs.basic_gates import Hadamard
 from qualtran.bloqs.qft import QFTTextBook
+from qualtran.simulation.tensor import initialize_from_zero
+from qualtran.cirq_interop._interop_qubit_manager import InteropQubitManager
+from qualtran._infra.gate_with_registers import get_named_qubits, merge_qubits
 
 """Functions for factoring from start to finish."""
 def find_factor_of_prime_power(n: int) -> int | None:
@@ -97,7 +100,7 @@ def find_factor(
     print(f"Failed to find a non-trivial factor in {max_attempts} attempts.")
     return None
 
-def _build_qpe_circuit(t: int, N: int, a: int) -> Tuple[cirq.Circuit, List[cirq.Qid]]:
+def _build_qpe_circuit(t: int, N: int, a: int) -> np.ndarray:
     """
     Build QPE circuit for the Ma: |x>->|a*x mod N> with NO measurements
     returns (circuit, qubit_order)
@@ -105,54 +108,50 @@ def _build_qpe_circuit(t: int, N: int, a: int) -> Tuple[cirq.Circuit, List[cirq.
     if N <= 1:
         raise ValueError("N must be > 1")
     if gcd(a, N) != 1:
-        raise ValueError("QPE requires gcd(a, N) == 1 for order finding")
+        raise ValueError("QPE requires gcd(a, N) == 1")
 
     m = int(ceil(log2(N)))
-    counting = list(cirq.LineQubit.range(t))
-    target = list(cirq.LineQubit.range(t, t + m))
-    qubit_order = counting + target
 
-    # Build the bloq graph ---
     bb = BloqBuilder()
 
+    # exponent register
     exponent = bb.add_register_from_dtype("exponent", QUInt(t))
 
-    exp_bits = bb.split(exponent)
+    # Hadamard on each exponent bit
+    bits = bb.split(exponent)
     for i in range(t):
-        exp_bits[i] = bb.add(Hadamard(), q=exp_bits[i])
-    exponent = bb.join(exp_bits, dtype=QUInt(t))
+        bits[i] = bb.add(Hadamard(), q=bits[i])
+    exponent = bb.join(bits, dtype=QUInt(t))
 
-    # Modular exponentiation.
-    # Qualtran's ModExp prepares the |1> output register internally (RIGHT register)
+    # modular exponentiation (creates RIGHT register x)
     modexp = ModExp(base=a, mod=N, exp_bitsize=t, x_bitsize=m)
     exponent, x = bb.add(modexp, exponent=exponent)
 
-    inv_qft = QFTTextBook(bitsize=t, with_reverse=True).adjoint()
-    exponent = bb.add(inv_qft, q=exponent)
-
+    # inverse QFT (with swaps, matching cirq.qft(... without_reverse=False))
+    exponent = bb.add(QFTTextBook(bitsize=t, with_reverse=True).adjoint(), q=exponent)
     cbloq = bb.finalize(exponent=exponent, x=x)
+    
+    # --- Convert CompositeBloq -> Cirq circuit and simulate ---
+    print("a1")
+    init_quregs = get_named_qubits(cbloq.signature)
+    print("a12")
+    qm = InteropQubitManager(cirq.ops.SimpleQubitManager())
+    print("a13")
+    circuit, quregs_out = cbloq.to_cirq_circuit_and_quregs(qubit_manager=qm, **init_quregs)
 
-    # To Cirq:
-    frozen_circuit, quregs = cbloq.to_cirq_circuit_and_quregs(exponent=counting)
+    print("a2")
+    # Put qubits in a stable order: signature qubits first, then any extra ancillas.
+    sig_qubits = merge_qubits(cbloq.signature, **quregs_out)
+    sig_set = set(sig_qubits)
+    extra_qubits = sorted([q for q in circuit.all_qubits() if q not in sig_set], key=str)
+    qubit_order = list(sig_qubits) + extra_qubits
 
-    if "x" not in quregs:
-        raise RuntimeError("Qualtran export did not produce expected right-register named 'x'.")
+    print("a3")
+    result = cirq.Simulator(dtype=np.complex128).simulate(circuit, qubit_order=qubit_order)
+    out = result.final_state_vector
 
-    x_qubits = list(quregs["x"])
-    if len(x_qubits) != m:
-        raise RuntimeError(f"Expected x register of size {m}, got {len(x_qubits)}.")
-
-    all_exported = set(frozen_circuit.all_qubits())
-    allowed = set(counting) | set(x_qubits)
-    extra = all_exported - allowed
-    if extra:
-        raise RuntimeError(f"Unexpected extra qubits allocated by Qualtran: {sorted(extra)}")
-
-    rename_map = {old: new for old, new in zip(x_qubits, target)}
-    circuit = cirq.Circuit(frozen_circuit).transform_qubits(lambda q: rename_map.get(q, q))
-
-    return circuit, qubit_order
-
+    return np.asarray(out, dtype=np.complex128)
+    
 
 def run_simulation(config: Dict[str, Any]):
     """
@@ -170,15 +169,10 @@ def run_simulation(config: Dict[str, Any]):
         )
     
     print(f"\t**Building QPE Circuit for N={N}, a={a}, t={t}...")
-    circuit, qubit_order = _build_qpe_circuit(t=t, N=N, a=a)
+    sv = _build_qpe_circuit(t=t, N=N, a=a)
     print("\t**QPE Circuit built")
-    sv = cirq.final_state_vector(
-        circuit,
-        qubit_order=qubit_order,
-        dtype=np.complex128,
-    )
-
-    return np.asarray(sv, dtype=np.complex128)
+    
+    return sv
 
 if __name__ == "__main__":
     N = 21

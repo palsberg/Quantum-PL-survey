@@ -11,7 +11,7 @@ from typing import Callable, Sequence
 from typing import Any, Dict, List, Optional, Tuple
 from .shor.modularexponentiation import ModularExp
 from .shor.quantumorderfinding import quantum_order_finder
-from .shor.common import classical_order_finder
+from .shor.shors_common import classical_order_finder
 
 """Functions for factoring from start to finish."""
 def find_factor_of_prime_power(n: int) -> int | None:

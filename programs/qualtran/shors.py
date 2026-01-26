@@ -13,15 +13,14 @@ import numpy as np
 import sympy
 from math import ceil, gcd, log2
 from qualtran.bloqs.cryptography.rsa import ModExp, RSAPhaseEstimate
-from .shor.shors_common import classical_order_finder
+from .shor.shors_common import classical_order_finder, ModExpPermutationGate
 from qualtran import BloqBuilder, QUInt
-from qualtran.bloqs.basic_gates import Hadamard
+from qualtran.bloqs.basic_gates import Hadamard, XGate
 from qualtran.bloqs.qft import QFTTextBook
 from qualtran.simulation.tensor import initialize_from_zero
 from qualtran.cirq_interop._interop_qubit_manager import InteropQubitManager
 from qualtran._infra.gate_with_registers import get_named_qubits, merge_qubits
-# from qualtran.bloqs.mod_arithmetic import CModMulK
-# from qualtran.bloqs.basic_gates import XGate
+from qualtran.cirq_interop import CirqGateAsBloq
 
 """Functions for factoring from start to finish."""
 def find_factor_of_prime_power(n: int) -> int | None:
@@ -104,7 +103,7 @@ def find_factor(
 
 def _build_qpe_circuit(t: int, N: int, a: int) -> np.ndarray:
     """
-    Build QPE circuit for the Ma: |x>->|a*x mod N> with NO measurements
+    Build QPE circuit for the Ma: |x>->|a*x mod N>
     """
     if N <= 1:
         raise ValueError("N must be > 1")
@@ -112,76 +111,36 @@ def _build_qpe_circuit(t: int, N: int, a: int) -> np.ndarray:
         raise ValueError("QPE requires gcd(a, N) == 1")
 
     m = int(ceil(log2(N)))
-
     bb = BloqBuilder()
 
     # exponent register (t qubits)
     exponent = bb.add_register_from_dtype("exponent", QUInt(t))
 
-    # H on each exponent qubit.
+    # H on each exponent qubit; exponent register in uniform superposition
     exp_bits = bb.split(exponent)
     for i in range(t):
         exp_bits[i] = bb.add(Hadamard(), q=exp_bits[i])
     exponent = bb.join(exp_bits)
 
-    # ModExp takes exponent and produces x = a^exponent mod N,
-    # and internally prepares x starting from |1>.
-    mod_exp = ModExp(base=a, mod=N, exp_bitsize=t, x_bitsize=m)
-    exponent, x = bb.add(mod_exp, exponent=exponent)
+    # target x register initialized to |1> (linear combination of all Ma eigenvectors)
+    x = bb.add_register_from_dtype("x", QUInt(m))
+    x_bits = bb.split(x)
+    x_bits[-1] = bb.add(XGate(), q=x_bits[-1])   # |1>
+    x = bb.join(x_bits)
+    
+    # fast ModExp by wrapping in Cirq permutation gate!
+    exp_bits = bb.split(exponent)
+    x_bits = bb.split(x)
+    work_bits = np.concatenate([exp_bits, x_bits]).astype(object)
+    work_bits = bb.add(CirqGateAsBloq(ModExpPermutationGate(t=t, m=m, a=a, N=N)), q=work_bits)
 
-    # iQFT on exponent (with_reverse=True by default)
-    exponent = bb.add(QFTTextBook(t).adjoint(), q=exponent) 
+    exponent = bb.join(list(work_bits[:t]))
+    x = bb.join(list(work_bits[t:]))
+
+    # iQFT on exponent
+    exponent = bb.add(QFTTextBook(t).adjoint(), q=exponent)
 
     return bb.finalize(exponent=exponent, x=x)
-
-def _simulate_bloq_and_project_ancillas(bloq) -> np.ndarray:
-    """
-    Simulate the decomposed bloq as a Cirq circuit and return the statevector
-    on ONLY the (signature) registers, with all extra ancillas projected to |0...0>.
-    """
-    print("Checkpoint 1")
-    cbloq = bloq.flatten()
-
-    print("Checkpoint 2")
-    init_quregs = get_named_qubits(bloq.signature)
-    qm = InteropQubitManager(cirq.ops.SimpleQubitManager())
-    circuit, quregs_out = cbloq.to_cirq_circuit_and_quregs(qubit_manager=qm, **init_quregs)
-
-    # Signature qubits (ordered by signature)
-    print("Checkpoint 3")
-    sig_qubits = merge_qubits(bloq.signature, **quregs_out)
-    sig_set = set(sig_qubits)
-
-    # Any extra ancillas introduced by decomposition
-    extra_qubits = sorted([q for q in circuit.all_qubits() if q not in sig_set], key=lambda q: str(q))
-
-    qubit_order = list(sig_qubits) + extra_qubits
-    result = cirq.Simulator(dtype=np.complex128).simulate(circuit, qubit_order=qubit_order)
-    full_sv = np.asarray(result.final_state_vector, dtype=np.complex128)
-
-    bits_per_register = [reg.total_bits() for reg in bloq.signature]
-    if extra_qubits:
-        bits_per_register.append(len(extra_qubits))
-
-    # Reshape into registers (+ one final "extra ancilla" register if present),
-    # then slice extra ancillas to |0...0>.
-    shape = [1 << b for b in bits_per_register]
-    reshaped = full_sv.reshape(shape)
-
-    indexer = [slice(None)] * len(bloq.signature)
-    if extra_qubits:
-        indexer.append(0)
-
-    projected = reshaped[tuple(indexer)].reshape(-1)
-
-    # If the decomposition is perfectly clean, this norm is already 1.
-    # Renormalize anyway for safety.
-    norm = np.linalg.norm(projected)
-    if norm == 0:
-        raise ValueError("Projected state on ancillas=|0...0> has zero norm (unexpected).")
-
-    return projected / norm
-    
 
 def run_simulation(config: Dict[str, Any]):
     """
@@ -202,11 +161,25 @@ def run_simulation(config: Dict[str, Any]):
     qpe_bloq = _build_qpe_circuit(t=t, N=N, a=a)
     print("\t**Bloq built; simulating...")
 
-    sv = _simulate_bloq_and_project_ancillas(qpe_bloq)
-    return np.asarray(sv, dtype=np.complex128)
-    
-    return sv
+    # **Do the stimulation
+    init_quregs = get_named_qubits(qpe_bloq.signature)
+    qm = InteropQubitManager(cirq.ops.SimpleQubitManager())
+    circuit, quregs_out = qpe_bloq.flatten().to_cirq_circuit_and_quregs(qubit_manager=qm, **init_quregs)
+    sig_qubits = merge_qubits(qpe_bloq.signature, **quregs_out)
+    sig_set = set(sig_qubits)
+    extra_qubits = sorted(set(circuit.all_qubits()) - set(sig_qubits), key=str)
+    qubit_order = list(sig_qubits) + extra_qubits
+    result = cirq.Simulator(dtype=np.complex128).simulate(circuit, qubit_order=qubit_order)
+    full_sv = np.asarray(result.final_state_vector, dtype=np.complex128)
 
+    # **Throw away ancilla qubits by projecting to |0...0>
+    sig_bits = sum(reg.total_bits() for reg in qpe_bloq.signature)
+    anc_bits = len(extra_qubits)
+    sv2 = full_sv.reshape((1 << sig_bits, 1 << anc_bits)) if anc_bits else full_sv.reshape((1 << sig_bits, 1))
+    projected = sv2[:, 0]
+
+    return np.asarray(projected / np.linalg.norm(projected), dtype=np.complex128)
+    
 if __name__ == "__main__":
     N = 21
     factor = find_factor(N, order_finder=classical_order_finder)

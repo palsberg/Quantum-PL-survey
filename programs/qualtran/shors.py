@@ -20,6 +20,8 @@ from qualtran.bloqs.qft import QFTTextBook
 from qualtran.simulation.tensor import initialize_from_zero
 from qualtran.cirq_interop._interop_qubit_manager import InteropQubitManager
 from qualtran._infra.gate_with_registers import get_named_qubits, merge_qubits
+# from qualtran.bloqs.mod_arithmetic import CModMulK
+# from qualtran.bloqs.basic_gates import XGate
 
 """Functions for factoring from start to finish."""
 def find_factor_of_prime_power(n: int) -> int | None:
@@ -103,7 +105,6 @@ def find_factor(
 def _build_qpe_circuit(t: int, N: int, a: int) -> np.ndarray:
     """
     Build QPE circuit for the Ma: |x>->|a*x mod N> with NO measurements
-    returns (circuit, qubit_order)
     """
     if N <= 1:
         raise ValueError("N must be > 1")
@@ -114,43 +115,72 @@ def _build_qpe_circuit(t: int, N: int, a: int) -> np.ndarray:
 
     bb = BloqBuilder()
 
-    # exponent register
+    # exponent register (t qubits)
     exponent = bb.add_register_from_dtype("exponent", QUInt(t))
 
-    # Hadamard on each exponent bit
-    bits = bb.split(exponent)
+    # H on each exponent qubit.
+    exp_bits = bb.split(exponent)
     for i in range(t):
-        bits[i] = bb.add(Hadamard(), q=bits[i])
-    exponent = bb.join(bits, dtype=QUInt(t))
+        exp_bits[i] = bb.add(Hadamard(), q=exp_bits[i])
+    exponent = bb.join(exp_bits)
 
-    # modular exponentiation (creates RIGHT register x)
-    modexp = ModExp(base=a, mod=N, exp_bitsize=t, x_bitsize=m)
-    exponent, x = bb.add(modexp, exponent=exponent)
+    # ModExp takes exponent and produces x = a^exponent mod N,
+    # and internally prepares x starting from |1>.
+    mod_exp = ModExp(base=a, mod=N, exp_bitsize=t, x_bitsize=m)
+    exponent, x = bb.add(mod_exp, exponent=exponent)
 
-    # inverse QFT (with swaps, matching cirq.qft(... without_reverse=False))
-    exponent = bb.add(QFTTextBook(bitsize=t, with_reverse=True).adjoint(), q=exponent)
-    cbloq = bb.finalize(exponent=exponent, x=x)
-    
-    # --- Convert CompositeBloq -> Cirq circuit and simulate ---
-    print("a1")
-    init_quregs = get_named_qubits(cbloq.signature)
-    print("a12")
+    # iQFT on exponent (with_reverse=True by default)
+    exponent = bb.add(QFTTextBook(t).adjoint(), q=exponent) 
+
+    return bb.finalize(exponent=exponent, x=x)
+
+def _simulate_bloq_and_project_ancillas(bloq) -> np.ndarray:
+    """
+    Simulate the decomposed bloq as a Cirq circuit and return the statevector
+    on ONLY the (signature) registers, with all extra ancillas projected to |0...0>.
+    """
+    print("Checkpoint 1")
+    cbloq = bloq.flatten()
+
+    print("Checkpoint 2")
+    init_quregs = get_named_qubits(bloq.signature)
     qm = InteropQubitManager(cirq.ops.SimpleQubitManager())
-    print("a13")
     circuit, quregs_out = cbloq.to_cirq_circuit_and_quregs(qubit_manager=qm, **init_quregs)
 
-    print("a2")
-    # Put qubits in a stable order: signature qubits first, then any extra ancillas.
-    sig_qubits = merge_qubits(cbloq.signature, **quregs_out)
+    # Signature qubits (ordered by signature)
+    print("Checkpoint 3")
+    sig_qubits = merge_qubits(bloq.signature, **quregs_out)
     sig_set = set(sig_qubits)
-    extra_qubits = sorted([q for q in circuit.all_qubits() if q not in sig_set], key=str)
+
+    # Any extra ancillas introduced by decomposition
+    extra_qubits = sorted([q for q in circuit.all_qubits() if q not in sig_set], key=lambda q: str(q))
+
     qubit_order = list(sig_qubits) + extra_qubits
-
-    print("a3")
     result = cirq.Simulator(dtype=np.complex128).simulate(circuit, qubit_order=qubit_order)
-    out = result.final_state_vector
+    full_sv = np.asarray(result.final_state_vector, dtype=np.complex128)
 
-    return np.asarray(out, dtype=np.complex128)
+    bits_per_register = [reg.total_bits() for reg in bloq.signature]
+    if extra_qubits:
+        bits_per_register.append(len(extra_qubits))
+
+    # Reshape into registers (+ one final "extra ancilla" register if present),
+    # then slice extra ancillas to |0...0>.
+    shape = [1 << b for b in bits_per_register]
+    reshaped = full_sv.reshape(shape)
+
+    indexer = [slice(None)] * len(bloq.signature)
+    if extra_qubits:
+        indexer.append(0)
+
+    projected = reshaped[tuple(indexer)].reshape(-1)
+
+    # If the decomposition is perfectly clean, this norm is already 1.
+    # Renormalize anyway for safety.
+    norm = np.linalg.norm(projected)
+    if norm == 0:
+        raise ValueError("Projected state on ancillas=|0...0> has zero norm (unexpected).")
+
+    return projected / norm
     
 
 def run_simulation(config: Dict[str, Any]):
@@ -159,18 +189,21 @@ def run_simulation(config: Dict[str, Any]):
     Returns the full final statevector.
     Expected config keys: t, N, a
     """
-    t=int(config.get("t",6))
-    N=int(config.get("N",21))
-    a=int(config.get("a",2))
+    t = int(config.get("t", 6))
+    N = int(config.get("N", 21))
+    a = int(config.get("a", 2))
+
     if N != 21 or a != 2:
-        # using the wrong code, raise error
         raise ValueError(
             f"This implementation is specialized for N=21, a=2 (got N={N}, a={a})."
         )
-    
-    print(f"\t**Building QPE Circuit for N={N}, a={a}, t={t}...")
-    sv = _build_qpe_circuit(t=t, N=N, a=a)
-    print("\t**QPE Circuit built")
+
+    print(f"\t**Building Qualtran QPE Bloq for N={N}, a={a}, t={t}...")
+    qpe_bloq = _build_qpe_circuit(t=t, N=N, a=a)
+    print("\t**Bloq built; simulating...")
+
+    sv = _simulate_bloq_and_project_ancillas(qpe_bloq)
+    return np.asarray(sv, dtype=np.complex128)
     
     return sv
 

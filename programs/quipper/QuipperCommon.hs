@@ -20,6 +20,8 @@ module QuipperCommon (
 ) where
 
 import Quipper
+import Control.Monad (forM_)
+import Data.Bits (testBit, xor, shiftL)
 
 -- | Implement exp(-i angle Z_i Z_j) via CNOT sandwich.
 evolveZZ :: Timestep -> Qubit -> Qubit -> Circ (Qubit, Qubit)

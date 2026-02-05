@@ -367,8 +367,8 @@ def LCU[n:!N](const ground:𝟙->B^n, const unitaries:(B^n->mfree B^n)[], const 
         }
 
         // Uncompute ancilla
-        // ancilla := unprepare(ancilla, amps);
-        ancilla := reverse(prepare)(ancilla, amps);
+        ancilla := unprepare(ancilla, amps);
+        // ancilla := reverse(prepare)(ancilla, amps);
 
         measurement = measure(ancilla);
         if measurement == vector(n_ancilla, 0:!B) {

@@ -33,6 +33,7 @@ This repository accompanies our ACM CSUR-style survey of Hamiltonian simulation 
 | Language(s)                            | Python package(s) & version(s)                          | Notes |
 |---------------------------------------|---------------------------------------------------------|-------|
 | Cirq, HML, OpenQASM helper circuits   | `cirq-core==1.4.0`, `numpy==1.26.4`, `openfermion==1.7.1` | Used for Cirq Trotter/LCU helpers and some HML backends. |
+| Guppy                                 | `guppylang==0.21.6`                                     | Programs are executed using Selene, which is included in guppylang. |
 | OpenQASM 3                            | `qiskit==2.2.3`                                         | We use `qiskit.qasm3.loads` to import OpenQASM 3 programs into Qiskit for simulation and metrics. |
 | Pennylane                             | `pennylane==0.43.1`, `pennylane-lightning==0.43.0`, `jax==0.4.28`, `jaxlib==0.4.28` | Lightning backend gives fast state vectors. |
 | PyQuil                                | `pyquil==4.17.0`, `rpcq==3.11.0`, `qcs-sdk-python==0.21.21` | Requires Rigetti QCS client libraries even for local sims. |

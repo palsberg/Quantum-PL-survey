@@ -76,6 +76,11 @@ def _parse_silq_output(output: str, case: str, num_sites: int) -> np.ndarray:
     if not lines:
         raise RuntimeError("Silq produced no output.")
     line = lines[-1]
+    print(line)
+    print()
+    print()
+    print()
+    print()
 
     # Manually scan for segments of the form "(amp)·|basis⟩".
     terms = []
@@ -121,27 +126,6 @@ def _parse_silq_output(output: str, case: str, num_sites: int) -> np.ndarray:
                 continue
             idx = _bits_to_index(system_bits)
             vec[idx] = amp
-    else:
-        # LCU cases: basis labels look like (anc,(q0,q1)).
-        for amp, basis in terms:
-            if not isinstance(basis, tuple) or len(basis) != 2:
-                continue
-            anc, sys_part = basis
-            # Only keep ancilla == 1 branch to mimic block selection.
-            if int(anc) != 1:
-                continue
-            if isinstance(sys_part, tuple):
-                system_bits = list(sys_part)
-            else:
-                system_bits = [sys_part]
-            if len(system_bits) != num_sites:
-                continue
-            idx = _bits_to_index(system_bits)
-            vec[idx] = amp
-        # Normalize the projected state.
-        norm = np.linalg.norm(vec)
-        if norm > 0:
-            vec = vec / norm
 
     return vec
 

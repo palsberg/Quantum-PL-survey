@@ -76,11 +76,6 @@ def _parse_silq_output(output: str, case: str, num_sites: int) -> np.ndarray:
     if not lines:
         raise RuntimeError("Silq produced no output.")
     line = lines[-1]
-    print(line)
-    print()
-    print()
-    print()
-    print()
 
     # Manually scan for segments of the form "(amp)·|basis⟩".
     terms = []

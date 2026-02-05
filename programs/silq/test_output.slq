@@ -1,0 +1,4 @@
+def main():𝔹^2{
+  qs := vector(2,0:𝔹);
+  return qs;
+}

@@ -199,10 +199,13 @@ def haskell_case_loc(entry_path: Path, helper_paths: List[Path]) -> int:
     return count_loc(all_lines, lang="haskell")
 
 
-def silq_case_loc(entry_path: Path) -> int:
-    if not entry_path.exists():
-        return 0
-    return count_loc(read_lines(entry_path), lang="silq")
+def silq_case_loc(silq_paths: List[Path]) -> int:
+    total_loc = 0
+    for path in silq_paths:
+        if not path.exists():
+            continue
+        total_loc += count_loc(read_lines(path), lang="silq")
+    return total_loc
 
 
 def openqasm_case_loc(case_name: str) -> int:
@@ -295,7 +298,11 @@ def main() -> None:
         },
         "qrisp": {
             "trotter_helpers": [ROOT / "programs" / "qrisp" / "common.py"],
-            "lcu_helpers": [ROOT / "programs" / "qrisp" / "common.py"],
+            "lcu_helpers": [
+                ROOT / "programs" / "common" / "pauli_models.py",
+                ROOT / "programs" / "qrisp" / "common.py",
+                ROOT / "programs" / "qrisp" / "lcu_common.py",
+            ],
         },
         "qualtran": {
             "trotter_helpers": [ROOT / "programs" / "qualtran" / "common.py"],
@@ -384,10 +391,18 @@ def main() -> None:
     silq_res: Dict[str, int] = {}
     silq_dir = ROOT / "programs" / "silq"
     silq_entry = {
-        "tfim_trotter": silq_dir / "tfim_trotter.slq",
-        "tfim_lcu": silq_dir / "tfim_lcu.slq",
-        "heis_trotter": silq_dir / "heis_trotter.slq",
-        "heis_lcu": silq_dir / "heis_lcu.slq",
+        "tfim_trotter": [silq_dir / "tfim_trotter.slq"],
+        "tfim_lcu": [
+            silq_dir / "tfim_lcu.slq",
+            silq_dir / "lcu_common.slq",
+            silq_dir / "map.slq",
+        ],
+        "heis_trotter": [silq_dir / "heis_trotter.slq"],
+        "heis_lcu": [
+            silq_dir / "heis_lcu.slq",
+            silq_dir / "lcu_common.slq",
+            silq_dir / "map.slq",
+        ],
     }
     for case_name, ham, method in cases:
         loc = silq_case_loc(silq_entry[case_name])
@@ -450,7 +465,7 @@ def main() -> None:
         }
 
         # Languages whose LCU entries are pseudocode / delegated.
-        dagger_langs = {"hml", "qrisp", "silq", "strawberryfields"}
+        dagger_langs = {"hml", "strawberryfields"}
 
         for lang in ordered_langs:
             row = results.get(lang, {})
@@ -476,7 +491,7 @@ def main() -> None:
         f.write("%\n")
         f.write(
             "% Entries marked with $^{\\dagger}$ denote LCU programs that are pseudocode\n"
-            "% sketches or rely on delegated LCU behavior (HML/SimuQ, Qrisp, Silq, Strawberry Fields),\n"
+            "% sketches or rely on delegated LCU behavior (HML/SimuQ and Strawberry Fields),\n"
             "% rather than full Taylor LCU implementations in the given language.\n"
         )
 

@@ -21,9 +21,9 @@ try:
         time_evolve,
         zero_state,
     )
-    from harness.reference_shors import (
-        make_shors
-    )
+    # from harness.reference_shors import (
+    #     make_shors
+    # )
 except ImportError:  # pragma: no cover
     import pathlib
     import sys
@@ -36,9 +36,9 @@ except ImportError:  # pragma: no cover
         time_evolve,
         zero_state,
     )
-    from harness.reference_shors import (
-        make_shors
-    )
+    # from harness.reference_shors import (
+    #     make_shors
+    # )
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 os.environ.setdefault("MPLCONFIGDIR", str(ROOT / ".mplconfig"))
@@ -149,10 +149,11 @@ def compute_reference(case: Case) -> np.ndarray:
     elif case.model == "heis":
         H = heis_xxx_hamiltonian(num_sites, J, field)
     else:
-        U = make_shors(t, N,a)
-        m = int(np.ceil(np.log2(N)))
-        psi0 = zero_state(t+m)   # make sure num_sites == t+m
-        return U @ psi0
+        assert False
+    #     U = make_shors(t, N,a)
+    #     m = int(np.ceil(np.log2(N)))
+    #     psi0 = zero_state(t+m)   # make sure num_sites == t+m
+    #     return U @ psi0
 
     psi0 = zero_state(num_sites)
     return time_evolve(H, psi0, total_time)
@@ -257,24 +258,24 @@ TOLERANCE = 1e-6
 # (e.g., Cirq or Qiskit) or use only a simplified LCU-style circuit.
 NA_CASES: Dict[tuple[str, str], str] = {
     # Qrisp LCU delegates to Qiskit.
-    (
-        "qrisp",
-        "tfim_lcu",
-    ): "Qrisp tfim_lcu delegates to Qiskit LCU; correctness covered under Qiskit.",
-    (
-        "qrisp",
-        "heis_lcu",
-    ): "Qrisp heis_lcu delegates to Qiskit LCU; correctness covered under Qiskit.",
+    # (
+    #     "qrisp",
+    #     "tfim_lcu",
+    # ): "Qrisp tfim_lcu delegates to Qiskit LCU; correctness covered under Qiskit.",
+    # (
+    #     "qrisp",
+    #     "heis_lcu",
+    # ): "Qrisp heis_lcu delegates to Qiskit LCU; correctness covered under Qiskit.",
     # Silq LCU programs are only simplified ancilla-controlled blocks and do
     # not implement the full 2nd-order Taylor LCU used in the primary stacks.
-    (
-        "silq",
-        "tfim_lcu",
-    ): "Silq tfim_lcu uses a simplified ancilla-controlled block; no full 2nd-order LCU implementation in this artifact.",
-    (
-        "silq",
-        "heis_lcu",
-    ): "Silq heis_lcu uses a simplified ancilla-controlled block; no full 2nd-order LCU implementation in this artifact.",
+    # (
+    #     "silq",
+    #     "tfim_lcu",
+    # ): "Silq tfim_lcu uses a simplified ancilla-controlled block; no full 2nd-order LCU implementation in this artifact.",
+    # (
+    #     "silq",
+    #     "heis_lcu",
+    # ): "Silq heis_lcu uses a simplified ancilla-controlled block; no full 2nd-order LCU implementation in this artifact.",
     # Strawberry Fields Trotter programs use dual-rail CV Trotterization as an
     # approximate qubit implementation and currently achieve low fidelity
     # against the reference qubit Hamiltonians. We exclude them from formal

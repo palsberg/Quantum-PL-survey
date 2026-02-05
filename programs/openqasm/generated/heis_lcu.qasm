@@ -8,7 +8,7 @@ qubit phase_anc;
 qubit[4] junk;
 
 // --- PREPARE block ---
-ry(0.36083112889490804) selection[0];
+ry(0.360831128894908) selection[0];
 x selection[0];
 ctrl @ ry(0.7505908594338558) selection[0], selection[1];
 x selection[0];
@@ -20,7 +20,7 @@ x selection[0];
 x selection[0];
 x selection[1];
 x selection[2];
-ctrl @ ctrl @ ctrl @ ry(0.1553863826761719) selection[0], selection[1], selection[2], selection[3];
+ctrl @ ctrl @ ctrl @ ry(0.15538638267617194) selection[0], selection[1], selection[2], selection[3];
 x selection[2];
 x selection[1];
 x selection[0];
@@ -46,7 +46,7 @@ ctrl @ ctrl @ ry(1.5323252993875682) selection[0], selection[1], selection[2];
 x selection[1];
 x selection[1];
 x selection[2];
-ctrl @ ctrl @ ctrl @ ry(0.5512855984325309) selection[0], selection[1], selection[2], selection[3];
+ctrl @ ctrl @ ctrl @ ry(0.5512855984325308) selection[0], selection[1], selection[2], selection[3];
 x selection[2];
 x selection[1];
 x selection[1];

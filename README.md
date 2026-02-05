@@ -38,7 +38,7 @@ This repository accompanies our ACM CSUR-style survey of Hamiltonian simulation 
 | PyQuil                                | `pyquil==4.17.0`, `rpcq==3.11.0`, `qcs-sdk-python==0.21.21` | Requires Rigetti QCS client libraries even for local sims. |
 | Qiskit                                | `qiskit==2.2.3`, `qiskit-aer==0.17.2`, `qiskit-ibm-runtime==0.43.1`, `rustworkx==0.17.1` | Aer powers statevector sims and gate metrics; also provides the OpenQASM 3 importer. |
 | Q# (modern QDK)                       | `qsharp==1.22.0`, `qsharp-widgets==1.22.0`, `qsharp` runtime auto-installs the .NET QDK. | No separate `dotnet build` required; Python driver runs everything. |
-| Qrisp                                 | `qrisp==0.6.3`                                          | Provides high-level Hamiltonian constructs used in `programs/qrisp`. |
+| Qrisp                                 | `qrisp==0.7.0`                                          | Provides high-level Hamiltonian constructs used in `programs/qrisp`. |
 | Qualtran                              | `qualtran==0.6.1`, `cotengra==0.7.5`, `quimb==1.11.2`   | Used for advanced TFIM decompositions on Cirq backends. |
 | Strawberry Fields                     | `StrawberryFields==0.19.0`, `thewalrus==0.21.0`, `quantum-blackbird==0.5.0` | Supports Gaussian CV encodings of the qubit Hamiltonians. |
 | Tket                                  | `pytket==2.10.3`, `pytket-qiskit==0.73.0`               | Tket targets circuit synthesis; we export to Qiskit for simulation. |

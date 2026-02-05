@@ -1,29 +1,23 @@
-"""TFIM LCU bridge for Qrisp.
-
-Qrisp currently lacks native multi-ancilla PREPARE/SELECT support, so we reuse the
-Qiskit implementation to obtain the statevector while keeping Qrisp as the
-Hamiltonian source of truth.
-"""
+"""TFIM LCU bridge for Qrisp."""
 
 from __future__ import annotations
 
 from typing import Any, Dict
 
-from . import common
-from ..qiskit import tfim_lcu as qiskit_tfim_lcu
+from . import lcu_common
+from ..common import pauli_models
 
 
 def run_simulation(config: Dict[str, Any]):
     num_sites = int(config["num_sites"])
+    t = float(config["time"])
     params = config.get("params", {})
     J = float(params.get("J", 1.0))
     h = float(params.get("h", 1.0))
 
-    # Build the operator to document the Hamiltonian in Qrisp form (for notes/benchmarks).
-    common.build_tfim_operator(num_sites, J, h)
+    H = pauli_models.tfim_pauli_terms(num_sites, J, h)
 
-    # Delegate the actual LCU block-encoding to the Qiskit backend for now.
-    return qiskit_tfim_lcu.run_simulation(config)
+    return lcu_common.lcu(num_sites, H, t)
 
 
 if __name__ == "__main__":

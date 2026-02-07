@@ -5,7 +5,6 @@ def calculate_shors_factors(n: int) -> List[int]:
         raise ValueError("Input must be an integer greater than or equal to 2.")
     
     prime_factors = [] # List to store the distinct prime factors of n
-    # Check for number of 2s that divide n
     cur_factor = 2
     while cur_factor <= n:
         if n % cur_factor == 0:

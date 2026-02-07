@@ -254,9 +254,6 @@ def _instantiate_trotter_template(case: str, config: Dict[str, Any]) -> Path:
     return Path(tmp.name)
 
 
-import math
-import re
-
 
 def _instantiate_shor_state_template(config: Dict[str, Any]) -> Path:
     N = int(config.get("N", 21))

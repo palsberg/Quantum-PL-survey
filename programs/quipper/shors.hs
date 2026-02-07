@@ -141,15 +141,16 @@ shor_statevector_circuit oracle = do
 -- Configuration: Choose your N and a here
 -- =======================================================================
 
+
 -- Example: N=21, a=2, 6 top bits
-my_target_oracle :: Oracle
-my_target_oracle = general_oracle 21 2 6
+-- my_target_oracle :: Oracle
+-- my_target_oracle = general_oracle 21 2 6
 
-buildCircuitStatevector :: () -> Circ [Qubit]
-buildCircuitStatevector () = shor_statevector_circuit my_target_oracle
+-- buildCircuitStatevector :: () -> Circ [Qubit]
+-- buildCircuitStatevector () = shor_statevector_circuit my_target_oracle
 
-outQubitsStatevector :: Int
-outQubitsStatevector = top_num my_target_oracle + bottom_num my_target_oracle
+-- outQubitsStatevector :: Int
+-- outQubitsStatevector = top_num my_target_oracle + bottom_num my_target_oracle
 
 
 -- =======================================================================
@@ -187,5 +188,6 @@ main = do
 
 
 
+    runDefault :: IO ()
     runDefault = do
-      print_simple GateCount (buildCircuitStatevector ())
+      putStrLn "Please specify --simulate-json or --metrics-json"

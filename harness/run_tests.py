@@ -418,7 +418,9 @@ def main(argv: Optional[List[str]] = None):
                 expected = compute_reference(case)
                 print("\t**Computing fidelity...")
                 if isinstance(expected, list):
-                    success = test_shors_value(expected, state)
+                    success = False
+                    if state in expected:
+                        success = True
                     message = "ok" if success else f"incorrect value {state}"
                     fidelity = 1.0 if success else 0.0
                     results.append(Result(language, case.name, success, fidelity, message))

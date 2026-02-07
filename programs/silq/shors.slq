@@ -12,56 +12,8 @@
 // Following code is from https://github.com/silq-lang/silq.git
 
 
-def main(){
-  // Harness case: t=6, N=21, a=2, m=ceil(log2(21))=5
-  return shors_harness_state[6,5](21, 2);
-}
 
 
-// DEBUG: QPE state for the harness reference (controlled modular multiplication).
-// Returns (counting:uint[t], work:uint[m]) after inverse QFT on counting.
-// No measurement => Silq prints raw Dirac amplitudes.
-def shors_harness_state[t:!ℕ, m:!ℕ](N:!ℕ, a:!ℕ) mfree: uint[t] × uint[m]{
-	// counting register: uniform superposition
-	c := 0:uint[t];
-	for k in [0..t) { c[k] := H(c[k]); }
-
-	// work register initialized to |1>
-	x := 0:uint[m];
-	x[m-1] := X(x[m-1]);
-
-	// We apply powers in big-endian order:
-	// control index goes t-1, t-2, ..., 0
-	// pow starts at a^(2^0) and squares each step.
-	pow := a % N;
-
-	step := 0;
-	while step < t {
-		// ctrl = (t-1) - step, computed without subtraction typing issues
-		ctrl := t;
-		ctrl -= 1;
-		s := 0;
-		while s < step { ctrl -= 1; s += 1; }
-
-		// controlled multiply (consume x and rebind)
-		if c[ctrl] {
-			x = mul_const_mod_perm[m](x, pow, N);
-
-		}
-
-		// update pow for next control (square mod N), except after last step
-		if step + 1 < t {
-			pow = (pow * pow) % N;
-		}
-
-		step += 1;
-	}
-
-	// inverse QFT on counting
-	c := reverse(QFT[t])(c);
-
-	return (c, x);
-}
 
 
 
@@ -95,15 +47,6 @@ def asPower(n:!ℕ){
 	return (n,1);
 }
 
-// Multiply-by-constant mod N permutation on an m-bit register.
-// Acts like: if x < N then x -> (c*x) % N else x -> x.
-// (Permutation if gcd(c,N)=1, which is true for a=2, N=21.)
-def mul_const_mod_perm[m:!ℕ](x:uint[m], c:!ℕ, N:!ℕ) lifted: uint[m]{
-	if x < N { return (x * (c as uint[m])) % N; }
-	else { return x; }
-}
-
-
 def uniform(n:!ℕ){
 	(k,l):=(0,1);
 	while l≤n { k+=1, l*=2; }
@@ -130,28 +73,6 @@ def order(a:!ℕ,N:!ℕ){
 	}
 	return b coerce !ℕ;
 }
-
-
-// ---- DEBUG: return intermediate QPE statevector instead of measuring ----
-// Returns the joint quantum state of (phase register cand, work register f(cand)).
-// If you want the state AFTER inverse QFT, set `after_qft` to true.
-def estimatePhaseState[n:!ℕ](f:uint[n] !→lifted uint[n], after_qft:!𝔹) mfree : uint[n] × uint[n] {
-	cand := 0:uint[n];
-	for k in [0..n) { cand[k] := H(cand[k]); }
-
-	// Instead of measure(f(cand)), keep the work register as quantum output.
-	work := f(cand);
-
-	// Optionally apply inverse QFT to the phase register.
-	if after_qft {
-		cand := reverse(QFT[n])(cand);
-	}
-
-	return (cand, work);
-}
-
-
-
 def estimatePhase[n:!ℕ](f:uint[n] !→lifted uint[n]):!ℕ{
 	cand := 0:uint[n];
 	for k in [0..n) { cand[k] := H(cand[k]); }
@@ -159,6 +80,7 @@ def estimatePhase[n:!ℕ](f:uint[n] !→lifted uint[n]):!ℕ{
 	cand := reverse(QFT[n])(cand);
 	return measure(cand) as !ℕ;
 }
+
 def candidates(q:!ℚ){ // TODO: probably this can be improved
 	res:=[]:!ℤ[];
 	r:=to_cfrac(q);

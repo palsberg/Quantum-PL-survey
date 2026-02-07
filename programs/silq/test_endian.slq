@@ -1,0 +1,10 @@
+// Test Silq's uint endianness
+def main():uint[3] × uint[2]{
+    c := 0:uint[3];
+    c[0] := X(c[0]);  // Set bit 0
+    
+    w := 0:uint[2];
+    w[1] := X(w[1]);  // Set bit 1
+    
+    return (c, w);
+}

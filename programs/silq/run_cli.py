@@ -13,21 +13,24 @@ import json
 import sys
 from pathlib import Path
 from typing import Any, Dict
-import math
 
 import numpy as np
 import subprocess
 import ast
 import tempfile
+import math
+import re
+
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-HARNESS_DIR = ROOT / "harness"
-if str(HARNESS_DIR) not in sys.path:
-    sys.path.insert(0, str(HARNESS_DIR))
-
+# Import reference Shor's implementation
+try:
+    from harness.reference_shors import make_shors
+except ImportError:
+    make_shors = None
 
 CASE_FILES = {
     "tfim_trotter": "tfim_trotter.slq",
@@ -35,56 +38,12 @@ CASE_FILES = {
     "heis_trotter": "heis_trotter.slq",
     "heis_lcu": "heis_lcu.slq",
     "shors21_2": "shors.slq",
-
+    "shors21_2_value": "shors_value.slq",
 }
 
 
 def _json_state(vec: np.ndarray):
     return [{"re": float(np.real(v)), "im": float(np.imag(v))} for v in vec.ravel()]
-
-def _parse_silq_amp(s: str) -> complex:
-    """
-    Parse Silq amplitudes, e.g.
-      √0.9950120∠-0.0500156
-      -√0.0006210∠ 1.5457963
-      √1.0000000
-    and also keep support for plain a+bi strings via fallback.
-    """
-    raw = s.strip()
-
-    # Some Silq outputs include a dot multiplication marker; strip it if present.
-    raw = raw.replace("·", " ").strip()
-
-    sign = 1.0
-    if raw.startswith("+"):
-        raw = raw[1:].strip()
-    elif raw.startswith("-"):
-        sign = -1.0
-        raw = raw[1:].strip()
-
-    # Polar form: (magnitude) ∠ (angle)
-    if "∠" in raw:
-        mag_str, ang_str = raw.split("∠", 1)
-        mag_str = mag_str.strip()
-        ang = float(ang_str.strip())
-
-        if mag_str.startswith("√"):
-            mag = math.sqrt(float(mag_str[1:].strip()))
-        else:
-            mag = float(mag_str)
-
-        mag *= sign
-        return complex(mag * math.cos(ang), mag * math.sin(ang))
-
-    # Sqrt-only form: √p
-    if raw.startswith("√"):
-        mag = math.sqrt(float(raw[1:].strip()))
-        return complex(sign * mag, 0.0)
-
-    # Fallback: old a+bi format (reuse your existing parser)
-    prefix = "-" if sign < 0 else ""
-    return _parse_complex(prefix + raw)
-
 
 
 def _parse_complex(s: str) -> complex:
@@ -120,94 +79,100 @@ def _bits_to_index(bits: Any) -> int:
         idx = 2 * idx + int(b)
     return idx
 
-def _shors_num_qubits(config: Dict[str, Any]) -> int:
-    """
-    Harness config provides:
-      t: number of counting qubits
-      N: modulus
-    Work register size m = ceil(log2(N)).
-    Total qubits n = t + m.
-    """
 
-
-    t = int(config["t"])
-    N = int(config["N"])
-    m = int(np.ceil(np.log2(N)))
-    return t + m
-
-
-def _parse_silq_output(output: str, case: str, num_sites: int) -> np.ndarray:
+def _parse_silq_output(output: str, case: str, num_sites: int) -> np.ndarray | int:
     """Parse Silq's Dirac-notation output into a statevector over system qubits."""
+    # Take the last non-empty line; Silq typically prints a single line of amplitudes.
+    if case == "shors21_2_value":
+        # For the value case, we expect a single integer output, not a statevector.
+        lines = [ln.strip() for ln in output.splitlines() if ln.strip()]
+        if not lines:
+            raise RuntimeError("Silq produced no output.")
+        line = lines[-1]
+        try:
+            value = int(line)
+            return value
+        except ValueError as exc:
+            raise RuntimeError(f"Failed to parse Shor's value from Silq output: '{line}'") from exc
+        
     lines = [ln.strip() for ln in output.splitlines() if ln.strip()]
     if not lines:
         raise RuntimeError("Silq produced no output.")
+    line = lines[-1]
 
+    # Manually scan for segments of the form "(amp)·|basis⟩".
     terms = []
-    for line in lines:
-        # Expect lines like:
-        #   √1.0000000 · |(0,0)⟩
-        #   -√0.0000062∠-0.0375137 · |(1,1)⟩
-        if "|" not in line or "⟩" not in line:
-            continue
-
-        bar_pos = line.find("|")
+    i = 0
+    n = len(line)
+    while i < n:
+        start = line.find("(", i)
+        if start == -1:
+            break
+        end_amp = line.find(")", start + 1)
+        if end_amp == -1:
+            break
+        amp_str = line[start + 1 : end_amp]
+        # Find the '|' that starts the basis.
+        bar_pos = line.find("|", end_amp)
+        if bar_pos == -1:
+            break
         end_basis = line.find("⟩", bar_pos)
         if end_basis == -1:
-            continue
-
-        basis_str = line[bar_pos + 1 : end_basis].strip()
-
-        # Everything left of '|' contains the amplitude (maybe plus a '·').
-        left = line[:bar_pos].strip()
-        if "·" in left:
-            left = left.split("·", 1)[0].strip()
-
-        # Support old "(amp)" format if it exists; otherwise parse Silq amp format.
-        if "(" in left and ")" in left:
-            start = left.rfind("(")
-            end = left.find(")", start + 1)
-            if end != -1:
-                amp_str = left[start + 1 : end].strip()
-                amp = _parse_complex(amp_str)
-            else:
-                amp = _parse_silq_amp(left)
-        else:
-            amp = _parse_silq_amp(left)
-
+            break
+        basis_str = line[bar_pos + 1 : end_basis]
+        amp = _parse_complex(amp_str)
         try:
             basis = ast.literal_eval(basis_str)
         except Exception as exc:
             raise RuntimeError(f"Failed to parse Silq basis label '{basis_str}'") from exc
-
         terms.append((amp, basis))
+        i = end_basis + 1
 
     if not terms:
-        raise RuntimeError(f"Could not parse Silq output. Last line was: {lines[-1]}")
+        raise RuntimeError(f"Could not parse Silq output line: {line}")
+
+    # Special handling for Shor's algorithm
+    if case == "shors21_2":
+        # Shor's output format: |(counting_int, work_int)⟩
+        # Silq already handles bit ordering to match Python reference
+        # Just convert directly to flat index
+        
+        if not terms:
+            raise RuntimeError("No terms found in Shor's output")
+        
+        # Infer dimensions from maximum indices
+        max_counting = 0
+        max_work = 0
+        for amp, basis in terms:
+            if isinstance(basis, tuple) and len(basis) == 2:
+                c, w = basis
+                if isinstance(c, int) and isinstance(w, int):
+                    max_counting = max(max_counting, c)
+                    max_work = max(max_work, w)
+        
+        # Bit widths (ensure minimum t=6, m=5)
+        t = max(max_counting.bit_length(), 6)
+        m = max(max_work.bit_length(), 5)
+        
+        dim = 2 ** (t + m)
+        vec = np.zeros(dim, dtype=np.complex128)
+        
+        for amp, basis in terms:
+            if isinstance(basis, tuple) and len(basis) == 2:
+                counting_int, work_int = basis
+                if isinstance(counting_int, int) and isinstance(work_int, int):
+                    # Direct conversion: index = counting * 2^m + work
+                    idx = counting_int * (2 ** m) + work_int
+                    if idx < dim:
+                        vec[idx] = amp
+        
+        return vec
 
     dim = 2**num_sites
     vec = np.zeros(dim, dtype=np.complex128)
 
-
-    if case == "shors21_2":
-        for amp, basis in terms:
-            if not isinstance(basis, tuple):
-                continue
-
-            if len(basis) == 2 and isinstance(basis[0], tuple) and isinstance(basis[1], tuple):
-                bits = list(basis[0]) + list(basis[1])
-            else:
-                bits = list(basis)
-
-            if len(bits) != num_sites:
-                continue
-
-            idx = _bits_to_index(bits)
-            vec[idx] = amp
-        # No projection; keep full statevector
-        return vec
-        
     if case in ("tfim_trotter", "heis_trotter"):
-        # Basis labels are tuples like (q0,q1,...).
+        # Basis labels are tuples like (q0,q1) for two-system-qubit states.
         for amp, basis in terms:
             if not isinstance(basis, tuple):
                 continue
@@ -216,36 +181,29 @@ def _parse_silq_output(output: str, case: str, num_sites: int) -> np.ndarray:
                 continue
             idx = _bits_to_index(system_bits)
             vec[idx] = amp
-
-
-
     else:
-        # LCU: basis labels like (anc,(q0,q1,...)) or (anc,q0) for 1-site.
+        # LCU cases: basis labels look like (anc,(q0,q1)).
         for amp, basis in terms:
             if not isinstance(basis, tuple) or len(basis) != 2:
                 continue
             anc, sys_part = basis
+            # Only keep ancilla == 1 branch to mimic block selection.
             if int(anc) != 1:
                 continue
-
             if isinstance(sys_part, tuple):
                 system_bits = list(sys_part)
             else:
                 system_bits = [sys_part]
-
             if len(system_bits) != num_sites:
                 continue
-
             idx = _bits_to_index(system_bits)
             vec[idx] = amp
-
         # Normalize the projected state.
         norm = np.linalg.norm(vec)
         if norm > 0:
             vec = vec / norm
 
     return vec
-
 
 
 def _instantiate_trotter_template(case: str, config: Dict[str, Any]) -> Path:
@@ -257,7 +215,6 @@ def _instantiate_trotter_template(case: str, config: Dict[str, Any]) -> Path:
     filename = CASE_FILES[case]
     template_path = ROOT / "programs" / "silq" / filename
     template = template_path.read_text()
-
 
     num_sites = int(config.get("num_sites", 2))
     total_time = float(config.get("time", 0.1))
@@ -297,17 +254,127 @@ def _instantiate_trotter_template(case: str, config: Dict[str, Any]) -> Path:
     return Path(tmp.name)
 
 
-def _run_case(case: str, config: Dict[str, Any]) -> np.ndarray:
+import math
+import re
 
 
-    if case == "shors21_2":
-        num_sites = _shors_num_qubits(config)
+def _instantiate_shor_state_template(config: Dict[str, Any]) -> Path:
+    N = int(config.get("N", 21))
+    a = int(config.get("a", 2))
+    t = int(config.get("t", 6))
+    after_qft = bool(config.get("after_qft", True))
+
+    w = max(1, math.ceil(math.log2(N)))
+    after = "true" if after_qft else "false"
+
+    base_path = ROOT / "programs" / "silq" / CASE_FILES["shors21_2"]
+    src = base_path.read_text()
+    m=math.ceil(math.log2(N))
+
+    # Ensure helper exists (the file currently doesn't have it)
+    if "def estimatePhaseState" not in src:
+        src += """
+
+// Returns the joint quantum state (phase register, work register).
+def estimatePhaseState[n:!ℕ](
+    f:uint[n] !→lifted uint[n],
+    after_qft:!𝔹
+) mfree : uint[n] × uint[n] {
+    cand := 0:uint[n];
+    for k in [0..n) { cand[k] := H(cand[k]); }
+    work := f(cand);
+    if after_qft { cand := reverse(QFT[n])(cand); }
+    return (cand, work);
+}
+def estimatePhaseState2[t:!ℕ, m:!ℕ](
+    f:uint[t] !→lifted uint[m],
+    after_qft:!𝔹
+) mfree : uint[t] × uint[m] {
+
+    cand := 0:uint[t];
+    for k in [0..t) { cand[k] := H(cand[k]); }
+
+    work := f(cand);
+
+    if after_qft {
+        cand := reverse(QFT[t])(cand);
+    }
+
+    return (cand, work);
+}
+"""
+
+    new_main = f"""
+def main() {{
+  N := {N};
+  a := {a};
+
+  def f(b:uint[{t}]) lifted => powm((a as uint[{m}]), b, N);
+  return estimatePhaseState2[{t},{m}](f, true);
+}}
+""".strip()
+
+    # Replace def main() { ... } in the file
+    main_re = re.compile(r"def\s+main\s*\(\s*\)\s*\{{.*?\}}\s*", re.DOTALL)
+    if main_re.search(src):
+        src = main_re.sub(new_main + "\n\n", src, count=1)
     else:
-        num_sites = int(config.get("num_sites", 2))
+        src = new_main + "\n\n" + src
+
+    tmp = tempfile.NamedTemporaryFile("w", suffix=".slq", delete=False)
+    tmp.write(src)
+    tmp.flush()
+    tmp.close()
+    return Path(tmp.name)
+
+
+def _instantiate_shor_value_template(config: Dict[str, Any]) -> Path:
+    N = int(config.get("N", 21))
+    a = int(config.get("a", 2))
+    t = int(config.get("t", 6))
+    after_qft = bool(config.get("after_qft", True))
+
+    w = max(1, math.ceil(math.log2(N)))
+    after = "true" if after_qft else "false"
+
+    base_path = ROOT / "programs" / "silq" / CASE_FILES["shors21_2"]
+    src = base_path.read_text()
+    new_main = f"""
+def main(){{
+	n:={N};
+	r:=shor(n);
+	assert(1<r&&r<n);
+	assert(n%r=0);
+	return r;
+}}
+""".strip()
+
+    # Replace def main() { ... } in the file
+    main_re = re.compile(r"def\s+main\s*\(\s*\)\s*\{{.*?\}}\s*", re.DOTALL)
+    if main_re.search(src):
+        src = main_re.sub(new_main + "\n\n", src, count=1)
+    else:
+        src = new_main + "\n\n" + src
+
+    tmp = tempfile.NamedTemporaryFile("w", suffix=".slq", delete=False)
+    tmp.write(src)
+    tmp.flush()
+    tmp.close()
+    return Path(tmp.name)
+
+
+def _run_case(case: str, config: Dict[str, Any]) -> np.ndarray:
+    num_sites = int(config.get("num_sites", 2))
     if case in ("tfim_trotter", "heis_trotter"):
         # Use the Trotter template mechanism to specialise to the requested
         # number of sites and parameters.
         slq_path = _instantiate_trotter_template(case, config)
+        cleanup = True
+    elif case == "shors21_2":
+        slq_path = _instantiate_shor_state_template(config)
+        cleanup = True
+    elif case == "shors21_2_value":
+        slq_path = _instantiate_shor_value_template(config)
         cleanup = True
     else:
         filename = CASE_FILES.get(case)
@@ -330,62 +397,19 @@ def _run_case(case: str, config: Dict[str, Any]) -> np.ndarray:
     return _parse_silq_output(proc.stdout, case, num_sites)
 
 
-def _fidelity(psi: np.ndarray, phi: np.ndarray) -> float:
-    """Fidelity between pure states |psi>, |phi>."""
-    psi = psi.reshape(-1)
-    phi = phi.reshape(-1)
-    # normalize defensively
-    n1 = np.linalg.norm(psi)
-    n2 = np.linalg.norm(phi)
-    if n1 == 0 or n2 == 0:
-        return 0.0
-    psi = psi / n1
-    phi = phi / n2
-    ov = np.vdot(phi, psi)  # <phi|psi>
-    return float(np.abs(ov) ** 2)
-
-
-def _selftest_shors(parsed: np.ndarray, config: Dict[str, Any]) -> None:
-    """
-    Compare parsed Silq statevector against the reference implementation.
-    Prints diagnostics to stderr.
-    """
-    # Import reference
-    try:
-        from harness.reference_shors import make_shors
-    except Exception:
-        # fallback if run from different cwd/layout
-        from reference_shors import make_shors  # type: ignore
-
-    t = int(config["t"])
-    N = int(config["N"])
-    a = int(config["a"])
-
-    ref = make_shors(t=t, N=N, a=a)
-
-    if parsed.shape != ref.shape:
-        print(
-            f"[shors selftest] shape mismatch: parsed={parsed.shape}, ref={ref.shape}",
-            file=sys.stderr,
-        )
-        return
-
-    fid = _fidelity(parsed, ref)
-    print(f"[shors selftest] fidelity={fid:.12f}", file=sys.stderr)
-
 
 
 def main() -> None:
-    if len(sys.argv) not in (2, 3):
-        raise SystemExit("usage: run_cli.py <case> [--selftest]")
+    if len(sys.argv) != 2:
+        raise SystemExit("usage: run_cli.py <case>")
     case = sys.argv[1]
-    do_selftest = (len(sys.argv) == 3 and sys.argv[2] == "--selftest")
     config = json.load(sys.stdin)
     state = _run_case(case, config)
-    if do_selftest and case == "shors21_2":
-        _selftest_shors(state, config)
-    json.dump({"statevector": _json_state(state)}, sys.stdout)
-
+    
+    if isinstance(state, int):
+        json.dump({"value": state}, sys.stdout)
+    else:
+        json.dump({"statevector": _json_state(state)}, sys.stdout)
 
 
 if __name__ == "__main__":

@@ -39,6 +39,7 @@ except ImportError:  # pragma: no cover
     from harness.reference_shors import (
         make_shors
     )
+    from harness.reference_shors_value import calculate_shors_factors, test_shors_value
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 os.environ.setdefault("MPLCONFIGDIR", str(ROOT / ".mplconfig"))
@@ -111,6 +112,8 @@ class CliAdapter(Adapter):
             raise RuntimeError(
                 f"Invalid JSON from {' '.join(self.command)}: {proc.stdout.decode(errors='ignore')}"
             ) from exc
+        if "value" in payload:
+            return payload["value"]
         state = payload.get("statevector")
         if state is None:
             raise RuntimeError("CLI result missing 'statevector' key")
@@ -131,7 +134,7 @@ def ensure_statevector(obj: Any) -> np.ndarray:
     raise TypeError(f"Cannot convert object of type {type(obj)} to statevector")
 
 
-def compute_reference(case: Case) -> np.ndarray:
+def compute_reference(case: Case) -> np.ndarray | list[int]:
     cfg = case.config
     
     if case.model == "tfim":
@@ -152,7 +155,7 @@ def compute_reference(case: Case) -> np.ndarray:
         field = float(params.get("field", 0.2))
 
         H = heis_xxx_hamiltonian(num_sites, J, field)
-    else:
+    elif case.model == "shors21_2":
         # shor's case, get corresponding parameters
         t=cfg.get("t",6) 
         N=cfg.get("N",21)
@@ -161,6 +164,18 @@ def compute_reference(case: Case) -> np.ndarray:
         state = make_shors(t, N, a)
         print("\t**Shor's circuit made")
         return state # final state vector for shor's
+    elif case.model == "shors_21_2_value":
+        # shor's value case, get corresponding parameters
+        t=cfg.get("t",6) 
+        N=cfg.get("N",21)
+        a=cfg.get("a",2)
+        print("\t**Calculating Shor's factors...")
+        factors = calculate_shors_factors(N)
+        print(f"\t**Factors calculated: {factors}")
+        
+        return factors # return the list of factors for shor's value case
+    else:
+        raise ValueError(f"Unknown model: {case.model}")
 
     psi0 = zero_state(num_sites)
     return time_evolve(H, psi0, total_time)
@@ -211,6 +226,15 @@ CASES: List[Case] = [
             "N":21,
             "a":2
         }
+    ),
+    Case(
+        name="shors21_2_value",
+        model="shors_21_2_value",
+        config={
+            "t":6, 
+            "N":21,
+            "a":2
+        }
     )
 ]
 
@@ -220,6 +244,7 @@ CASE_SUFFIX = {
     "heis_trotter": "heis_trotter",
     "heis_lcu": "heis_lcu",
     "shors21_2":"shors", # general shor's file
+    "shors21_2_value":"shors_value" # shor's value file
 }
 
 PYTHON_BASES = {
@@ -392,10 +417,17 @@ def main(argv: Optional[List[str]] = None):
                 state = adapter.run(case.config)
                 expected = compute_reference(case)
                 print("\t**Computing fidelity...")
-                fidelity = compute_fidelity(state, expected)
-                success = fidelity >= 1 - TOLERANCE
-                message = "ok" if success else "low fidelity"
-                results.append(Result(language, case.name, success, fidelity, message))
+                if isinstance(expected, list):
+                    success = test_shors_value(expected, state)
+                    message = "ok" if success else f"incorrect value {state}"
+                    fidelity = 1.0 if success else 0.0
+                    results.append(Result(language, case.name, success, fidelity, message))
+                    continue
+                else:
+                    fidelity = compute_fidelity(state, expected)
+                    success = fidelity >= 1 - TOLERANCE
+                    message = "ok" if success else "low fidelity"
+                    results.append(Result(language, case.name, success, fidelity, message))
             except Exception as exc:
                 results.append(Result(language, case.name, False, None, str(exc)))
     print_summary(results)

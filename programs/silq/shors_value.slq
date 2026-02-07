@@ -13,13 +13,7 @@
 
 
 
-def main(){
-	n:=21;
-	r:=shor(n);
-	assert(1<r&&r<n);
-	assert(n%r=0);
-	return r;
-}
+
 
 def shor(n:!ℕ){
 	if n%2=0 { return 2; }

@@ -39,7 +39,7 @@ except ImportError:  # pragma: no cover
     from harness.reference_shors import (
         make_shors
     )
-    from harness.reference_shors_value import calculate_shors_factors, test_shors_value
+    from harness.reference_shors_value import calculate_shors_factors
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 os.environ.setdefault("MPLCONFIGDIR", str(ROOT / ".mplconfig"))
@@ -421,7 +421,7 @@ def main(argv: Optional[List[str]] = None):
                     success = False
                     if state in expected:
                         success = True
-                    message = "ok" if success else f"incorrect value {state}"
+                    message = f"ok, {expected}" if success else f"incorrect value {state}, expected one of {expected}"
                     fidelity = 1.0 if success else 0.0
                     results.append(Result(language, case.name, success, fidelity, message))
                     continue

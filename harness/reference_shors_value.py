@@ -7,9 +7,10 @@ def calculate_shors_factors(n: int) -> List[int]:
     prime_factors = [] # List to store the distinct prime factors of n
     # Check for number of 2s that divide n
     cur_factor = 2
-    while cur_factor * cur_factor <= n:
+    while cur_factor <= n:
         if n % cur_factor == 0:
             prime_factors.append(cur_factor)
+
         while n % cur_factor == 0:
             n //= cur_factor
         cur_factor += 1

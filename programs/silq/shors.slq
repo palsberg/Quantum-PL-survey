@@ -125,16 +125,26 @@ def QFT[n:!ℕ](ψ: uint[n])mfree: uint[n]{
 	return ψ;
 }
 
-// compute a^b%N
 def powm[n:!ℕ,m:!ℕ](a:uint[n],b:uint[m],N:!ℕ)lifted: uint[n]{
-	(r,x):=(1:uint[n], a);
+	(r,x):=(1:uint[2*n], a);
+
+	// Expand x to a 2n-qubit integer
+	x_expanded_vec := (x as B^n)~vector(n, 0:B);
+	x := x_expanded_vec coerce uint[2*n];
+
 	for i in 0..m{
 		if b[i]{
 			r=r·x%N;
 		}
 		x=x·x%N;
 	}
-	return r;
+
+	// Truncate r to an n-qubit integer
+	r_vec := r as B^(2*n);
+	for i in [0..n) {
+		r_vec~(r_top_qubit,) := r_vec;
+	}
+	return r_vec coerce uint[n];
 }
 
 

@@ -171,7 +171,7 @@ def compute_reference(case: Case) -> np.ndarray | list[int]:
         a=cfg.get("a",2)
         print("\t**Calculating Shor's factors...")
         factors = calculate_shors_factors(N)
-        print(f"\t**Factors calculated: {factors}")
+        print(f"\t**Expected factors: {factors}")
         
         return factors # return the list of factors for shor's value case
     else:
@@ -418,8 +418,10 @@ def main(argv: Optional[List[str]] = None):
                 expected = compute_reference(case)
                 print("\t**Computing fidelity...")
                 if isinstance(expected, list):
+                    # shor's factoring
                     success = False
                     if state in expected:
+                        print(f"\t**Factor from shor: {state}")
                         success = True
                     message = f"ok" if success else f"incorrect value {state}, expected one of {expected}"
                     fidelity = 1.0 if success else 0.0

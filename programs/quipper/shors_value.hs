@@ -261,9 +261,9 @@ tryFactorFromC n a t c =
    in if r0 <= 0 || (r0 `mod` 2 /= 0) then 0
       else
         let ar2 = powMod a (r0 `div` 2) n
-            d1  = gcd' (ar2 - 1) n
-            d2  = gcd' (ar2 + 1) n
-         in if d1 > 1 && d1 < n then d1
+            d1  = gcd' (ar2 + 1) n 
+            d2  = gcd' (ar2 - 1) n
+         in if d1 > 1 && d1 < n then d1 -- returns d1 first if both are valid
             else if d2 > 1 && d2 < n then d2
             else 0
 
@@ -297,26 +297,29 @@ shorAttemptA n a t shots maxTries =
  
 -- Full factoring pipeline (deterministic a selection)
  
-
--- deterministically scan a in [2..N-2]
+-- random a from 2 to N-1
 -- if gcd(a,N)>1 => immediate factor
 -- else run Shor attempt
 factorViaShor :: Int -> Int -> Int
 factorViaShor n t =
-  go 2
+  loop 0 (mkStdGen 42)
   where
     shots    = 1000
     maxTries = 20
-    maxA     = min (n-3) 25  -- cap for speed; deterministic
+    maxAtries = 25  -- number of random bases to try
 
-    go a
-      | a > maxA = -1
+    loop k gen
+      | k >= maxAtries = -1
       | otherwise =
-          let g = gcd' a n
-           in if g > 1 && g < n then g
-              else
-                let f = shorAttemptA n a t shots maxTries
-                 in if f > 1 && f < n then f else go (a + 1)
+          let (a, gen') = randomR (2, n-2) gen
+              g = gcd' a n
+           in if g > 1 && g < n
+                 then g
+                 else
+                   let f = shorAttemptA n a t shots maxTries
+                    in if f > 1 && f < n
+                          then f
+                          else loop (k+1) gen'
 
 -- Top-level: handle all classical cases + Shor
 factorN :: Int -> Int -> Int

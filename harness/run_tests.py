@@ -207,16 +207,18 @@ CASE_SUFFIX = {
 
 PYTHON_BASES = {
     "cirq": "programs.cirq",
-    "hml": "programs.hml",
-    "openqasm": "programs.openqasm",
+    "cudaq": "programs.cudaq",
+    "guppy": "programs.guppy",
+    # "hml": "programs.hml",
+    # "openqasm": "programs.openqasm",
     "pennylane": "programs.pennylane",
     "pyquil": "programs.pyquil",
     "qsharp": "programs.qsharp",
     "qiskit": "programs.qiskit",
     "qrisp": "programs.qrisp",
     "qualtran": "programs.qualtran",
-    "tket": "programs.tket",
-    "strawberryfields": "programs.strawberryfields",
+    # "tket": "programs.tket",
+    # "strawberryfields": "programs.strawberryfields",
 }
 
 ADAPTERS: Dict[str, Dict[str, Adapter]] = {}
@@ -280,26 +282,26 @@ NA_CASES: Dict[tuple[str, str], str] = {
     # approximate qubit implementation and currently achieve low fidelity
     # against the reference qubit Hamiltonians. We exclude them from formal
     # correctness checks in this artifact.
-    (
-        "strawberryfields",
-        "tfim_trotter",
-    ): "Strawberry Fields tfim_trotter uses a dual-rail CV Trotterization with low fidelity versus the reference qubit TFIM; excluded from correctness checks in this artifact.",
-    (
-        "strawberryfields",
-        "heis_trotter",
-    ): "Strawberry Fields heis_trotter uses a dual-rail CV Trotterization with low fidelity versus the reference qubit Heisenberg model; excluded from correctness checks in this artifact.",
+    # (
+    #     "strawberryfields",
+    #     "tfim_trotter",
+    # ): "Strawberry Fields tfim_trotter uses a dual-rail CV Trotterization with low fidelity versus the reference qubit TFIM; excluded from correctness checks in this artifact.",
+    # (
+    #     "strawberryfields",
+    #     "heis_trotter",
+    # ): "Strawberry Fields heis_trotter uses a dual-rail CV Trotterization with low fidelity versus the reference qubit Heisenberg model; excluded from correctness checks in this artifact.",
     # Strawberry Fields LCU programs are sequential dual-rail CV circuits, not
     # full 2nd-order Taylor LCU block encodings with selection ancillas and
     # PREPARE/SELECT oracles. We keep them N/A in the cross-language LCU
     # comparison to avoid conflating them with true Taylor LCU implementations.
-    (
-        "strawberryfields",
-        "tfim_lcu",
-    ): "Strawberry Fields tfim_lcu is a sequential dual-rail CV circuit, not a full 2nd-order Taylor LCU block encoding with selection ancillas and PREPARE/SELECT.",
-    (
-        "strawberryfields",
-        "heis_lcu",
-    ): "Strawberry Fields heis_lcu is a sequential dual-rail CV circuit, not a full 2nd-order Taylor LCU block encoding with selection ancillas and PREPARE/SELECT.",
+    # (
+    #     "strawberryfields",
+    #     "tfim_lcu",
+    # ): "Strawberry Fields tfim_lcu is a sequential dual-rail CV circuit, not a full 2nd-order Taylor LCU block encoding with selection ancillas and PREPARE/SELECT.",
+    # (
+    #     "strawberryfields",
+    #     "heis_lcu",
+    # ): "Strawberry Fields heis_lcu is a sequential dual-rail CV circuit, not a full 2nd-order Taylor LCU block encoding with selection ancillas and PREPARE/SELECT.",
 }
 
 

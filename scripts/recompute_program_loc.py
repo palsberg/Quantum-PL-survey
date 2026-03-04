@@ -34,7 +34,7 @@ def count_loc(lines: List[str], lang: str) -> int:
         if not line.strip():
             continue
         stripped = line.lstrip()
-        if lang in {"python", "strawberry"}:
+        if lang in {"python"}:
             if stripped.startswith("#"):
                 continue
         elif lang in {"qsharp", "openqasm", "silq"}:
@@ -271,9 +271,16 @@ def main() -> None:
                 ROOT / "programs" / "common" / "pauli_models.py",
             ],
         },
-        "hml": {
-            "trotter_helpers": [ROOT / "programs" / "hml" / "common.py"],
-            "lcu_helpers": [ROOT / "programs" / "hml" / "common.py"],
+        "cudaq": {
+            "trotter_helpers": [ROOT / "programs" / "cudaq" / "common.py"],
+            "lcu_helpers": [ROOT / "programs" / "cudaq" / "lcu_common.py"],
+        },
+        "guppy": {
+            "trotter_helpers": [ROOT / "programs" / "guppy" / "common.py"],
+            "lcu_helpers": [
+                ROOT / "programs" / "guppy" / "lcu_common.py",
+                ROOT / "programs" / "common" / "pauli_models.py",
+            ],
         },
         "pennylane": {
             "trotter_helpers": [ROOT / "programs" / "pennylane" / "common.py"],
@@ -308,17 +315,6 @@ def main() -> None:
             "trotter_helpers": [ROOT / "programs" / "qualtran" / "common.py"],
             "lcu_helpers": [
                 ROOT / "programs" / "qualtran" / "common.py",
-                ROOT / "programs" / "common" / "pauli_models.py",
-            ],
-        },
-        "strawberryfields": {
-            "trotter_helpers": [ROOT / "programs" / "strawberryfields" / "common.py"],
-            "lcu_helpers": [ROOT / "programs" / "strawberryfields" / "common.py"],
-        },
-        "tket": {
-            "trotter_helpers": [ROOT / "programs" / "tket" / "common.py"],
-            "lcu_helpers": [
-                ROOT / "programs" / "tket" / "lcu_common.py",
                 ROOT / "programs" / "common" / "pauli_models.py",
             ],
         },
@@ -409,11 +405,11 @@ def main() -> None:
         silq_res[f"{ham}_{method}"] = loc
     results["silq"] = silq_res
 
-    # Sanity: ensure we have all 13 languages used in the table.
+    # Sanity: ensure we have all 11 languages used in the table.
     ordered_langs = [
         "cirq",
-        "hml",
-        "openqasm",
+        "cudaq",
+        "guppy",
         "pennylane",
         "pyquil",
         "qiskit",
@@ -422,8 +418,6 @@ def main() -> None:
         "qualtran",
         "quipper",
         "silq",
-        "strawberryfields",
-        "tket",
     ]
 
     # Pretty-print to LaTeX table.
@@ -450,7 +444,8 @@ def main() -> None:
 
         name_map = {
             "cirq": "Cirq",
-            "hml": "HML",
+            "cudaq": "CUDA-Q",
+            "guppy": "Guppy",
             "openqasm": "OpenQASM~3",
             "pennylane": "PennyLane",
             "pyquil": "PyQuil",
@@ -460,12 +455,7 @@ def main() -> None:
             "qualtran": "Qualtran",
             "quipper": "Quipper",
             "silq": "Silq",
-            "strawberryfields": "Strawberry Fields",
-            "tket": "pytket",
         }
-
-        # Languages whose LCU entries are pseudocode / delegated.
-        dagger_langs = {"hml", "strawberryfields"}
 
         for lang in ordered_langs:
             row = results.get(lang, {})
@@ -474,26 +464,15 @@ def main() -> None:
             heis_t = row.get("Heis_Trotter", 0)
             heis_l = row.get("Heis_LCU", 0)
 
-            def fmt_lcu(val: int, is_dagger: bool) -> str:
-                if is_dagger:
-                    return f"{val}$^{{\\dagger}}$"
-                return str(val)
-
-            is_dagger = lang in dagger_langs
             f.write(
-                f"    {name_map[lang]:<16} & {tfim_t} & {fmt_lcu(tfim_l, is_dagger)} "
-                f"& {heis_t} & {fmt_lcu(heis_l, is_dagger)} \\\\\n"
+                f"    {name_map[lang]:<16} & {tfim_t} & {tfim_l} "
+                f"& {heis_t} & {heis_l} \\\\\n"
             )
 
         f.write("    \\bottomrule\n")
         f.write("  \\end{tabular}\n")
         f.write("\\end{table*}\n")
         f.write("%\n")
-        f.write(
-            "% Entries marked with $^{\\dagger}$ denote LCU programs that are pseudocode\n"
-            "% sketches or rely on delegated LCU behavior (HML/SimuQ and Strawberry Fields),\n"
-            "% rather than full Taylor LCU implementations in the given language.\n"
-        )
 
     print(f"Wrote updated LOC table to {out_path}")
 

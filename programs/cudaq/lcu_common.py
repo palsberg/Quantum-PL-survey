@@ -29,7 +29,7 @@ def create_hamiltonian_heis(n_sites: int, coupling: float, field: float) -> cuda
         H += field * spin.z(i)
     return H
 
-def get_taylor_coeffs(H: cudaq.SpinOperator) -> Dict[str, complex]:
+def get_taylor_coeffs(H: cudaq.SpinOperator, t: float) -> Dict[str, complex]:
     taylor_H = spin.i(0) - (1j * H * t) - (H * H * t**2 / 2)
     coeffs = dict()
     for x in taylor_H:
@@ -37,7 +37,6 @@ def get_taylor_coeffs(H: cudaq.SpinOperator) -> Dict[str, complex]:
         coeff = x.evaluate_coefficient()
         word = x.get_pauli_word()
         coeffs[word] = coeffs.get(word, 0) + coeff
-    print(coeffs)
     return coeffs
 
 def get_lcu_weights(coeffs: Dict[str, complex]) -> Tuple[List[float], List[str], List[str]]:
@@ -241,8 +240,8 @@ def lcu_circuit(n_operand: int, n_anc: int, angles: List[float],
             break
 
 
-def lcu(n_sites: int, hamiltonian: cudaq.SpinOperator):
-    taylor_coeffs = get_taylor_coeffs(hamiltonian)
+def lcu(n_sites: int, hamiltonian: cudaq.SpinOperator, t: float):
+    taylor_coeffs = get_taylor_coeffs(hamiltonian, t)
     weights, paulis, phases = get_lcu_weights(taylor_coeffs)
 
     # weights -> amplitudes for lcu ancilla state preparation
@@ -259,52 +258,5 @@ def lcu(n_sites: int, hamiltonian: cudaq.SpinOperator):
     angles = get_rotation_angles(amps)
 
     state = cudaq.get_state(lcu_circuit, n_sites, n_ancilla, angles, paulis, phases)
-    return np.array(state)
-
-
-
-
-# Parameters
-n_sites = 3
-ham_type = "tfim"
-coupling = 2.0
-field = 0.5
-t = 1.0
-
-# Create Hamiltonian
-if ham_type == "tfim":
-    H = create_hamiltonian_tfim(n_sites, coupling, field)
-elif ham_type == "heis":
-    H = create_hamiltonian_heis(n_sites, coupling, field)
-else:
-    assert False
-
-state = lcu(n_sites, H)
-state = state[:2**n_sites]
-state = state / np.linalg.norm(state)
-
-
-
-# Ground truth
-from reference_hamiltonians import *
-if ham_type == 'tfim':
-    ref_H = tfim_hamiltonian(n_sites, coupling, field)
-elif ham_type == 'heis':
-    ref_H = heis_xxx_hamiltonian(n_sites, coupling, field)
-ref_state = time_evolve(ref_H, zero_state(n_sites), t)
-
-def compute_fidelity(state: np.ndarray, reference: np.ndarray) -> float:
-    state = normalize(state)
-    reference = normalize(reference)
-    return float(np.abs(np.vdot(reference, state)) ** 2)
-
-
-def normalize(vec: np.ndarray) -> np.ndarray:
-    vec = np.asarray(vec, dtype=np.complex128).flatten()
-    norm = np.linalg.norm(vec)
-    if norm == 0:
-        raise ValueError("Zero vector")
-    return vec / norm
-
-fidelity = compute_fidelity(state, ref_state)
-print(f'{fidelity=}')
+    state = np.array(state)[:2**n_sites]
+    return state

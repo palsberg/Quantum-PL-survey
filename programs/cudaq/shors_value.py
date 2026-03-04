@@ -1,5 +1,6 @@
 import cudaq
 import numpy as np
+from fractions import Fraction
 
 def get_oracle_matrix(N: int, a: int):
     m = int(np.ceil(np.log2(N)))
@@ -82,6 +83,7 @@ def shors(N: int, a: int, t: int, measure: bool):
         mz(ancilla)
 
 
+
 def main():
     N = 21
     a = 2
@@ -89,10 +91,8 @@ def main():
 
     register_oracle(N, a)
 
-    state = cudaq.get_state(shors, N, a, t, False)
-    state = np.array(state)
-    print(state)
-    print(state.shape)
+    res = cudaq.sample(shors, N, a, t, True)
+    print(res)
 
 
 if __name__ == '__main__':

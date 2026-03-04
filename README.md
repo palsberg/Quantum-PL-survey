@@ -33,7 +33,7 @@ This repository accompanies our ACM CSUR-style survey of Hamiltonian simulation 
 | Language(s)                            | Python package(s) & version(s)                          | Notes |
 |---------------------------------------|---------------------------------------------------------|-------|
 | Cirq, HML, OpenQASM helper circuits   | `cirq-core==1.4.0`, `numpy==1.26.4`, `openfermion==1.7.1` | Used for Cirq Trotter/LCU helpers and some HML backends. |
-| Guppy                                 | `guppylang==0.21.6`                                     | Programs are executed using Selene, which is included in guppylang. |
+| Guppy                                 | `guppylang==0.21.8`, `tket==0.12.16`                    | Programs are executed using Selene, which is included in guppylang. |
 | OpenQASM 3                            | `qiskit==2.2.3`                                         | We use `qiskit.qasm3.loads` to import OpenQASM 3 programs into Qiskit for simulation and metrics. |
 | Pennylane                             | `pennylane==0.43.1`, `pennylane-lightning==0.43.0`, `jax==0.4.28`, `jaxlib==0.4.28` | Lightning backend gives fast state vectors. |
 | PyQuil                                | `pyquil==4.17.0`, `rpcq==3.11.0`, `qcs-sdk-python==0.21.21` | Requires Rigetti QCS client libraries even for local sims. |
@@ -47,6 +47,19 @@ This repository accompanies our ACM CSUR-style survey of Hamiltonian simulation 
 | Non-Python toolchains                 | **Silq** (requires the Silq compiler toolchain, install from https://silq.ethz.ch).<br>**Quipper** (requires GHC + Quipper libraries, see https://www.mathstat.dal.ca/~selinger/quipper/). | Our CLI wrappers assume those toolchains are on `PATH`. |
 
 Install whichever rows correspond to the languages you intend to execute (e.g., `pip install qsharp==1.22.0` before running the Q# programs). The versions above mirror the ones in our `.venv` and are what we cite in the paper.
+
+### Running CUDA-Q in Docker
+
+To execute our CUDA-Q programs, we use the CUDA-Q Docker containers, which allow
+us to run on any platform (with or without an Nvidia gpu).
+
+1. Start Docker. If you're on macOS, this probably means starting Docker
+   Desktop.
+2. Run the provided script: `./cudaq.sh`. This script automatically downloads
+   the CUDA-Q Docker image and starts a container in your current shell. From
+   this shell, you can execute the CUDA-Q programs normally with our test harness.
+3. To exit the container type `exit` or `Ctrl+D`. To restart the container,
+   rerun `./cudaq.sh`.
 
 ### Quipper on Apple Silicon (and how to adapt the CLI elsewhere)
 

@@ -205,55 +205,6 @@ def silq_case_loc(entry_path: Path) -> int:
     return count_loc(read_lines(entry_path), lang="silq")
 
 
-def openqasm_case_loc(case_name: str) -> int:
-    """Count LOC on a synthetic 10-site OpenQASM program for this case.
-
-    We generate QASM via the project-local emitters for a 10-qubit instance
-    (matching the TFIM/Heisenberg benchmark configuration) and count
-    non-comment, non-blank lines in the resulting IR, without running any
-    simulator or backend.
-    """
-    try:
-        from programs.openqasm import common as oq_common  # type: ignore
-    except Exception:
-        return 0
-
-    num_sites = 10
-    if case_name == "tfim_trotter":
-        qasm, _ = oq_common.render_tfim_trotter_qasm(
-            num_sites=num_sites,
-            J=1.0,
-            h=0.5,
-            total_time=0.1,
-            steps=4,
-        )
-    elif case_name == "heis_trotter":
-        qasm, _ = oq_common.render_heis_trotter_qasm(
-            num_sites=num_sites,
-            J=0.8,
-            field=0.2,
-            total_time=0.1,
-            steps=4,
-        )
-    elif case_name == "tfim_lcu":
-        qasm = oq_common.render_tfim_lcu_qasm(
-            num_sites=num_sites,
-            J=1.0,
-            h=0.5,
-            total_time=0.1,
-        )
-    elif case_name == "heis_lcu":
-        qasm = oq_common.render_heis_lcu_qasm(
-            num_sites=num_sites,
-            J=0.8,
-            field=0.2,
-            total_time=0.1,
-        )
-    else:
-        return 0
-    lines = qasm.splitlines()
-    return count_loc(lines, lang="openqasm")
-
 
 def main() -> None:
     # Languages and their LOC per (TFIM/Heis × Trotter/LCU).
@@ -267,16 +218,20 @@ def main() -> None:
                 ROOT / "programs" / "cirq" / "lcu_common.py",
                 ROOT / "programs" / "common" / "pauli_models.py",
             ],
-        },
-        "hml": {
-            "trotter_helpers": [ROOT / "programs" / "hml" / "common.py"],
-            "lcu_helpers": [ROOT / "programs" / "hml" / "common.py"],
+            "shors_helpers": [
+                ROOT / "programs" / "cirq" / "shors" / "modularexponentiation.py",
+                ROOT / "programs" / "cirq" / "shors" / "quantumorderfinding.py",
+                ROOT / "programs" / "cirq" / "shors" / "shors_common.py",
+            ],
         },
         "pennylane": {
             "trotter_helpers": [ROOT / "programs" / "pennylane" / "common.py"],
             "lcu_helpers": [
                 ROOT / "programs" / "pennylane" / "lcu_common.py",
                 ROOT / "programs" / "common" / "pauli_models.py",
+            ],
+            "shors_helpers": [
+                ROOT / "programs" / "cirq" / "Shors" / "shors_orderfinding.py",
             ],
         },
         "pyquil": {
@@ -285,6 +240,7 @@ def main() -> None:
                 ROOT / "programs" / "pyquil" / "lcu_common.py",
                 ROOT / "programs" / "common" / "pauli_models.py",
             ],
+            "shors_helpers": [],
         },
         "qiskit": {
             "trotter_helpers": [ROOT / "programs" / "qiskit" / "common.py"],
@@ -292,10 +248,12 @@ def main() -> None:
                 ROOT / "programs" / "qiskit" / "lcu_common.py",
                 ROOT / "programs" / "common" / "pauli_models.py",
             ],
+            "shors_helpers": [],
         },
         "qrisp": {
             "trotter_helpers": [ROOT / "programs" / "qrisp" / "common.py"],
             "lcu_helpers": [ROOT / "programs" / "qrisp" / "common.py"],
+            "shors_helpers": [],
         },
         "qualtran": {
             "trotter_helpers": [ROOT / "programs" / "qualtran" / "common.py"],
@@ -303,16 +261,8 @@ def main() -> None:
                 ROOT / "programs" / "qualtran" / "common.py",
                 ROOT / "programs" / "common" / "pauli_models.py",
             ],
-        },
-        "strawberryfields": {
-            "trotter_helpers": [ROOT / "programs" / "strawberryfields" / "common.py"],
-            "lcu_helpers": [ROOT / "programs" / "strawberryfields" / "common.py"],
-        },
-        "tket": {
-            "trotter_helpers": [ROOT / "programs" / "tket" / "common.py"],
-            "lcu_helpers": [
-                ROOT / "programs" / "tket" / "lcu_common.py",
-                ROOT / "programs" / "common" / "pauli_models.py",
+            "shors_helpers": [
+                ROOT / "programs" / "cirq" / "shor" / "shors_common.py",
             ],
         },
     }
@@ -323,6 +273,7 @@ def main() -> None:
         ("tfim_lcu", "TFIM", "LCU"),
         ("heis_trotter", "Heis", "Trotter"),
         ("heis_lcu", "Heis", "LCU"),
+        ("shors_value", "Factoring", "Shors")
     ]
 
     # Python languages first.
@@ -332,20 +283,16 @@ def main() -> None:
             entry = ROOT / "programs" / lang / f"{case_name}.py"
             if method == "Trotter":
                 helpers = cfg["trotter_helpers"]
-            else:
+            elif method == "LCU":
                 helpers = cfg["lcu_helpers"]
+            elif method == "Shors":
+                helpers = cfg["shors_helpers"]
+            else:
+                assert False
             loc = python_case_loc(entry, helpers)
             key = f"{ham}_{method}"
             lang_res[key] = loc
         results[lang] = lang_res
-
-    # OpenQASM: count the generated QASM artifacts.
-    oq_lang = "openqasm"
-    oq_res: Dict[str, int] = {}
-    for case_name, ham, method in cases:
-        loc = openqasm_case_loc(case_name)
-        oq_res[f"{ham}_{method}"] = loc
-    results[oq_lang] = oq_res
 
     # Q#: use Q# source only (no Python shims).
     qsharp_res: Dict[str, int] = {}
@@ -356,9 +303,13 @@ def main() -> None:
         "tfim_lcu": qsharp_dir / "TFIMLCU.qs",
         "heis_trotter": qsharp_dir / "HeisenbergTrotter.qs",
         "heis_lcu": qsharp_dir / "HeisenbergLCU.qs",
+        "shors_value": qsharp_dir / "shors.qs",
     }
     for case_name, ham, method in cases:
-        loc = qsharp_case_loc(qsharp_entry[case_name], common_qs)
+        if case_name in qsharp_entry:
+            loc = qsharp_case_loc(qsharp_entry[case_name], common_qs)
+        else:
+            loc = 0
         qsharp_res[f"{ham}_{method}"] = loc
     results["qsharp"] = qsharp_res
 
@@ -370,13 +321,18 @@ def main() -> None:
         "tfim_lcu": quipper_dir / "tfim_lcu.hs",
         "heis_trotter": quipper_dir / "heis_trotter.hs",
         "heis_lcu": quipper_dir / "heis_lcu.hs",
+        "shors_value": quipper_dir / "shors.hs",
     }
     quipper_helpers = [
         quipper_dir / "QuipperCommon.hs",
         quipper_dir / "QuipperLcuCommon.hs",
+        quipper_dir / "QuipperSimulationCLI.hs",
     ]
     for case_name, ham, method in cases:
-        loc = haskell_case_loc(quipper_entry[case_name], quipper_helpers)
+        if case_name in quipper_entry:
+            loc = haskell_case_loc(quipper_entry[case_name], quipper_helpers)
+        else:
+            loc = 0
         quipper_res[f"{ham}_{method}"] = loc
     results["quipper"] = quipper_res
 
@@ -388,27 +344,27 @@ def main() -> None:
         "tfim_lcu": silq_dir / "tfim_lcu.slq",
         "heis_trotter": silq_dir / "heis_trotter.slq",
         "heis_lcu": silq_dir / "heis_lcu.slq",
+        "shors_value": silq_dir / "shors_value.slq",
     }
     for case_name, ham, method in cases:
-        loc = silq_case_loc(silq_entry[case_name])
+        if case_name in silq_entry:
+            loc = silq_case_loc(silq_entry[case_name])
+        else:
+            loc = 0
         silq_res[f"{ham}_{method}"] = loc
     results["silq"] = silq_res
 
-    # Sanity: ensure we have all 13 languages used in the table.
+    # Sanity: ensure we have all 11 languages used in the table.
     ordered_langs = [
         "cirq",
-        "hml",
-        "openqasm",
         "pennylane",
         "pyquil",
-        "qiskit",
-        "qrisp",
         "qsharp",
+        "qiskit",
         "qualtran",
+        "qrisp",
         "quipper",
         "silq",
-        "strawberryfields",
-        "tket",
     ]
 
     # Pretty-print to LaTeX table.
@@ -435,8 +391,6 @@ def main() -> None:
 
         name_map = {
             "cirq": "Cirq",
-            "hml": "HML",
-            "openqasm": "OpenQASM~3",
             "pennylane": "PennyLane",
             "pyquil": "PyQuil",
             "qiskit": "Qiskit",
@@ -445,12 +399,7 @@ def main() -> None:
             "qualtran": "Qualtran",
             "quipper": "Quipper",
             "silq": "Silq",
-            "strawberryfields": "Strawberry Fields",
-            "tket": "pytket",
         }
-
-        # Languages whose LCU entries are pseudocode / delegated.
-        dagger_langs = {"hml", "qrisp", "silq", "strawberryfields"}
 
         for lang in ordered_langs:
             row = results.get(lang, {})
@@ -458,27 +407,17 @@ def main() -> None:
             tfim_l = row.get("TFIM_LCU", 0)
             heis_t = row.get("Heis_Trotter", 0)
             heis_l = row.get("Heis_LCU", 0)
+            shors = row.get("Factoring_Shors", 0)
 
-            def fmt_lcu(val: int, is_dagger: bool) -> str:
-                if is_dagger:
-                    return f"{val}$^{{\\dagger}}$"
-                return str(val)
-
-            is_dagger = lang in dagger_langs
             f.write(
-                f"    {name_map[lang]:<16} & {tfim_t} & {fmt_lcu(tfim_l, is_dagger)} "
-                f"& {heis_t} & {fmt_lcu(heis_l, is_dagger)} \\\\\n"
+                f"    {name_map[lang]:<16} & {shors} & {tfim_t} & {tfim_l} "
+                f"& {heis_t} & {heis_l} \\\\\n"
             )
 
         f.write("    \\bottomrule\n")
         f.write("  \\end{tabular}\n")
         f.write("\\end{table*}\n")
         f.write("%\n")
-        f.write(
-            "% Entries marked with $^{\\dagger}$ denote LCU programs that are pseudocode\n"
-            "% sketches or rely on delegated LCU behavior (HML/SimuQ, Qrisp, Silq, Strawberry Fields),\n"
-            "% rather than full Taylor LCU implementations in the given language.\n"
-        )
 
     print(f"Wrote updated LOC table to {out_path}")
 

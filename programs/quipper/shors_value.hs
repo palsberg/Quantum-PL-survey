@@ -297,29 +297,26 @@ shorAttemptA n a t shots maxTries =
  
 -- Full factoring pipeline (deterministic a selection)
  
--- random a from 2 to N-1
+-- deterministically scan a in [2..N-2]
 -- if gcd(a,N)>1 => immediate factor
 -- else run Shor attempt
 factorViaShor :: Int -> Int -> Int
 factorViaShor n t =
-  loop 0 (mkStdGen 42)
+  go 2
   where
     shots    = 1000
     maxTries = 20
-    maxAtries = 25  -- number of random bases to try
+    maxA     = n-2  -- cap for speed; deterministic
 
-    loop k gen
-      | k >= maxAtries = -1
+    go a
+      | a > maxA = -1
       | otherwise =
-          let (a, gen') = randomR (2, n-2) gen
-              g = gcd' a n
-           in if g > 1 && g < n
-                 then g
-                 else
-                   let f = shorAttemptA n a t shots maxTries
-                    in if f > 1 && f < n
-                          then f
-                          else loop (k+1) gen'
+          let g = gcd' a n
+           in if g > 1 && g < n then g
+              else
+                let f = shorAttemptA n a t shots maxTries
+                 in if f > 1 && f < n then f else go (a + 1)
+
 
 -- Top-level: handle all classical cases + Shor
 factorN :: Int -> Int -> Int

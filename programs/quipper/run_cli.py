@@ -23,7 +23,7 @@ HS_SOURCES = {
     "heis_trotter": "heis_trotter.hs",
     "heis_lcu": "heis_lcu.hs",
     "shors21_2":"shors.hs",
-    "shors_21_2_value":"shors_value.hs"
+    "shors21_2_value":"shors_value.hs"
 }
 
 
@@ -46,6 +46,12 @@ def main() -> None:
     payload = invoke_quipper(args.case, args.mode, config)
 
     if args.mode == "simulate":
+        if args.case.endswith("_value"):
+            value = payload.get("value")
+            if value is None:
+                raise SystemExit("Quipper value payload missing 'value'.")
+            json.dump({"value": value}, sys.stdout)
+            return
         amplitudes = payload.get("amplitudes")
         if amplitudes is None:
             raise SystemExit("Quipper simulation payload missing 'amplitudes'.")

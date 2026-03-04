@@ -205,7 +205,7 @@ def run_simulation(config: Dict[str, Any]) -> int:
 
     return Shor_value(
         N,
-        a=a,
+        a=a, # none
         t=t,
         max_tries=max_tries,
         seed=seed,

@@ -188,16 +188,12 @@ def main():
     N = 21
     a = 2
     t = 6
-    measure = False
 
-    shors = build_shors(N, a, t, measure)
-    if measure:
-        res = shors.emulator().with_seed(12345).with_shots(1000).run()
-        print(res.register_counts()['ctrl'])
-    else:
-        res = shors.emulator().statevector_sim().with_shots(1).run()
-        state = res.partial_state_dicts()[0]['final'].as_single_state()
-        print(state)
+    shors = build_shors(N, a, t, False)
+
+    res = shors.emulator().statevector_sim().with_shots(1).run()
+    state = res.partial_state_dicts()[0]['final'].as_single_state()
+    print(state)
 
 
 

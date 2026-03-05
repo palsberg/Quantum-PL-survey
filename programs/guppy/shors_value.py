@@ -15,6 +15,13 @@ from pytket.passes import AutoRebase, DecomposeBoxes
 
 import math
 import numpy as np
+from typing import Any, Dict, List, Optional
+import time
+
+from fractions import Fraction
+import random
+from math import gcd
+
 
 
 def int_to_bools(num: int, n_bits: int) -> tuple:
@@ -22,13 +29,13 @@ def int_to_bools(num: int, n_bits: int) -> tuple:
     return tuple([b=='1' for b in num_binary])
 
 
-def get_shors_oracle(N: int, a: int) -> dict[tuple[bool], tuple[bool]]:
+def get_shors_oracle(N: int, a: int, i: int) -> dict[tuple[bool], tuple[bool]]:
     n = math.ceil(math.log2(N))
     permutation = {}
     for k in range(2**n):
         if k < N:
             from_bits = int_to_bools(k, n)
-            to_bits = int_to_bools((k*a) % N, n)
+            to_bits = int_to_bools((k * a**(2**i)) % N, n)
             permutation[from_bits] = to_bits
         else:
             permutation[int_to_bools(k, n)] = int_to_bools(k, n)
@@ -37,17 +44,18 @@ def get_shors_oracle(N: int, a: int) -> dict[tuple[bool], tuple[bool]]:
 
 def build_controlled_oracle(n_ctrl: int,
                             n_opr: int,
-                            oracle: Op,
+                            oracles: List[Op],
                             ) -> GuppyFunctionDefinition:
-    ctrl_box = QControlBox(oracle, 1)
+    assert n_ctrl == len(oracles)
+    ctrl_boxes = [QControlBox(oracles[i], 1) for i in range(n_ctrl)]
 
     pytket_circ = Circuit()
     pytket_ctrl = pytket_circ.add_q_register('ctrl', n_ctrl)
     pytket_opr = pytket_circ.add_q_register('opr', n_opr)
 
     for k in range(n_ctrl):
-        for _ in range(2**k):
-            pytket_circ.add_gate(ctrl_box, [list(pytket_ctrl)[n_ctrl - k - 1]] + list(pytket_opr))
+        # for _ in range(2**k):
+        pytket_circ.add_gate(ctrl_boxes[k], [list(pytket_ctrl)[n_ctrl - k - 1]] + list(pytket_opr))
 
     DecomposeBoxes().apply(pytket_circ)
     AutoRebase({OpType.H, OpType.Rz, OpType.CX}).apply(pytket_circ)
@@ -94,9 +102,9 @@ def build_inverse_qft(n: int) -> GuppyFunctionDefinition:
 # already in the eigenstate. This circuit does not include measurement.
 def build_qpe(n_meas: int,
               n_opr: int,
-              oracle_op: Op
+              oracle_ops: List[Op]
               ) -> GuppyFunctionDefinition:
-    ctrl_oracle = build_controlled_oracle(n_meas, n_opr, oracle_op)
+    ctrl_oracle = build_controlled_oracle(n_meas, n_opr, oracle_ops)
     inverse_qft = build_inverse_qft(n_meas)
 
     @guppy
@@ -113,8 +121,8 @@ def build_qpe(n_meas: int,
 
 def build_shors(N: int, a: int, t: int, measure=False) -> GuppyFunctionDefinition:
     n = math.ceil(math.log2(N))
-    permute = ToffoliBox(get_shors_oracle(N, a))
-    qpe = build_qpe(t, n, permute)
+    permutes = [ToffoliBox(get_shors_oracle(N, a, k)) for k in range(t)]
+    qpe = build_qpe(t, n, permutes)
 
     @guppy(max_qubits=t+n)
     def shors() -> None:
@@ -133,37 +141,37 @@ def build_shors(N: int, a: int, t: int, measure=False) -> GuppyFunctionDefinitio
             if len(opr) == 4:
                 if len(ctrl) == 3:
                     state_result('final',
-                        opr[0], opr[1], opr[2], opr[3],
-                        ctrl[0], ctrl[1], ctrl[2])
+                        ctrl[0], ctrl[1], ctrl[2],
+                        opr[0], opr[1], opr[2], opr[3])
                 elif len(ctrl) == 4:
                     state_result('final',
-                        opr[0], opr[1], opr[2], opr[3],
-                        ctrl[0], ctrl[1], ctrl[2], ctrl[3])
+                        ctrl[0], ctrl[1], ctrl[2], ctrl[3],
+                        opr[0], opr[1], opr[2], opr[3])
                 elif len(ctrl) == 5:
                     state_result('final',
-                        opr[0], opr[1], opr[2], opr[3],
-                        ctrl[0], ctrl[1], ctrl[2], ctrl[3], ctrl[4])
+                        ctrl[0], ctrl[1], ctrl[2], ctrl[3], ctrl[4],
+                        opr[0], opr[1], opr[2], opr[3])
                 elif len(ctrl) == 6:
                     state_result('final',
-                        opr[0], opr[1], opr[2], opr[3],
-                        ctrl[0], ctrl[1], ctrl[2], ctrl[3], ctrl[4], ctrl[5])
+                        ctrl[0], ctrl[1], ctrl[2], ctrl[3], ctrl[4], ctrl[5],
+                        opr[0], opr[1], opr[2], opr[3])
             elif len(opr) == 5:
                 if len(ctrl) == 3:
                     state_result('final',
-                        opr[0], opr[1], opr[2], opr[3], opr[4],
-                        ctrl[0], ctrl[1], ctrl[2])
+                        ctrl[0], ctrl[1], ctrl[2],
+                        opr[0], opr[1], opr[2], opr[3], opr[4])
                 elif len(ctrl) == 4:
                     state_result('final',
-                        opr[0], opr[1], opr[2], opr[3], opr[4],
-                        ctrl[0], ctrl[1], ctrl[2], ctrl[3])
+                        ctrl[0], ctrl[1], ctrl[2], ctrl[3],
+                        opr[0], opr[1], opr[2], opr[3], opr[4])
                 elif len(ctrl) == 5:
                     state_result('final',
-                        opr[0], opr[1], opr[2], opr[3], opr[4],
-                        ctrl[0], ctrl[1], ctrl[2], ctrl[3], ctrl[4])
+                        ctrl[0], ctrl[1], ctrl[2], ctrl[3], ctrl[4],
+                        opr[0], opr[1], opr[2], opr[3], opr[4])
                 elif len(ctrl) == 6:
                     state_result('final',
-                        opr[0], opr[1], opr[2], opr[3], opr[4],
-                        ctrl[0], ctrl[1], ctrl[2], ctrl[3], ctrl[4], ctrl[5])
+                        ctrl[0], ctrl[1], ctrl[2], ctrl[3], ctrl[4], ctrl[5],
+                        opr[0], opr[1], opr[2], opr[3], opr[4])
             discard_array(ctrl)
             discard_array(opr)
 
@@ -171,20 +179,92 @@ def build_shors(N: int, a: int, t: int, measure=False) -> GuppyFunctionDefinitio
     return shors
 
 
+
+# Classical routine
+
+# n is the integer that is measured
+# t is the number of measurement qubits
+def find_order(n, t, a, N) -> Optional[int]:
+    x = n / (2**t)
+    frac = Fraction(x).limit_denominator(N)
+
+    candidates = []
+    for q in range(1, frac.denominator + 1):
+        if abs(x - round(x*q)/q) < 2**-(t+1):
+            candidates.append(q)
+
+    for r in candidates:
+        if pow(a, r, N) == 1:
+            return r
+    return None
+
+
+def run_simulation(config: Dict[str, Any]) -> np.ndarray:
+    if "N" not in config:
+        raise ValueError("config must include key 'N'")
+
+    N = int(config["N"])
+    a = config.get("a", None)
+    a = int(a) if a is not None else None
+    t = config.get("t", None)
+    t = int(t) if t is not None else None
+
+    max_tries = int(config.get("max_tries", 25))
+    seed = int(config.get("seed", 0))
+    allow_random_a = bool(config.get("allow_random_a", True))
+
+    shots = int(config.get("shots", 10))
+    retries = int(config.get("retries", 16))
+
+
+
+    for i in range(retries):
+        a = random.randint(2, N-1)
+        K = gcd(a, N)
+        if K != 1:
+            return np.array(K)
+
+        shors = build_shors(N, a, t, True)
+        emu = shors.emulator().with_seed(seed + i).with_shots(1)
+
+        for _ in range(shots):
+            res = emu.run().register_counts()['ctrl']
+            bitstring = max(res, key=lambda b:res[b])
+            n = int(bitstring, 2)
+
+            r = find_order(n, t, a, N)
+            if r == None or r % 2 == 1:
+                continue
+
+            g = gcd(N, int(a**(r//2) + 1))
+            if g == 1 or g == N:
+                continue
+
+            return np.array(g)
+
+    raise RuntimeError('Failed to find a factor')
+
+
+
 def main():
     N = 21
     a = 2
-    t = 3
-    measure = True
+    t = 6
 
-    shors = build_shors(N, a, t, measure)
-    if measure:
-        res = shors.emulator().with_seed(12345).with_shots(1000).run()
+    time_start = time.time()
+    shors = build_shors(N, a, t, True)
+    time_shors = time.time()
+    print('built shors:', time_shors - time_start)
+
+    emu = shors.emulator().with_shots(1)
+    time_emu = time.time()
+    print('built emulator:', time_emu - time_shors)
+    time_i = time_emu
+    for i in range(10):
+        print('i:', time.time() - time_i)
+        time_i = time.time()
+        res = emu.run()
         print(res.register_counts()['ctrl'])
-    else:
-        res = shors.emulator().statevector_sim().with_shots(1).run()
-        state = res.partial_state_dicts()[0]['final'].as_single_state()
-        print(state)
 
 
 

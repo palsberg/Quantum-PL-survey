@@ -1,6 +1,11 @@
 import cudaq
 import numpy as np
 from fractions import Fraction
+import random
+from math import gcd
+from typing import Any, Dict, Optional, List
+
+
 
 def get_oracle_matrix(N: int, a: int):
     m = int(np.ceil(np.log2(N)))
@@ -68,8 +73,8 @@ def shors(N: int, a: int, t: int, measure: bool):
         m += 1
         tmp = tmp // 2
 
-    ancilla = cudaq.qvector(t)
     operand = cudaq.qvector(m)
+    ancilla = cudaq.qvector(t)
 
     h(ancilla)
     x(operand[0])
@@ -84,15 +89,84 @@ def shors(N: int, a: int, t: int, measure: bool):
 
 
 
+
+# Classical routine
+
+# n is the integer that is measured
+# t is the number of measurement qubits
+def find_order(n, t, a, N) -> Optional[int]:
+    x = n / (2**t)
+    frac = Fraction(x).limit_denominator(N)
+
+    candidates = []
+    for q in range(1, frac.denominator + 1):
+        if abs(x - round(x*q)/q) < 2**-(t+1):
+            candidates.append(q)
+
+    for r in candidates:
+        if pow(a, r, N) == 1:
+            return r
+    return None
+
+
+def run_simulation(config: Dict[str, Any]) -> np.ndarray:
+    if "N" not in config:
+        raise ValueError("config must include key 'N'")
+
+    N = int(config["N"])
+    a = config.get("a", None)
+    a = int(a) if a is not None else None
+    t = config.get("t", None)
+    t = int(t) if t is not None else None
+
+    max_tries = int(config.get("max_tries", 25))
+    seed = int(config.get("seed", 0))
+    allow_random_a = bool(config.get("allow_random_a", True))
+
+    shots = int(config.get("shots", 256))
+    retries = int(config.get("retries", 16))
+
+
+
+    for _ in range(retries):
+        a = random.randint(2, N-1)
+        K = gcd(a, N)
+        if K != 1:
+            return np.array(K)
+
+        register_oracle(N, a)
+        for _ in range(shots):
+            res = cudaq.sample(shors, N, a, t, True, shots_count=10)
+            bitstring = max(res, key=lambda b:res[b])
+            n = int(bitstring[::-1], 2)
+
+            r = find_order(n, t, a, N)
+            if r == None or r % 2 == 1:
+                continue
+
+            g = gcd(N, int(a**(r//2) + 1))
+            if g == 1 or g == N:
+                continue
+
+            return np.array(g)
+
+    raise RuntimeError('Failed to find a factor')
+
+
+
+
 def main():
     N = 21
     a = 2
-    t = 3
+    t = 6
 
     register_oracle(N, a)
 
-    res = cudaq.sample(shors, N, a, t, True)
-    print(res)
+    for i in range(100):
+        res = cudaq.sample(shors, N, a, t, True, shots_count=10)
+        bitstring = max(res, key=lambda b:res[b])
+        n = int(bitstring[::-1], 2)
+        print(n)
 
 
 if __name__ == '__main__':

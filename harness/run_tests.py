@@ -232,7 +232,7 @@ CASES: List[Case] = [
         model="shors_21_2_value",
         config={
             "t":6, 
-            "N":21
+            "N":145
         }
     )
 ]

@@ -171,7 +171,7 @@ def _parse_silq_output(output: str, case: str, num_sites: int) -> np.ndarray | i
     dim = 2**num_sites
     vec = np.zeros(dim, dtype=np.complex128)
 
-    if case in ("tfim_trotter", "heis_trotter"):
+    if case in ("tfim_trotter", "heis_trotter", "tfim_lcu", "heis_lcu"):
         # Basis labels are tuples like (q0,q1) for two-system-qubit states.
         for amp, basis in terms:
             if not isinstance(basis, tuple):
@@ -181,33 +181,12 @@ def _parse_silq_output(output: str, case: str, num_sites: int) -> np.ndarray | i
                 continue
             idx = _bits_to_index(system_bits)
             vec[idx] = amp
-    else:
-        # LCU cases: basis labels look like (anc,(q0,q1)).
-        for amp, basis in terms:
-            if not isinstance(basis, tuple) or len(basis) != 2:
-                continue
-            anc, sys_part = basis
-            # Only keep ancilla == 1 branch to mimic block selection.
-            if int(anc) != 1:
-                continue
-            if isinstance(sys_part, tuple):
-                system_bits = list(sys_part)
-            else:
-                system_bits = [sys_part]
-            if len(system_bits) != num_sites:
-                continue
-            idx = _bits_to_index(system_bits)
-            vec[idx] = amp
-        # Normalize the projected state.
-        norm = np.linalg.norm(vec)
-        if norm > 0:
-            vec = vec / norm
 
     return vec
 
 
-def _instantiate_trotter_template(case: str, config: Dict[str, Any]) -> Path:
-    """Instantiate a Silq Trotter template with numeric parameters.
+def _instantiate_template(case: str, config: Dict[str, Any]) -> Path:
+    """Instantiate a Silq template with numeric parameters.
 
     We treat the .slq file as a template containing placeholders that are
     substituted with concrete literals derived from the JSON config.
@@ -232,6 +211,26 @@ def _instantiate_trotter_template(case: str, config: Dict[str, Any]) -> Path:
             "__STEPS__": str(steps),
         }
     elif case == "heis_trotter":
+        J = float(params.get("J", 1.0))
+        field = float(params.get("field", 0.0))
+        replacements = {
+            "__NUM_SITES__": str(num_sites),
+            "__J__": repr(J),
+            "__FIELD__": repr(field),
+            "__TOTAL_TIME__": repr(total_time),
+            "__STEPS__": str(steps),
+        }
+    elif case == "tfim_lcu":
+        J = float(params.get("J", 1.0))
+        h = float(params.get("h", 0.0))
+        replacements = {
+            "__NUM_SITES__": str(num_sites),
+            "__J__": repr(J),
+            "__H__": repr(h),
+            "__TOTAL_TIME__": repr(total_time),
+            "__STEPS__": str(steps),
+        }
+    elif case == "heis_lcu":
         J = float(params.get("J", 1.0))
         field = float(params.get("field", 0.0))
         replacements = {
@@ -362,10 +361,10 @@ def main(){{
 
 def _run_case(case: str, config: Dict[str, Any]) -> np.ndarray:
     num_sites = int(config.get("num_sites", 2))
-    if case in ("tfim_trotter", "heis_trotter"):
+    if case in ("tfim_trotter", "heis_trotter", "tfim_lcu", "heis_lcu"):
         # Use the Trotter template mechanism to specialise to the requested
         # number of sites and parameters.
-        slq_path = _instantiate_trotter_template(case, config)
+        slq_path = _instantiate_template(case, config)
         cleanup = True
     elif case == "shors21_2":
         slq_path = _instantiate_shor_state_template(config)
@@ -381,7 +380,7 @@ def _run_case(case: str, config: Dict[str, Any]) -> np.ndarray:
         cleanup = False
 
     cmd = ["silq", "--run", str(slq_path)]
-    proc = subprocess.run(cmd, capture_output=True, text=True, cwd=str(ROOT))
+    proc = subprocess.run(cmd, capture_output=True, text=True, cwd=str(ROOT/'programs'/'silq'))
     if cleanup:
         try:
             slq_path.unlink()

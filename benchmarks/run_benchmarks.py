@@ -773,10 +773,6 @@ def strawberryfields_metric_provider(
 def qrisp_metric_provider(
     language: str, case_name: str, config: Dict[str, Any]
 ) -> Tuple[Dict[str, Any], Optional[str]]:
-    # LCU cases delegate execution to Qiskit, and we report metrics only under
-    # the Qiskit language to avoid double-counting.
-    if "lcu" in case_name:
-        return {}, "N/A: Qrisp LCU programs delegate to Qiskit; see Qiskit metrics."
     # For Trotter cases, build the Qrisp QuantumCircuit via the same
     # Hamiltonian + trotterization path used in the simulation helpers,
     # then convert to a Qiskit circuit for metric extraction.
@@ -796,11 +792,11 @@ def qrisp_metric_provider(
     init_angle = float(params.get("init_angle", np.pi / 8))
 
     # Build the Qrisp Hamiltonian operator.
-    if case_name == "tfim_trotter":
+    if case_name in ("tfim_trotter", "tfim_lcu"):
         J = float(params.get("J", 1.0))
         h = float(params.get("h", 1.0))
         H = qrisp_common.build_tfim_operator(num_sites, J, h)
-    elif case_name == "heis_trotter":
+    elif case_name in ("heis_trotter", "heis_lcu"):
         J = float(params.get("J", 1.0))
         field = float(params.get("field", 0.2))
         H = qrisp_common.build_heisenberg_operator(num_sites, J, field)

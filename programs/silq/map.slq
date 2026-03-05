@@ -1,0 +1,66 @@
+// This file defines a classical map datatype. See main() for how to use.
+
+// MapT := (MapKeyT x MapValT)[];
+
+// Returns a MapValT
+def map_get_generic[MapKeyT,MapValT]
+    (comparator:(!MapKeyT x !MapKeyT)!->qfree B)
+    (
+        map:!(MapKeyT x MapValT)[],
+        key:!MapKeyT,
+        default:!MapValT
+    ) lifted :!MapValT {
+    for i in [0..map.length) {
+        entry := map[i];
+        if comparator(key, entry[0]) {
+            return entry[1];
+        }
+    }
+    return default;
+}
+
+// Returns the modified MapT
+def map_set_generic[MapKeyT,MapValT]
+    (comparator:(!MapKeyT x !MapKeyT)!->qfree B)
+    (
+        map:!(MapKeyT x MapValT)[],
+        const key:!MapKeyT,
+        const val:!MapValT
+    ) qfree :!(MapKeyT x MapValT)[] {
+    for i in [0..map.length) {
+        entry := map[i];
+        if comparator(key, entry[0]) {
+            map[i][1] = val;
+            return map;
+        }
+    }
+    return map~((key, val),);
+}
+
+def main() {
+    // We create a map with !N keys and !R values.
+    MapT := (!N x !R)[];
+    map := []:MapT;
+
+    // We need to define a function that tests for equality of two keys using
+    // their concrete types.
+    comparator := lambda(k1:!N,k2:!N)lifted=>(k1 == k2);
+
+    // We get our getter/setter functions by calling the generic functions with
+    // the comparator.
+    map_get := map_get_generic[!N,!R](comparator);
+    map_set := map_set_generic[!N,!R](comparator);
+
+    assert(map_get(map, 4, -999.999) == -999.999);
+    assert(map_get(map, 5, -999.999) == -999.999);
+    map = map_set(map, 4, 40);
+    assert(map_get(map, 4, -999.999) == 40);
+    assert(map_get(map, 5, -999.999) == -999.999);
+    map = map_set(map, 5, 50);
+    assert(map_get(map, 4, -999.999) == 40);
+    assert(map_get(map, 5, -999.999) == 50);
+    map = map_set(map, 4, 41);
+    assert(map_get(map, 4, -999.999) == 41);
+    assert(map_get(map, 5, -999.999) == 50);
+    return map;
+}

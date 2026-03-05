@@ -32,13 +32,14 @@ This repository accompanies our ACM CSUR-style survey of Hamiltonian simulation 
 
 | Language(s)                            | Python package(s) & version(s)                          | Notes |
 |---------------------------------------|---------------------------------------------------------|-------|
-| Cirq, HML, OpenQASM helper circuits   | `cirq-core==1.4.0`, `numpy==1.26.4`, `openfermion==1.7.1` | Used for Cirq Trotter/LCU helpers and some HML backends. |
+| Cirq, HML, OpenQASM helper circuits   | `cirq-core==1.4.0`, `numpy==2.3`, `openfermion==1.7.1` | Used for Cirq Trotter/LCU helpers and some HML backends. |
+| Guppy                                 | `guppylang==0.21.8`, `tket==0.12.16`                    | Programs are executed using Selene, which is included in guppylang. |
 | OpenQASM 3                            | `qiskit==2.2.3`                                         | We use `qiskit.qasm3.loads` to import OpenQASM 3 programs into Qiskit for simulation and metrics. |
 | Pennylane                             | `pennylane==0.43.1`, `pennylane-lightning==0.43.0`, `jax==0.4.28`, `jaxlib==0.4.28` | Lightning backend gives fast state vectors. |
 | PyQuil                                | `pyquil==4.17.0`, `rpcq==3.11.0`, `qcs-sdk-python==0.21.21` | Requires Rigetti QCS client libraries even for local sims. |
 | Qiskit                                | `qiskit==2.2.3`, `qiskit-aer==0.17.2`, `qiskit-ibm-runtime==0.43.1`, `rustworkx==0.17.1` | Aer powers statevector sims and gate metrics; also provides the OpenQASM 3 importer. |
 | Q# (modern QDK)                       | `qsharp==1.22.0`, `qsharp-widgets==1.22.0`, `qsharp` runtime auto-installs the .NET QDK. | No separate `dotnet build` required; Python driver runs everything. |
-| Qrisp                                 | `qrisp==0.6.3`                                          | Provides high-level Hamiltonian constructs used in `programs/qrisp`. |
+| Qrisp                                 | `qrisp==0.7.0`                                          | Provides high-level Hamiltonian constructs used in `programs/qrisp`. |
 | Qualtran                              | `qualtran==0.6.1`, `cotengra==0.7.5`, `quimb==1.11.2`   | Used for advanced TFIM decompositions on Cirq backends. |
 | Strawberry Fields                     | `StrawberryFields==0.19.0`, `thewalrus==0.21.0`, `quantum-blackbird==0.5.0` | Supports Gaussian CV encodings of the qubit Hamiltonians. |
 | Tket                                  | `pytket==2.10.3`, `pytket-qiskit==0.73.0`               | Tket targets circuit synthesis; we export to Qiskit for simulation. |
@@ -46,6 +47,21 @@ This repository accompanies our ACM CSUR-style survey of Hamiltonian simulation 
 | Non-Python toolchains                 | **Silq** (requires the Silq compiler toolchain, install from https://silq.ethz.ch).<br>**Quipper** (requires GHC + Quipper libraries, see https://www.mathstat.dal.ca/~selinger/quipper/). | Our CLI wrappers assume those toolchains are on `PATH`. |
 
 Install whichever rows correspond to the languages you intend to execute (e.g., `pip install qsharp==1.22.0` before running the Q# programs). The versions above mirror the ones in our `.venv` and are what we cite in the paper.
+
+### Running CUDA-Q in Docker
+
+To execute our CUDA-Q programs, we use the CUDA-Q Docker containers, which allow
+us to run on any platform (with or without an Nvidia gpu).
+
+1. Start Docker. If you're on macOS, this probably means starting Docker
+   Desktop.
+2. Run the provided script: `./cudaq.sh`. This script automatically downloads
+   the CUDA-Q Docker image and starts a container in your current shell.
+3. From this shell, run `cd Hamiltonian-Simulation`. This takes you to a mounted
+   version of the repo from inside the container. Now you can execute the CUDA-Q
+   programs normally with our test harness.
+4. To exit the container type `exit` or `Ctrl+D`. To restart the container,
+   rerun `./cudaq.sh`.
 
 ### Quipper on Apple Silicon (and how to adapt the CLI elsewhere)
 

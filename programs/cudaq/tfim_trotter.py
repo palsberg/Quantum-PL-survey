@@ -27,7 +27,6 @@ def run_simulation(config: Dict[str, Any]) -> np.ndarray:
 
     H = create_hamiltonian_tfim(num_sites, J, h)
     state = common.trotter(num_sites, H, total_time, steps)
-    print(state)
     return state
 
 

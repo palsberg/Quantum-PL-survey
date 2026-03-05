@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import cudaq
 import numpy as np
 
@@ -67,8 +68,8 @@ def shors(N: int, a: int, t: int, measure: bool):
         m += 1
         tmp = tmp // 2
 
-    ancilla = cudaq.qvector(t)
     operand = cudaq.qvector(m)
+    ancilla = cudaq.qvector(t)
 
     h(ancilla)
     x(operand[0])
@@ -80,6 +81,17 @@ def shors(N: int, a: int, t: int, measure: bool):
     cudaq.adjoint(qft, ancilla)
     if measure:
         mz(ancilla)
+
+def run_simulation(config: Dict[str, Any]):
+    t = int(config.get("t", 6))
+    N = int(config.get("N", 21))
+    a = int(config.get("a", 2))
+    m = int(np.ceil(np.log2(N)))
+
+    register_oracle(N, a)
+    state = cudaq.get_state(shors, N, a, t, False)
+    state = np.array(state)
+    return state
 
 
 def main():

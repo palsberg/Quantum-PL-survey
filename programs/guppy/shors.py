@@ -15,6 +15,7 @@ from pytket.passes import AutoRebase, DecomposeBoxes
 
 import math
 import numpy as np
+from typing import Any, Dict, List
 
 
 def int_to_bools(num: int, n_bits: int) -> tuple:
@@ -22,13 +23,13 @@ def int_to_bools(num: int, n_bits: int) -> tuple:
     return tuple([b=='1' for b in num_binary])
 
 
-def get_shors_oracle(N: int, a: int) -> dict[tuple[bool], tuple[bool]]:
+def get_shors_oracle(N: int, a: int, i: int) -> dict[tuple[bool], tuple[bool]]:
     n = math.ceil(math.log2(N))
     permutation = {}
     for k in range(2**n):
         if k < N:
             from_bits = int_to_bools(k, n)
-            to_bits = int_to_bools((k*a) % N, n)
+            to_bits = int_to_bools((k * a**(2**i)) % N, n)
             permutation[from_bits] = to_bits
         else:
             permutation[int_to_bools(k, n)] = int_to_bools(k, n)
@@ -37,17 +38,18 @@ def get_shors_oracle(N: int, a: int) -> dict[tuple[bool], tuple[bool]]:
 
 def build_controlled_oracle(n_ctrl: int,
                             n_opr: int,
-                            oracle: Op,
+                            oracles: List[Op],
                             ) -> GuppyFunctionDefinition:
-    ctrl_box = QControlBox(oracle, 1)
+    assert n_ctrl == len(oracles)
+    ctrl_boxes = [QControlBox(oracles[i], 1) for i in range(n_ctrl)]
 
     pytket_circ = Circuit()
     pytket_ctrl = pytket_circ.add_q_register('ctrl', n_ctrl)
     pytket_opr = pytket_circ.add_q_register('opr', n_opr)
 
     for k in range(n_ctrl):
-        for _ in range(2**k):
-            pytket_circ.add_gate(ctrl_box, [list(pytket_ctrl)[n_ctrl - k - 1]] + list(pytket_opr))
+        # for _ in range(2**k):
+        pytket_circ.add_gate(ctrl_boxes[k], [list(pytket_ctrl)[n_ctrl - k - 1]] + list(pytket_opr))
 
     DecomposeBoxes().apply(pytket_circ)
     AutoRebase({OpType.H, OpType.Rz, OpType.CX}).apply(pytket_circ)
@@ -94,9 +96,9 @@ def build_inverse_qft(n: int) -> GuppyFunctionDefinition:
 # already in the eigenstate. This circuit does not include measurement.
 def build_qpe(n_meas: int,
               n_opr: int,
-              oracle_op: Op
+              oracle_ops: List[Op]
               ) -> GuppyFunctionDefinition:
-    ctrl_oracle = build_controlled_oracle(n_meas, n_opr, oracle_op)
+    ctrl_oracle = build_controlled_oracle(n_meas, n_opr, oracle_ops)
     inverse_qft = build_inverse_qft(n_meas)
 
     @guppy
@@ -113,8 +115,8 @@ def build_qpe(n_meas: int,
 
 def build_shors(N: int, a: int, t: int, measure=False) -> GuppyFunctionDefinition:
     n = math.ceil(math.log2(N))
-    permute = ToffoliBox(get_shors_oracle(N, a))
-    qpe = build_qpe(t, n, permute)
+    permutes = [ToffoliBox(get_shors_oracle(N, a, k)) for k in range(t)]
+    qpe = build_qpe(t, n, permutes)
 
     @guppy(max_qubits=t+n)
     def shors() -> None:
@@ -133,48 +135,59 @@ def build_shors(N: int, a: int, t: int, measure=False) -> GuppyFunctionDefinitio
             if len(opr) == 4:
                 if len(ctrl) == 3:
                     state_result('final',
-                        opr[0], opr[1], opr[2], opr[3],
-                        ctrl[0], ctrl[1], ctrl[2])
+                        ctrl[0], ctrl[1], ctrl[2],
+                        opr[0], opr[1], opr[2], opr[3])
                 elif len(ctrl) == 4:
                     state_result('final',
-                        opr[0], opr[1], opr[2], opr[3],
-                        ctrl[0], ctrl[1], ctrl[2], ctrl[3])
+                        ctrl[0], ctrl[1], ctrl[2], ctrl[3],
+                        opr[0], opr[1], opr[2], opr[3])
                 elif len(ctrl) == 5:
                     state_result('final',
-                        opr[0], opr[1], opr[2], opr[3],
-                        ctrl[0], ctrl[1], ctrl[2], ctrl[3], ctrl[4])
+                        ctrl[0], ctrl[1], ctrl[2], ctrl[3], ctrl[4],
+                        opr[0], opr[1], opr[2], opr[3])
                 elif len(ctrl) == 6:
                     state_result('final',
-                        opr[0], opr[1], opr[2], opr[3],
-                        ctrl[0], ctrl[1], ctrl[2], ctrl[3], ctrl[4], ctrl[5])
+                        ctrl[0], ctrl[1], ctrl[2], ctrl[3], ctrl[4], ctrl[5],
+                        opr[0], opr[1], opr[2], opr[3])
             elif len(opr) == 5:
                 if len(ctrl) == 3:
                     state_result('final',
-                        opr[0], opr[1], opr[2], opr[3], opr[4],
-                        ctrl[0], ctrl[1], ctrl[2])
+                        ctrl[0], ctrl[1], ctrl[2],
+                        opr[0], opr[1], opr[2], opr[3], opr[4])
                 elif len(ctrl) == 4:
                     state_result('final',
-                        opr[0], opr[1], opr[2], opr[3], opr[4],
-                        ctrl[0], ctrl[1], ctrl[2], ctrl[3])
+                        ctrl[0], ctrl[1], ctrl[2], ctrl[3],
+                        opr[0], opr[1], opr[2], opr[3], opr[4])
                 elif len(ctrl) == 5:
                     state_result('final',
-                        opr[0], opr[1], opr[2], opr[3], opr[4],
-                        ctrl[0], ctrl[1], ctrl[2], ctrl[3], ctrl[4])
+                        ctrl[0], ctrl[1], ctrl[2], ctrl[3], ctrl[4],
+                        opr[0], opr[1], opr[2], opr[3], opr[4])
                 elif len(ctrl) == 6:
                     state_result('final',
-                        opr[0], opr[1], opr[2], opr[3], opr[4],
-                        ctrl[0], ctrl[1], ctrl[2], ctrl[3], ctrl[4], ctrl[5])
+                        ctrl[0], ctrl[1], ctrl[2], ctrl[3], ctrl[4], ctrl[5],
+                        opr[0], opr[1], opr[2], opr[3], opr[4])
             discard_array(ctrl)
             discard_array(opr)
 
     shors.check()
     return shors
 
+def run_simulation(config: Dict[str, Any]):
+    t = int(config.get("t", 6))
+    N = int(config.get("N", 21))
+    a = int(config.get("a", 2))
+
+    shors = build_shors(N, a, t, False)
+    res = shors.emulator().statevector_sim().with_shots(1).run()
+    state = res.partial_state_dicts()[0]['final'].as_single_state()
+
+    return state
+
 
 def main():
     N = 21
     a = 2
-    t = 3
+    t = 6
     measure = False
 
     shors = build_shors(N, a, t, measure)

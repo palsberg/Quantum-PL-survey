@@ -32,8 +32,8 @@ This repository accompanies our ACM CSUR-style survey of Hamiltonian simulation 
 
 | Language(s)                           | Python package(s) & version(s)                          | Notes |
 |---------------------------------------|---------------------------------------------------------|-------|
-| Cirq                                  | `cirq-core==1.4.0`, `numpy==2.3`, `openfermion==1.7.1` | Used for Cirq Trotter/LCU helpers |
-| Guppy                                 | `guppylang==0.21.8`, `tket==0.12.16`                    | Programs are executed using Selene, which is included in guppylang. |
+| Cirq                                  | `cirq-core==1.4.0`, `numpy==2.3`, `openfermion==1.7.0` | Used for Cirq Trotter/LCU helpers |
+| Guppy                                 | `guppylang==0.21.8`, `pytket==2.13.0`, `tket==0.12.16`                    | Programs are executed using Selene, which is included in guppylang. |
 | Pennylane                             | `pennylane==0.43.1`, `pennylane-lightning==0.43.0`, `jax==0.4.28`, `jaxlib==0.4.28` | Lightning backend gives fast state vectors. |
 | PyQuil                                | `pyquil==4.17.0`, `rpcq==3.11.0`, `qcs-sdk-python==0.21.21` | Requires Rigetti QCS client libraries even for local sims. |
 | Qiskit                                | `qiskit==2.2.3`, `qiskit-aer==0.17.2`, `qiskit-ibm-runtime==0.43.1`, `rustworkx==0.17.1` | Aer powers statevector sims and gate metrics; also provides the OpenQASM 3 importer. |

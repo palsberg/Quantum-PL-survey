@@ -41,7 +41,7 @@ This repository accompanies our ACM CSUR-style survey of Hamiltonian simulation 
 | Qrisp                                 | `qrisp==0.7.0`                                          | Provides high-level Hamiltonian constructs used in `programs/qrisp`. |
 | Qualtran                              | `qualtran==0.6.1`, `cotengra==0.7.5`, `quimb==1.11.2`   | Used for advanced TFIM decompositions on Cirq backends. |
 | Common math / tooling (multi-language)| `scipy==1.16.3`, `sympy==1.13.0`, `pandas==2.3.3`, `matplotlib==3.10.7` | Shared across benchmarking/plots. |
-| Non-Python toolchains                 | **Silq** (requires the Silq compiler toolchain, install from https://silq.ethz.ch).<br>**Quipper** (requires GHC + Quipper libraries, see https://www.mathstat.dal.ca/~selinger/quipper/). | Our CLI wrappers assume those toolchains are on `PATH`. |
+| Non-Python toolchains                 | **Silq** (requires the Silq compiler toolchain, install from https://github.com/silq-lang/silq, compiling from commit 99aa556).<br>**Quipper** (requires GHC + Quipper libraries, see https://www.mathstat.dal.ca/~selinger/quipper/). | Our CLI wrappers assume those toolchains are on `PATH`. |
 
 Install whichever rows correspond to the languages you intend to execute (e.g., `pip install qsharp==1.22.0` before running the Q# programs). The versions above mirror the ones in our `.venv` and are what we cite in the paper.
 

@@ -14,14 +14,13 @@ if docker ps -a --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
   # Container exists
   if docker ps --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
     # Container is already running
-    exit 0
+    docker attach "$CONTAINER_NAME"
   else
     # Container exists but is stopped
     docker start -i "$CONTAINER_NAME"
   fi
 else
   # Container does not exist
-  # docker run -d --name "$CONTAINER_NAME" "$IMAGE_NAME"
   docker run -it --name "$CONTAINER_NAME" \
     --mount type=bind,source="$SCRIPT_DIR",target=/home/"$CONTAINER_NAME"/Hamiltonian-Simulation \
     "$IMAGE_NAME"

@@ -1,20 +1,39 @@
 from typing import List
+# def calculate_shors_factors(n: int) -> List[int]:
+#     """return the list of all possible prime factors of n"""
+#     if n < 2:
+#         raise ValueError("Input must be an integer greater than or equal to 2.")
+    
+#     prime_factors = [] # List to store the distinct prime factors of n
+#     cur_factor = 2
+#     while cur_factor <= n:
+#         if n % cur_factor == 0:
+#             prime_factors.append(cur_factor)
+
+#         while n % cur_factor == 0:
+#             n //= cur_factor
+#         cur_factor += 1
+    
+#     return prime_factors
+
 def calculate_shors_factors(n: int) -> List[int]:
     """return the list of all possible prime factors of n"""
     if n < 2:
         raise ValueError("Input must be an integer greater than or equal to 2.")
+    if n == 2:
+        return [2]
     
-    prime_factors = [] # List to store the distinct prime factors of n
+    factors = [] # List to store the distinct prime factors of n
     cur_factor = 2
-    while cur_factor <= n:
+    while cur_factor <= n-1:
         if n % cur_factor == 0:
-            prime_factors.append(cur_factor)
+            factors.append(cur_factor)
 
-        while n % cur_factor == 0:
-            n //= cur_factor
+        # while n % cur_factor == 0:
+        #     n //= cur_factor
         cur_factor += 1
     
-    return prime_factors
+    return factors
 
 def test_shors_value(factors: List[int], shors_value: int) -> bool:
     """given a list of factors and a Shor's value, return True if the factors are correct."""

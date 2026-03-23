@@ -261,8 +261,8 @@ def factor_integer(N: int) -> List[int]:
     return factors
 
 if __name__ == "__main__":
-    N=27
+    N=45
     a=2
-    print(f"Order candidate r for a={a}, N={N}:", FindOrderCandidate(a, N, t=12))
-    print(f"One factor from Shor({N}):", Shor(N, max_tries=5, t=12))
+    print(f"Order candidate r for a={a}, N={N}:", FindOrderCandidate(a, N, t=4))
+    print(f"One factor from Shor({N}):", Shor(N, max_tries=5, t=4))
     print(f"Full factorization of {N}:", factor_integer(N))

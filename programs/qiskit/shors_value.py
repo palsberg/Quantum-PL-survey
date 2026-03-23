@@ -24,38 +24,42 @@ from qiskit_aer import Aer
 #   from .shors import _build_qpe_circuit, _fraction_with_bounded_denominator_from_counts
 # or
 #   from programs.qiskit.shors import ...
-from .shors import (
+from shors import (
     _build_qpe_circuit,
     _fraction_with_bounded_denominator_from_counts,
 )
 
 
-def _measure_counting_register_once(
-    a: int, N: int, t: int, *, shots: int, seed: int
-) -> int:
-    """
-    Build QPE circuit (no measurement), then append measurement on counting qubits.
-    Run shots and return the most frequent observed integer c in [0, 2^t).
-    """
-    qc, m = _build_qpe_circuit(a, N, t)
+# def _measure_counting_register_once(
+#     tqc,
+#     backend,
+#     *,
+#     t: int,
+#     shots: int,
+#     seed: int
+# ) -> int:
+#     """
+#     Run shots on a pre-transpiled measured-QPE circuit.
+#     Return the most frequent observed integer c in [0, 2^t).
+#     """
+#     job = backend.run(tqc, shots=shots, seed_simulator=seed)
+#     result = job.result()
+#     counts = result.get_counts()
 
-    # Explicit classical register of size t for counting outcomes
-    meas = QuantumCircuit(qc.num_qubits, t)
-    meas.compose(qc, inplace=True)
-    meas.measure(range(t), range(t))
+#     bitstring = max(counts.items(), key=lambda kv: kv[1])[0]
+#     c = int(bitstring, 2)
+#     return c
 
-    backend = Aer.get_backend("aer_simulator")
-    tqc = transpile(meas, backend)
-
+def _measure_counting_register_counts(
+    tqc,
+    backend,
+    *,
+    shots: int,
+    seed: int
+) -> dict:
+    """Run shots on pre-transpiled circuit and return counts dict."""
     job = backend.run(tqc, shots=shots, seed_simulator=seed)
-    result = job.result()
-    counts = result.get_counts()
-
-    # counts keys are bitstrings of length t (because we only have t classical bits)
-    bitstring = max(counts.items(), key=lambda kv: kv[1])[0]
-    c = int(bitstring, 2)
-    return c
-
+    return job.result().get_counts()
 
 def FindOrderCandidate_measured(
     a: int,
@@ -75,6 +79,7 @@ def FindOrderCandidate_measured(
 
     Returns r or 0 if it gives up.
     """
+    print("order of ", a)
     if N <= 1:
         raise ValueError("N must be > 1")
     if gcd(a, N) != 1:
@@ -83,12 +88,47 @@ def FindOrderCandidate_measured(
     if t is None:
         t = max(8, 2 * int(ceil(log2(N))) + 2)
 
-    for j in range(retries):
-        c = _measure_counting_register_once(a, N, t, shots=shots, seed=seed + j)
+    # Build the QPE circuit once
+    qc, m = _build_qpe_circuit(a, N, t)
 
+    meas = QuantumCircuit(qc.num_qubits, t)
+    meas.compose(qc, inplace=True)
+    meas.measure(range(t), range(t))
+
+    backend = Aer.get_backend("aer_simulator")
+
+    # Transpile once
+    tqc = transpile(meas, backend, optimization_level=0)
+    print("transpile finished for ", a)
+
+    # for j in range(retries):
+    #     c = _measure_counting_register_once(
+    #         tqc,
+    #         backend,
+    #         t=t,
+    #         shots=shots,
+    #         seed=seed + j
+    #     )
+
+    #     q = _fraction_with_bounded_denominator_from_counts(c, t, N)
+    #     r = q.denominator
+
+    #     if r > 0 and pow(a, r, N) == 1:
+    #         return r
+
+        # Run ONCE with aggregated shots instead of many retries.
+    total_shots = shots * max(1, retries)
+    counts = _measure_counting_register_counts(
+        tqc, backend, shots=total_shots, seed=seed
+    )
+
+    # Try several most-likely outcomes, not just the single mode.
+    # This is both faster and more robust than retrying.
+    topk = 8
+    for bitstring, _ in sorted(counts.items(), key=lambda kv: kv[1], reverse=True)[:topk]:
+        c = int(bitstring, 2)
         q = _fraction_with_bounded_denominator_from_counts(c, t, N)
         r = q.denominator
-
         if r > 0 and pow(a, r, N) == 1:
             return r
 
@@ -107,6 +147,7 @@ def _try_shor_with_base_a_measured(
     """
     One measured Shor attempt with fixed base a. Returns factor or 0.
     """
+    print("a:",a)
     d = gcd(a, N)
     if 1 < d < N:
         return d
@@ -163,7 +204,7 @@ def Shor_value(
 
     if allow_random_a:
         while len(attempts) < max_tries:
-            attempts.append(int(rng.integers(2, N)))
+            attempts.append(int(rng.integers(2, N-2)))
     else:
         if not attempts:
             raise ValueError("allow_random_a=False requires providing a valid 'a' in config.")
@@ -196,8 +237,8 @@ def run_simulation(config: Dict[str, Any]) -> int:
     t = config.get("t", None)
     t = int(t) if t is not None else None
 
-    max_tries = int(config.get("max_tries", 25))
-    seed = int(config.get("seed", 0))
+    max_tries = int(config.get("max_tries", 10))
+    seed = int(config.get("seed", np.random.SeedSequence().entropy))
     allow_random_a = bool(config.get("allow_random_a", True))
 
     shots = int(config.get("shots", 256))       # measurement shots per attempt
@@ -216,5 +257,8 @@ def run_simulation(config: Dict[str, Any]) -> int:
 
 
 if __name__ == "__main__":
-    cfg = {"N": 21, "a": 2, "t": 8, "shots": 512, "retries": 20, "max_tries": 10, "seed": 0}
+    
+    cfg = {"N": 45, "t": 6, "shots": 512, "retries": 10, "max_tries": 1}
+    
+    print("here")
     print("Factor:", run_simulation(cfg))

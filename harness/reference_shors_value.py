@@ -1,20 +1,5 @@
 from typing import List
-# def calculate_shors_factors(n: int) -> List[int]:
-#     """return the list of all possible prime factors of n"""
-#     if n < 2:
-#         raise ValueError("Input must be an integer greater than or equal to 2.")
-    
-#     prime_factors = [] # List to store the distinct prime factors of n
-#     cur_factor = 2
-#     while cur_factor <= n:
-#         if n % cur_factor == 0:
-#             prime_factors.append(cur_factor)
 
-#         while n % cur_factor == 0:
-#             n //= cur_factor
-#         cur_factor += 1
-    
-#     return prime_factors
 
 def calculate_shors_factors(n: int) -> List[int]:
     """return the list of all possible prime factors of n"""
@@ -23,12 +8,17 @@ def calculate_shors_factors(n: int) -> List[int]:
     if n == 2:
         return [2]
     
+    starting_n=n
+    
     factors = [] # List to store the distinct prime factors of n
     cur_factor = 2
-    while cur_factor <= n-1:
+
+    while cur_factor <= n and cur_factor != starting_n: # only accept nontrivial factor
         if n % cur_factor == 0:
             factors.append(cur_factor)
-
+        while n % cur_factor == 0:
+            n //= cur_factor
+        
         cur_factor += 1
     
     return factors

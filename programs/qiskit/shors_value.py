@@ -24,7 +24,7 @@ from qiskit_aer import Aer
 #   from .shors import _build_qpe_circuit, _fraction_with_bounded_denominator_from_counts
 # or
 #   from programs.qiskit.shors import ...
-from shors import (
+from .shors import (
     _build_qpe_circuit,
     _fraction_with_bounded_denominator_from_counts,
 )

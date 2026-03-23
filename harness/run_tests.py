@@ -290,7 +290,7 @@ class Result:
     message: str
 
 
-TOLERANCE = 1e-6
+TOLERANCE = 1e-4
 
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:

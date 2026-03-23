@@ -34,7 +34,7 @@ def count_loc(lines: List[str], lang: str) -> int:
         if not line.strip():
             continue
         stripped = line.lstrip()
-        if lang in {"python", "strawberry"}:
+        if lang in {"python"}:
             if stripped.startswith("#"):
                 continue
         elif lang in {"qsharp", "openqasm", "silq"}:
@@ -199,10 +199,13 @@ def haskell_case_loc(entry_path: Path, helper_paths: List[Path]) -> int:
     return count_loc(all_lines, lang="haskell")
 
 
-def silq_case_loc(entry_path: Path) -> int:
-    if not entry_path.exists():
-        return 0
-    return count_loc(read_lines(entry_path), lang="silq")
+def silq_case_loc(silq_paths: List[Path]) -> int:
+    total_loc = 0
+    for path in silq_paths:
+        if not path.exists():
+            continue
+        total_loc += count_loc(read_lines(path), lang="silq")
+    return total_loc
 
 
 
@@ -223,6 +226,19 @@ def main() -> None:
                 ROOT / "programs" / "cirq" / "shors" / "quantumorderfinding.py",
                 ROOT / "programs" / "cirq" / "shors" / "shors_common.py",
             ],
+        },
+        "cudaq": {
+            "trotter_helpers": [ROOT / "programs" / "cudaq" / "common.py"],
+            "lcu_helpers": [ROOT / "programs" / "cudaq" / "lcu_common.py"],
+            "shors_helpers": [],
+        },
+        "guppy": {
+            "trotter_helpers": [ROOT / "programs" / "guppy" / "common.py"],
+            "lcu_helpers": [
+                ROOT / "programs" / "guppy" / "lcu_common.py",
+                ROOT / "programs" / "common" / "pauli_models.py",
+            ],
+            "shors_helpers": [],
         },
         "pennylane": {
             "trotter_helpers": [ROOT / "programs" / "pennylane" / "common.py"],
@@ -252,7 +268,11 @@ def main() -> None:
         },
         "qrisp": {
             "trotter_helpers": [ROOT / "programs" / "qrisp" / "common.py"],
-            "lcu_helpers": [ROOT / "programs" / "qrisp" / "common.py"],
+            "lcu_helpers": [
+                ROOT / "programs" / "common" / "pauli_models.py",
+                ROOT / "programs" / "qrisp" / "common.py",
+                ROOT / "programs" / "qrisp" / "lcu_common.py",
+            ],
             "shors_helpers": [],
         },
         "qualtran": {
@@ -340,11 +360,19 @@ def main() -> None:
     silq_res: Dict[str, int] = {}
     silq_dir = ROOT / "programs" / "silq"
     silq_entry = {
-        "tfim_trotter": silq_dir / "tfim_trotter.slq",
-        "tfim_lcu": silq_dir / "tfim_lcu.slq",
-        "heis_trotter": silq_dir / "heis_trotter.slq",
-        "heis_lcu": silq_dir / "heis_lcu.slq",
-        "shors_value": silq_dir / "shors_value.slq",
+        "tfim_trotter": [silq_dir / "tfim_trotter.slq"],
+        "tfim_lcu": [
+            silq_dir / "tfim_lcu.slq",
+            silq_dir / "lcu_common.slq",
+            silq_dir / "map.slq",
+        ],
+        "heis_trotter": [silq_dir / "heis_trotter.slq"],
+        "heis_lcu": [
+            silq_dir / "heis_lcu.slq",
+            silq_dir / "lcu_common.slq",
+            silq_dir / "map.slq",
+        ],
+        "shors_value": [silq_dir / "shors_value.slq"],
     }
     for case_name, ham, method in cases:
         if case_name in silq_entry:
@@ -357,6 +385,8 @@ def main() -> None:
     # Sanity: ensure we have all 11 languages used in the table.
     ordered_langs = [
         "cirq",
+        "cudaq",
+        "guppy",
         "pennylane",
         "pyquil",
         "qsharp",
@@ -391,6 +421,9 @@ def main() -> None:
 
         name_map = {
             "cirq": "Cirq",
+            "cudaq": "CUDA-Q",
+            "guppy": "Guppy",
+            "openqasm": "OpenQASM~3",
             "pennylane": "PennyLane",
             "pyquil": "PyQuil",
             "qiskit": "Qiskit",

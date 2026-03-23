@@ -28,8 +28,8 @@ def get_r_candidates(approx):
 
 def shor(N, a, t):
     meas_res = find_order(a, N, t)[0].get_measurement()
-    print(meas_res)
-    print(f"number of outcomes: {len(meas_res)}")
+    # print(meas_res)
+    # print(f"number of outcomes: {len(meas_res)}")
     
     r_candidates = sum([get_r_candidates(approx) for approx in meas_res.keys()], [])
 

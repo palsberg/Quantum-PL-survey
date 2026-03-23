@@ -29,8 +29,6 @@ def calculate_shors_factors(n: int) -> List[int]:
         if n % cur_factor == 0:
             factors.append(cur_factor)
 
-        # while n % cur_factor == 0:
-        #     n //= cur_factor
         cur_factor += 1
     
     return factors

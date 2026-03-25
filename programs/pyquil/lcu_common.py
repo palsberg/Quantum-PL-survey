@@ -113,7 +113,7 @@ def _apply_controlled_pauli_string(
 
 def _mask_index(prog: Program, index_qubits: Sequence[int], value: int):
     bits = [(value >> k) & 1 for k in range(len(index_qubits))]
-    for pos, bit in enumerate(bits):
+    for pos, bit in enumerate(bits[::-1]):
         if bit == 0:
             prog += X(index_qubits[pos])
 

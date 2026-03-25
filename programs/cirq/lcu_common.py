@@ -41,7 +41,7 @@ def iterate_bits(index: int, num_bits: int) -> List[int]:
 
 def select_mask_ops(qubits: Sequence[cirq.Qid], index: int) -> List[cirq.Operation]:
     """Produce X masks that turn |index> into |11..1> for multi-control."""
-    bits = iterate_bits(index, len(qubits))
+    bits = iterate_bits(index, len(qubits))[::-1]
     return [cirq.X(qubits[k]) for k, bit in enumerate(bits) if bit == 0]
 
 

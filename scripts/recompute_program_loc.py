@@ -499,12 +499,7 @@ def main() -> None:
         f.write("\\begin{table*}[t]\n")
         f.write("  \\centering\n")
         f.write(
-            "  \\caption{Lines of source code for TFIM and Heisenberg isotropic chain benchmark programs. "
-            "Counts are computed from a temporary version of each program where language--local helper "
-            "definitions actually used by the benchmark (for example, \\texttt{common.py}, "
-            "\\texttt{lcu\\_common.py}, and \\texttt{pauli\\_models.py}) are inlined, comments and blank "
-            "lines are removed, and non--Python stacks are measured on their native artifacts (Q\\#, "
-            "Quipper, Silq, and generated OpenQASM~3).}\n"
+            "  \\caption{The eleven languages and the lines of source code for our benchmark programs.}\n"
         )
         f.write("  \\label{tab:program-size}\n")
         f.write("  \\begin{tabular}{l|r|rr|rr}\n")

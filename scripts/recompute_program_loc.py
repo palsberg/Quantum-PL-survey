@@ -16,6 +16,8 @@ The resulting counts are written into Paper/program_size_table.tex.
 from __future__ import annotations
 
 import re
+import io
+import tokenize
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -26,26 +28,106 @@ def read_lines(path: Path) -> List[str]:
     return path.read_text(encoding="utf-8").splitlines()
 
 
-def count_loc(lines: List[str], lang: str) -> int:
-    """Count non-empty, non-comment lines for a given language."""
+def _strip_c_style_blocks(text: str) -> str:
+    """Strip /* ... */ blocks used by C-style languages."""
+    return re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)
+
+
+def _strip_haskell_blocks(text: str) -> str:
+    """Strip {- ... -} Haskell block comments."""
+    return re.sub(r"\{\-.*?\-\}", "", text, flags=re.DOTALL)
+
+
+def _strip_python_comments_and_docstrings(text: str) -> str:
+    """Remove Python comments and docstrings, preserving code tokens only."""
+    out_parts: List[str] = []
+    prev_toktype = tokenize.INDENT
+    last_lineno = -1
+    last_col = 0
+
+    try:
+        tokens = tokenize.generate_tokens(io.StringIO(text).readline)
+    except Exception:
+        # Fallback: keep original text if tokenization fails.
+        return text
+
+    for tok in tokens:
+        tok_type = tok.type
+        tok_str = tok.string
+        start_line, start_col = tok.start
+        end_line, end_col = tok.end
+
+        if start_line > last_lineno:
+            last_col = 0
+        if start_col > last_col:
+            out_parts.append(" " * (start_col - last_col))
+
+        if tok_type == tokenize.COMMENT:
+            # Drop comments.
+            pass
+        elif tok_type == tokenize.STRING and prev_toktype in {
+            tokenize.INDENT,
+            tokenize.NEWLINE,
+            tokenize.DEDENT,
+            tokenize.NL,
+            tokenize.ENDMARKER,
+        }:
+            # Drop likely module/class/function docstrings.
+            pass
+        else:
+            out_parts.append(tok_str)
+
+        prev_toktype = tok_type
+        last_col = end_col
+        last_lineno = end_line
+
+    return "".join(out_parts)
+
+
+def _count_python_logical_lines(lines: List[str]) -> int:
+    """Count Python logical lines after stripping comments/docstrings."""
+    text = "\n".join(lines)
+    stripped = _strip_python_comments_and_docstrings(text)
     count = 0
-    for raw in lines:
+    try:
+        for tok in tokenize.generate_tokens(io.StringIO(stripped).readline):
+            if tok.type == tokenize.NEWLINE:
+                count += 1
+    except Exception:
+        # Fallback to physical non-empty lines.
+        for raw in stripped.splitlines():
+            if raw.strip():
+                count += 1
+    return count
+
+
+def count_loc(lines: List[str], lang: str) -> int:
+    """Count non-empty, non-comment logical lines for a given language."""
+    if lang == "python":
+        return _count_python_logical_lines(lines)
+
+    text = "\n".join(lines)
+    if lang in {"qsharp", "silq", "cudaq", "openqasm", "guppy"}:
+        text = _strip_c_style_blocks(text)
+    elif lang == "haskell":
+        text = _strip_haskell_blocks(text)
+
+    count = 0
+    for raw in text.splitlines():
         line = raw.rstrip()
         if not line.strip():
             continue
         stripped = line.lstrip()
-        if lang in {"python"}:
-            if stripped.startswith("#"):
-                continue
-        elif lang in {"qsharp", "openqasm", "silq"}:
+        if lang in {"qsharp", "openqasm", "silq", "cudaq", "guppy"}:
             if stripped.startswith("//"):
                 continue
         elif lang == "haskell":
             if stripped.startswith("--"):
                 continue
-        else:
-            # Default: no special comment handling beyond blank lines.
-            pass
+        # For non-Python languages, optionally treat obvious continuation-only
+        # lines as formatting rather than logic.
+        if stripped in {"(", ")", "[", "]", "{", "}"}:
+            continue
         count += 1
     return count
 
@@ -208,6 +290,17 @@ def silq_case_loc(silq_paths: List[Path]) -> int:
     return total_loc
 
 
+def python_shors_case_loc(entry_path: Path, helper_mods: List[Path]) -> int:
+    """Count Shor entry plus helper module files for fairness across languages."""
+    if not entry_path.exists():
+        return 0
+    all_lines = read_lines(entry_path)
+    for helper in helper_mods:
+        if helper.exists():
+            all_lines.extend(read_lines(helper))
+    return count_loc(all_lines, lang="python")
+
+
 
 def main() -> None:
     # Languages and their LOC per (TFIM/Heis × Trotter/LCU).
@@ -222,15 +315,15 @@ def main() -> None:
                 ROOT / "programs" / "common" / "pauli_models.py",
             ],
             "shors_helpers": [
-                ROOT / "programs" / "cirq" / "shors" / "modularexponentiation.py",
-                ROOT / "programs" / "cirq" / "shors" / "quantumorderfinding.py",
-                ROOT / "programs" / "cirq" / "shors" / "shors_common.py",
+                ROOT / "programs" / "cirq" / "shor" / "modularexponentiation.py",
+                ROOT / "programs" / "cirq" / "shor" / "quantumorderfinding.py",
+                ROOT / "programs" / "cirq" / "shor" / "shors_common.py",
             ],
         },
         "cudaq": {
             "trotter_helpers": [ROOT / "programs" / "cudaq" / "common.py"],
             "lcu_helpers": [ROOT / "programs" / "cudaq" / "lcu_common.py"],
-            "shors_helpers": [],
+            "shors_helpers": [ROOT / "programs" / "cudaq" / "shors.py"],
         },
         "guppy": {
             "trotter_helpers": [ROOT / "programs" / "guppy" / "common.py"],
@@ -238,7 +331,7 @@ def main() -> None:
                 ROOT / "programs" / "guppy" / "lcu_common.py",
                 ROOT / "programs" / "common" / "pauli_models.py",
             ],
-            "shors_helpers": [],
+            "shors_helpers": [ROOT / "programs" / "guppy" / "shors.py"],
         },
         "pennylane": {
             "trotter_helpers": [ROOT / "programs" / "pennylane" / "common.py"],
@@ -247,7 +340,7 @@ def main() -> None:
                 ROOT / "programs" / "common" / "pauli_models.py",
             ],
             "shors_helpers": [
-                ROOT / "programs" / "cirq" / "Shors" / "shors_orderfinding.py",
+                ROOT / "programs" / "pennylane" / "shors.py",
             ],
         },
         "pyquil": {
@@ -309,7 +402,10 @@ def main() -> None:
                 helpers = cfg["shors_helpers"]
             else:
                 assert False
-            loc = python_case_loc(entry, helpers)
+            if method == "Shors":
+                loc = python_shors_case_loc(entry, helpers)
+            else:
+                loc = python_case_loc(entry, helpers)
             key = f"{ham}_{method}"
             lang_res[key] = loc
         results[lang] = lang_res
@@ -411,12 +507,12 @@ def main() -> None:
             "Quipper, Silq, and generated OpenQASM~3).}\n"
         )
         f.write("  \\label{tab:program-size}\n")
-        f.write("  \\begin{tabular}{l|rr|rr}\n")
+        f.write("  \\begin{tabular}{l|r|rr|rr}\n")
         f.write("    \\toprule\n")
         f.write(
-            "             & \\multicolumn{2}{c|}{TFIM} & \\multicolumn{2}{c}{Heisenberg} \\\\\n"
+            "             & Factoring & \\multicolumn{2}{c|}{TFIM} & \\multicolumn{2}{c}{Heisenberg} \\\\\n"
         )
-        f.write("    Language & Trotter & LCU & Trotter & LCU \\\\\n")
+        f.write("    Language & Shor's & Trotter & LCU & Trotter & LCU \\\\\n")
         f.write("    \\midrule\n")
 
         name_map = {

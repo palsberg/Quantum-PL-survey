@@ -24,7 +24,7 @@ from qiskit_aer import Aer
 #   from .shors import _build_qpe_circuit, _fraction_with_bounded_denominator_from_counts
 # or
 #   from programs.qiskit.shors import ...
-from shors import (
+from .shors import (
     _build_qpe_circuit,
     _fraction_with_bounded_denominator_from_counts,
 )
@@ -130,6 +130,7 @@ def FindOrderCandidate_measured(
         q = _fraction_with_bounded_denominator_from_counts(c, t, N)
         r = q.denominator
         if r > 0 and pow(a, r, N) == 1:
+            print("order for ", a, " is ", r)
             return r
 
     return 0
@@ -255,6 +256,20 @@ def run_simulation(config: Dict[str, Any]) -> int:
         retries=retries,
     )
 
+
+# for the benchmarking 
+def build_circuit(config: Dict[str, Any]) -> QuantumCircuit:
+    N = int(config["N"])
+    a = int(config.get("a", 2))
+    t = int(config.get("t", 8))
+
+    qc, _ = _build_qpe_circuit(a, N, t)
+
+    meas = QuantumCircuit(qc.num_qubits, t)
+    meas.compose(qc, inplace=True)
+    meas.measure(range(t), range(t))
+
+    return meas
 
 if __name__ == "__main__":
     

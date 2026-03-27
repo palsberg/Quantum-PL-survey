@@ -21,6 +21,7 @@ from pathlib import Path
 from time import perf_counter
 import math
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
+from statistics import mean
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -37,12 +38,15 @@ from harness.run_tests import (  # type: ignore  # noqa: E402
 
 from programs.common import pauli_models  # type: ignore  # noqa: E402
 
+# increase these to ensure more robust measurement
+SHOR_STATEVECTOR_RUNS = 5
+SHOR_VALUE_RUNS = 50
+DEFAULT_RUNS = 1
 
 LANGUAGE_ALIASES = {
     # Languages that reuse another stack for metrics should not appear here;
     # instead they are handled via METRIC_NA_REASONS below.
 }
-
 
 @dataclass
 class BenchmarkResult:
@@ -145,6 +149,86 @@ def main() -> None:
     print(f"Wrote {len(results)} benchmark rows to {args.output}")
 
 
+
+
+
+def execution_repetitions(case_name: str) -> int:
+    if case_name == "shors21_2":
+        return SHOR_STATEVECTOR_RUNS
+    if case_name == "shors21_2_value":
+        return SHOR_VALUE_RUNS
+    return DEFAULT_RUNS
+
+def timed_execution_average(
+    language: str,
+    case: Case,
+    adapter,
+    base_config: Dict[str, Any],
+) -> Tuple[float, int]:
+    runs = execution_repetitions(case.name)
+    samples: List[float] = []
+    fail = 0
+
+    for i in range(runs):
+        cfg = copy.deepcopy(base_config)
+
+        if case.name == "shors21_2_value":
+            cfg["seed"] = i
+
+        start = perf_counter()
+        try:
+            adapter.run(cfg)
+        except Exception:
+            fail += 1
+        finally:
+            samples.append(perf_counter() - start)
+
+    return mean(samples), fail
+
+
+def timed_execution_stats(
+    language: str,
+    case: Case,
+    adapter,
+    base_config: Dict[str, Any],
+) -> Dict[str, Any]:
+    runs = execution_repetitions(case.name)
+    all_times: List[float] = []
+    success_times: List[float] = []
+    successful_runs = 0
+    failure_messages: List[str] = []
+
+    for i in range(runs):
+        cfg = copy.deepcopy(base_config)
+
+        if case.name == "shors21_2_value":
+            cfg["seed"] = i
+
+        start = perf_counter()
+        try:
+            adapter.run(cfg)
+            dt = perf_counter() - start
+            all_times.append(dt)
+            success_times.append(dt)
+            successful_runs += 1
+        except Exception as exc:
+            dt = perf_counter() - start
+            all_times.append(dt)
+            failure_messages.append(str(exc))
+
+    failed_runs = runs - successful_runs
+
+    return {
+        "total_runs": runs,
+        "successful_runs": successful_runs,
+        "failed_runs": failed_runs,
+        "success_rate": successful_runs / runs if runs else 0.0,
+        "avg_time_all_runs": mean(all_times) if all_times else None,
+        "avg_time_successful_runs": mean(success_times) if success_times else None,
+        "failure_messages": sorted(set(failure_messages)),
+    }
+
+
 def run_single_benchmark(
     language: str, case: Case, adapter, timestamp: str
 ) -> BenchmarkResult:
@@ -153,11 +237,33 @@ def run_single_benchmark(
     # instance (for example, 10-site TFIM).
     config_correct = copy.deepcopy(case.config)
     config_metrics = benchmark_config_for_metrics(language, case, config_correct)
-    hamiltonian = "TFIM" if case.name.startswith("tfim") else "HeisenbergXXX"
-    method = "Trotter" if "trotter" in case.name else "LCU"
-    system_size = int(config_metrics.get("num_sites", 0))
-    parameter_set = {"time": config_metrics.get("time")}
-    parameter_set.update(config_metrics.get("params", {}))
+
+    # Also consider the shor's case
+    def classify_case(case: Case, config: Dict[str, Any]) -> Tuple[str, str, int]:
+        if case.name == "shors21_2":
+            return "Shors", "Statevector", int(config.get("N", 0))
+        if case.name == "shors21_2_value":
+            return "Shors", "Value", int(config.get("N", 0))
+        if case.name.startswith("tfim"):
+            ham = "TFIM"
+        else:
+            ham = "HeisenbergXXX"
+
+        method = "Trotter" if "trotter" in case.name else "LCU"
+        size = int(config.get("num_sites", 0))
+        return ham, method, size
+    
+    hamiltonian, method, system_size = classify_case(case, config_metrics)
+    if case.name.startswith("shors"):
+        parameter_set = {
+            "N": config_metrics.get("N"),
+            "t": config_metrics.get("t"),
+            "a": config_metrics.get("a"),
+        }
+    else:
+        parameter_set = {"time": config_metrics.get("time")}
+        parameter_set.update(config_metrics.get("params", {}))
+
     impl_path = resolve_implementation_path(language, case.name)
 
     backend_name = None
@@ -190,42 +296,39 @@ def run_single_benchmark(
             notes = reason
         return empty_result(language, case, timestamp, status=status, notes=notes)
 
-    run_start = perf_counter()
-    try:
-        # Correctness is evaluated on the original harness configuration (typically
-        # small system sizes) to keep runs lightweight and robust across tools.
-        adapter.run(config_correct)
-        execution_time = perf_counter() - run_start
-        status = "ok"
-        message = notes
-    except Exception as exc:  # pragma: no cover - defensive logging
-        execution_time = perf_counter() - run_start
-        status = "error"
-        message = f"Execution failed: {exc}"
-        if notes:
-            message = f"{notes} | {message}"
-        notes = message
-        return BenchmarkResult(
-            benchmark_id=build_benchmark_id(language, case, config_metrics),
-            language=language,
-            hamiltonian=hamiltonian,
-            method=method,
-            system_size=system_size,
-            parameter_set=parameter_set,
-            implementation_path=impl_path,
-            backend=backend_name,
-            compilation_time_seconds=compilation_time,
-            execution_time_seconds=execution_time,
-            total_gate_count=gate_metrics.get("total_gate_count"),
-            two_qubit_gate_count=gate_metrics.get("two_qubit_gate_count"),
-            circuit_depth=gate_metrics.get("circuit_depth"),
-            qubit_count=gate_metrics.get("qubit_count"),
-            native_gate_set=gate_metrics.get("native_gate_set"),
-            timestamp_utc=timestamp,
-            tool_versions=detect_tool_versions(language),
-            status=status,
-            notes=message,
+    # new logic for shors value VS others in timing
+    if case.name == "shors21_2_value":
+        stats = timed_execution_stats(language, case, adapter, config_correct)
+        execution_time = stats["avg_time_all_runs"]
+
+        extra = (
+            f"success_rate={stats['success_rate']:.3f}; "
+            f"failed_runs={stats['failed_runs']}/{stats['total_runs']}"
         )
+        if stats["avg_time_successful_runs"] is not None:
+            extra += f"; avg_time_successful_runs={stats['avg_time_successful_runs']:.6f}"
+
+        if notes:
+            notes = f"{notes} | {extra}"
+        else:
+            notes = extra
+
+        status = "ok" if stats["successful_runs"] > 0 else "error"
+
+    else:
+        execution_time, failed_runs = timed_execution_average(
+            language, case, adapter, config_correct
+        )
+
+        if failed_runs == 0:
+            status = "ok"
+        else:
+            status = "error"
+            extra = f"failed_runs={failed_runs}/{execution_repetitions(case.name)}"
+            if notes:
+                notes = f"{notes} | {extra}"
+            else:
+                notes = extra
 
     return BenchmarkResult(
         benchmark_id=build_benchmark_id(language, case, config_metrics),
@@ -251,10 +354,22 @@ def run_single_benchmark(
 
 
 def build_benchmark_id(language: str, case: Case, config: Dict[str, Any]) -> str:
+    # also consider shor's on top of pre-existing hamiltonian
+    parts = [language, case.name]
+
+    if "num_sites" in config:
+        parts.append(f"n{config['num_sites']}")
+    if "N" in config:
+        parts.append(f"N{config['N']}")
+    if "t" in config:
+        parts.append(f"t{config['t']}")
+    if "a" in config:
+        parts.append(f"a{config['a']}")
+
     params = config.get("params", {})
-    parts = [language, case.name, f"n{config.get('num_sites', 0)}"]
     for key in sorted(params):
         parts.append(f"{key}{params[key]}")
+
     return "-".join(parts)
 
 
@@ -278,11 +393,31 @@ def empty_result(
     language: str, case: Case, timestamp: str, status: str, notes: Optional[str]
 ) -> BenchmarkResult:
     config = benchmark_config_for_metrics(language, case, case.config)
-    hamiltonian = "TFIM" if case.name.startswith("tfim") else "HeisenbergXXX"
-    method = "Trotter" if "trotter" in case.name else "LCU"
-    system_size = int(config.get("num_sites", 0))
-    parameter_set = {"time": config.get("time")}
-    parameter_set.update(config.get("params", {}))
+    # shors OR Hamiltonian config data 
+    if case.name == "shors21_2":
+        hamiltonian = "Shors"
+        method = "Statevector"
+        system_size = int(config.get("N", 0))
+        parameter_set = {
+            "N": config.get("N"),
+            "t": config.get("t"),
+            "a": config.get("a"),
+        }
+    elif case.name == "shors21_2_value":
+        hamiltonian = "Shors"
+        method = "Value"
+        system_size = int(config.get("N", 0))
+        parameter_set = {
+            "N": config.get("N"),
+            "t": config.get("t"),
+            "a": config.get("a"),
+        }
+    else:
+        hamiltonian = "TFIM" if case.name.startswith("tfim") else "HeisenbergXXX"
+        method = "Trotter" if "trotter" in case.name else "LCU"
+        system_size = int(config.get("num_sites", 0))
+        parameter_set = {"time": config.get("time")}
+        parameter_set.update(config.get("params", {}))
     return BenchmarkResult(
         benchmark_id=build_benchmark_id(language, case, config),
         language=language,
@@ -421,13 +556,17 @@ def qiskit_metric_provider(
         from qiskit.providers.fake_provider import GenericBackendV2  # type: ignore
         from programs.qiskit import common as qiskit_common  # type: ignore
         from programs.qiskit import lcu_common as qiskit_lcu_common  # type: ignore
+        from programs.qiskit import shors as qiskit_shors # type: ignore
+        from programs.qiskit import shors_value as qiskit_shors_value # type: ignore
     except Exception as exc:  # pragma: no cover
         return {}, f"Qiskit stack unavailable: {exc}"
-    num_sites = int(config["num_sites"])
-    time_total = float(config["time"])
-    params = config.get("params", {})
+    
+    
     backend: Optional[GenericBackendV2] = None
     if case_name == "tfim_trotter":
+        num_sites = int(config["num_sites"])
+        time_total = float(config["time"])
+        params = config.get("params", {})
         steps = int(params.get("trotter_steps", 2))
         circuit, _ = qiskit_common.trotterize_tfim(
             num_sites,
@@ -437,7 +576,16 @@ def qiskit_metric_provider(
             steps,
         )
         backend = GenericBackendV2(num_qubits=num_sites)
+        start = perf_counter()
+        compiled = transpile(circuit, backend=backend, optimization_level=2)
+        compilation_time = perf_counter() - start
+        metrics = describe_qiskit_circuit(compiled)
+        metrics["backend"] = getattr(backend, "name", str(backend))
+        metrics["compilation_time_seconds"] = compilation_time
     elif case_name == "heis_trotter":
+        num_sites = int(config["num_sites"])
+        time_total = float(config["time"])
+        params = config.get("params", {})
         steps = int(params.get("trotter_steps", 2))
         circuit, _ = qiskit_common.trotterize_heisenberg_xxx(
             num_sites,
@@ -447,7 +595,16 @@ def qiskit_metric_provider(
             steps,
         )
         backend = GenericBackendV2(num_qubits=num_sites)
+        start = perf_counter()
+        compiled = transpile(circuit, backend=backend, optimization_level=2)
+        compilation_time = perf_counter() - start
+        metrics = describe_qiskit_circuit(compiled)
+        metrics["backend"] = getattr(backend, "name", str(backend))
+        metrics["compilation_time_seconds"] = compilation_time
     elif case_name == "tfim_lcu":
+        num_sites = int(config["num_sites"])
+        time_total = float(config["time"])
+        params = config.get("params", {})
         gamma = pauli_models.taylor_coefficients(
             pauli_models.tfim_pauli_terms(
                 num_sites, float(params.get("J", 1.0)), float(params.get("h", 1.0))
@@ -459,7 +616,16 @@ def qiskit_metric_provider(
             num_sites, list(weights), list(paulis), list(phases)
         )
         backend = GenericBackendV2(num_qubits=circuit.num_qubits)
+        start = perf_counter()
+        compiled = transpile(circuit, backend=backend, optimization_level=2)
+        compilation_time = perf_counter() - start
+        metrics = describe_qiskit_circuit(compiled)
+        metrics["backend"] = getattr(backend, "name", str(backend))
+        metrics["compilation_time_seconds"] = compilation_time
     elif case_name == "heis_lcu":
+        num_sites = int(config["num_sites"])
+        time_total = float(config["time"])
+        params = config.get("params", {})
         gamma = pauli_models.taylor_coefficients(
             pauli_models.heisenberg_pauli_terms(
                 num_sites, float(params.get("J", 1.0)), float(params.get("field", 0.2))
@@ -471,16 +637,39 @@ def qiskit_metric_provider(
             num_sites, list(weights), list(paulis), list(phases)
         )
         backend = GenericBackendV2(num_qubits=circuit.num_qubits)
+        start = perf_counter()
+        compiled = transpile(circuit, backend=backend, optimization_level=2)
+        compilation_time = perf_counter() - start
+        metrics = describe_qiskit_circuit(compiled)
+        metrics["backend"] = getattr(backend, "name", str(backend))
+        metrics["compilation_time_seconds"] = compilation_time
+
+    elif case_name == "shors21_2":
+        start = perf_counter()
+        circuit = qiskit_shors.build_circuit(config)
+        backend = GenericBackendV2(num_qubits=circuit.num_qubits)
+        compiled = transpile(circuit, backend=backend, optimization_level=2)
+        compilation_time = perf_counter() - start
+        metrics = describe_qiskit_circuit(compiled)
+        metrics["backend"] = getattr(backend, "name", str(backend))
+        metrics["compilation_time_seconds"] = compilation_time
+        return metrics, None
+
+    elif case_name == "shors21_2_value":
+        start = perf_counter()
+        circuit = qiskit_shors_value.build_circuit(config)
+        backend = GenericBackendV2(num_qubits=circuit.num_qubits)
+        compiled = transpile(circuit, backend=backend, optimization_level=2)
+        compilation_time = perf_counter() - start
+        metrics = describe_qiskit_circuit(compiled)
+        metrics["backend"] = getattr(backend, "name", str(backend))
+        metrics["compilation_time_seconds"] = compilation_time
+        return metrics, None
     else:
         return {}, f"Unsupported case {case_name} for Qiskit metrics"
     if backend is None:
         backend = GenericBackendV2(num_qubits=circuit.num_qubits)
-    start = perf_counter()
-    compiled = transpile(circuit, backend=backend, optimization_level=2)
-    compilation_time = perf_counter() - start
-    metrics = describe_qiskit_circuit(compiled)
-    metrics["backend"] = getattr(backend, "name", str(backend))
-    metrics["compilation_time_seconds"] = compilation_time
+    
     return metrics, None
 
 
@@ -783,6 +972,7 @@ def qrisp_metric_provider(
         from programs.qrisp import common as qrisp_common  # type: ignore
     except Exception as exc:  # pragma: no cover
         return {}, f"Qrisp stack unavailable: {exc}"
+
 
     num_sites = int(config["num_sites"])
     total_time = float(config["time"])

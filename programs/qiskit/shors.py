@@ -260,6 +260,14 @@ def factor_integer(N: int) -> List[int]:
     factors.sort()
     return factors
 
+def build_circuit(config: Dict[str, Any]) -> QuantumCircuit:
+    t = int(config.get("t", 8))
+    N = int(config.get("N", 21))
+    a = int(config.get("a", 2))
+
+    qc, _ = _build_qpe_circuit(a, N, t)
+    return qc
+
 if __name__ == "__main__":
     N=45
     a=2

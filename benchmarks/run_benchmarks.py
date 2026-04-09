@@ -97,7 +97,7 @@ def parse_args() -> argparse.Namespace:
         "--cases",
         type=str,
         default=",".join(case.name for case in CASES),
-        help="Comma-separated subset of cases (tfim_trotter, tfim_lcu, heis_trotter, heis_lcu).",
+        help="Comma-separated subset of cases (tfim_trotter, tfim_lcu, heis_trotter, heis_lcu, shors21_2, shors21_2_value).",
     )
     return parser.parse_args()
 
@@ -493,10 +493,14 @@ def cirq_metric_provider(
         from programs.cirq import common as cirq_common  # type: ignore
         from programs.cirq import tfim_lcu as cirq_tfim_lcu  # type: ignore
         from programs.cirq import heis_lcu as cirq_heis_lcu  # type: ignore
+        from programs.cirq import shors as cirq_shors  # type: ignore
+        from programs.cirq import shors_value as cirq_shors_value  # type: ignore
     except Exception as exc:  # pragma: no cover
         return {}, f"Cirq stack unavailable: {exc}"
-    num_sites = int(config["num_sites"])
-    time_total = float(config["time"])
+    
+    # Only set num_sites and time_total if it's Hamiltonian.
+    num_sites = int(config["num_sites"]) if "num_sites" in config else None
+    time_total = float(config["time"]) if "time" in config else None
     params = config.get("params", {})
     start = perf_counter()
     if case_name == "tfim_trotter":
@@ -539,6 +543,22 @@ def cirq_metric_provider(
         circuit, qubits, _ = cirq_heis_lcu._build_lcu_circuit(
             num_sites, list(weights), list(paulis), list(phases)
         )
+    elif case_name == "shors21_2":
+        t = int(config["t"])
+        N = int(config["N"])
+        a = int(config["a"])
+
+        circuit, qubits = cirq_shors._build_qpe_circuit(t=t, N=N, a=a)
+        compilation_time = perf_counter() - start
+        metrics = describe_cirq_circuit(circuit, qubits)
+        metrics["backend"] = "cirq.Simulator"
+        metrics["compilation_time_seconds"] = compilation_time
+        return metrics, None
+    elif case_name == "shors21_2_value":
+        t = int(config["t"])
+        N = int(config["N"])
+        # no circuit metric because the circuit changes upon updates of a within the shor's value regime
+        return metrics, None
     else:
         return {}, f"Unsupported case {case_name} for Cirq metrics"
     compilation_time = perf_counter() - start
@@ -546,6 +566,11 @@ def cirq_metric_provider(
     metrics["backend"] = "cirq.Simulator"
     metrics["compilation_time_seconds"] = compilation_time
     return metrics, None
+
+
+    
+
+
 
 
 def qiskit_metric_provider(
@@ -727,12 +752,15 @@ def pyquil_metric_provider(
         from pyquil.quilbase import Gate  # type: ignore
         from programs.pyquil import common as pyquil_common  # type: ignore
         from programs.pyquil import lcu_common as pyquil_lcu  # type: ignore
+        from programs.pyquil import shors as pyquil_shors  # type: ignore
+        from programs.pyquil import shors_value as pyquil_shors_value  # type: ignore
     except Exception as exc:  # pragma: no cover
         return {}, f"PyQuil stack unavailable: {exc}"
-    num_sites = int(config["num_sites"])
-    time_total = float(config["time"])
+    
     params = config.get("params", {})
     if case_name == "tfim_trotter":
+        num_sites = int(config["num_sites"])
+        time_total = float(config["time"])
         steps = int(params.get("trotter_steps", 2))
         prog, _ = pyquil_common.trotterize_tfim(
             num_sites,
@@ -741,7 +769,10 @@ def pyquil_metric_provider(
             time_total,
             steps,
         )
+        return describe_pyquil_program(prog, Gate), None
     elif case_name == "heis_trotter":
+        num_sites = int(config["num_sites"])
+        time_total = float(config["time"])
         steps = int(params.get("trotter_steps", 2))
         prog, _ = pyquil_common.trotterize_heisenberg_xxx(
             num_sites,
@@ -750,23 +781,56 @@ def pyquil_metric_provider(
             time_total,
             steps,
         )
+        return describe_pyquil_program(prog, Gate), None
     elif case_name == "tfim_lcu":
+        num_sites = int(config["num_sites"])
+        time_total = float(config["time"])
         H = pauli_models.tfim_pauli_terms(
             num_sites, float(params.get("J", 1.0)), float(params.get("h", 1.0))
         )
         gamma = pauli_models.taylor_coefficients(H, time_total)
         weights, paulis, phases = pauli_models.lcu_weights_from_gamma(gamma)
         prog, _ = pyquil_lcu.build_lcu_program(num_sites, list(weights), list(paulis), list(phases))
+        return describe_pyquil_program(prog, Gate), None
     elif case_name == "heis_lcu":
+        num_sites = int(config["num_sites"])
+        time_total = float(config["time"])
         H = pauli_models.heisenberg_pauli_terms(
             num_sites, float(params.get("J", 1.0)), float(params.get("field", 0.2))
         )
         gamma = pauli_models.taylor_coefficients(H, time_total)
         weights, paulis, phases = pauli_models.lcu_weights_from_gamma(gamma)
         prog, _ = pyquil_lcu.build_lcu_program(num_sites, list(weights), list(paulis), list(phases))
+        return describe_pyquil_program(prog, Gate), None
+
+    if case_name == "shors21_2":
+        N = int(config.get("N", 21))
+        a = int(config.get("a", 2))
+
+        start = perf_counter()
+        prog, _ = pyquil_shors.shors_algorithm(N, a=a)
+        compilation_time = perf_counter() - start
+
+        metrics = describe_pyquil_program(prog, Gate)
+        metrics["backend"] = "pyquil.NumpyWavefunctionSimulator"
+        metrics["compilation_time_seconds"] = compilation_time
+        return metrics, None
+
+    elif case_name == "shors21_2_value":
+        N = int(config.get("N", 21))
+        a = int(config.get("a", 2))
+
+        start = perf_counter()
+        prog, _ = pyquil_shors_value.shors_algorithm(N, a=a)
+        compilation_time = perf_counter() - start
+
+        metrics = describe_pyquil_program(prog, Gate)
+        metrics["backend"] = "pyquil.NumpyWavefunctionSimulator"
+        metrics["compilation_time_seconds"] = compilation_time
+        return metrics, None
+    
     else:
         return {}, f"PyQuil metric extractor not implemented for {case_name}"
-    return describe_pyquil_program(prog, Gate), None
 
 
 def _pennylane_lcu_terms(num_sites: int, hamiltonian: Dict[str, complex], total_time: float):
@@ -1164,6 +1228,9 @@ def qualtran_metric_provider(
         from qualtran.cirq_interop._interop_qubit_manager import InteropQubitManager  # type: ignore
     except Exception as exc:  # pragma: no cover
         return {}, f"Qualtran dependencies unavailable: {exc}"
+    
+    # Hamiltonian Cases:
+    
     num_sites = int(config["num_sites"])
     total_time = float(config["time"])
     params = config.get("params", {})
@@ -1240,6 +1307,9 @@ def qualtran_metric_provider(
     metrics["backend"] = "cirq.Simulator"
     metrics["compilation_time_seconds"] = None
     return metrics, None
+
+    # Shor case:
+
 
 
 def placeholder_metric_provider(

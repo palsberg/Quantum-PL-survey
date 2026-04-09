@@ -65,6 +65,9 @@ class BenchmarkResult:
     circuit_depth: Optional[int]
     qubit_count: Optional[int]
     native_gate_set: Optional[Iterable[str]]
+    success_rate: Optional[float]
+    avg_time_all_runs: Optional[float]
+    avg_time_successful_runs: Optional[float]
     timestamp_utc: str
     tool_versions: Dict[str, str]
     status: str
@@ -271,11 +274,16 @@ def run_single_benchmark(
     gate_metrics: Dict[str, Any] = {}
     metric_note: Optional[str] = None
 
-    metrics, metric_note = collect_metrics(language, case.name, config_metrics)
-    if metrics:
-        backend_name = metrics.get("backend")
-        compilation_time = metrics.get("compilation_time_seconds")
-        gate_metrics = metrics
+    success_rate: Optional[float] = None
+    avg_time_all_runs: Optional[float] = None
+    avg_time_successful_runs: Optional[float] = None
+
+    if case.name != "shors21_2_value":
+        metrics, metric_note = collect_metrics(language, case.name, config_metrics)
+        if metrics:
+            backend_name = metrics.get("backend")
+            compilation_time = metrics.get("compilation_time_seconds")
+            gate_metrics = metrics
 
     notes = metric_note
 
@@ -299,19 +307,11 @@ def run_single_benchmark(
     # new logic for shors value VS others in timing
     if case.name == "shors21_2_value":
         stats = timed_execution_stats(language, case, adapter, config_correct)
-        execution_time = stats["avg_time_all_runs"]
 
-        extra = (
-            f"success_rate={stats['success_rate']:.3f}; "
-            f"failed_runs={stats['failed_runs']}/{stats['total_runs']}"
-        )
-        if stats["avg_time_successful_runs"] is not None:
-            extra += f"; avg_time_successful_runs={stats['avg_time_successful_runs']:.6f}"
-
-        if notes:
-            notes = f"{notes} | {extra}"
-        else:
-            notes = extra
+        execution_time = None
+        success_rate = stats["success_rate"]
+        avg_time_all_runs = stats["avg_time_all_runs"]
+        avg_time_successful_runs = stats["avg_time_successful_runs"]
 
         status = "ok" if stats["successful_runs"] > 0 else "error"
 
@@ -346,6 +346,9 @@ def run_single_benchmark(
         circuit_depth=gate_metrics.get("circuit_depth"),
         qubit_count=gate_metrics.get("qubit_count"),
         native_gate_set=gate_metrics.get("native_gate_set"),
+        success_rate=success_rate,
+        avg_time_all_runs=avg_time_all_runs,
+        avg_time_successful_runs=avg_time_successful_runs,
         timestamp_utc=timestamp,
         tool_versions=detect_tool_versions(language),
         status=status,
@@ -434,6 +437,9 @@ def empty_result(
         circuit_depth=None,
         qubit_count=None,
         native_gate_set=None,
+        success_rate=None,
+        avg_time_all_runs=None,
+        avg_time_successful_runs=None,
         timestamp_utc=timestamp,
         tool_versions=detect_tool_versions(language),
         status=status,
@@ -555,10 +561,7 @@ def cirq_metric_provider(
         metrics["compilation_time_seconds"] = compilation_time
         return metrics, None
     elif case_name == "shors21_2_value":
-        t = int(config["t"])
-        N = int(config["N"])
-        # no circuit metric because the circuit changes upon updates of a within the shor's value regime
-        return metrics, None
+        return {}, None
     else:
         return {}, f"Unsupported case {case_name} for Cirq metrics"
     compilation_time = perf_counter() - start
@@ -681,15 +684,7 @@ def qiskit_metric_provider(
         return metrics, None
 
     elif case_name == "shors21_2_value":
-        start = perf_counter()
-        circuit = qiskit_shors_value.build_circuit(config)
-        backend = GenericBackendV2(num_qubits=circuit.num_qubits)
-        compiled = transpile(circuit, backend=backend, optimization_level=2)
-        compilation_time = perf_counter() - start
-        metrics = describe_qiskit_circuit(compiled)
-        metrics["backend"] = getattr(backend, "name", str(backend))
-        metrics["compilation_time_seconds"] = compilation_time
-        return metrics, None
+        return {}, None
     else:
         return {}, f"Unsupported case {case_name} for Qiskit metrics"
     if backend is None:
@@ -753,7 +748,7 @@ def pyquil_metric_provider(
         from programs.pyquil import common as pyquil_common  # type: ignore
         from programs.pyquil import lcu_common as pyquil_lcu  # type: ignore
         from programs.pyquil import shors as pyquil_shors  # type: ignore
-        from programs.pyquil import shors_value as pyquil_shors_value  # type: ignore
+        
     except Exception as exc:  # pragma: no cover
         return {}, f"PyQuil stack unavailable: {exc}"
     
@@ -804,11 +799,8 @@ def pyquil_metric_provider(
         return describe_pyquil_program(prog, Gate), None
 
     if case_name == "shors21_2":
-        N = int(config.get("N", 21))
-        a = int(config.get("a", 2))
-
         start = perf_counter()
-        prog, _ = pyquil_shors.shors_algorithm(N, a=a)
+        prog = pyquil_shors.build_program(config)
         compilation_time = perf_counter() - start
 
         metrics = describe_pyquil_program(prog, Gate)
@@ -817,17 +809,7 @@ def pyquil_metric_provider(
         return metrics, None
 
     elif case_name == "shors21_2_value":
-        N = int(config.get("N", 21))
-        a = int(config.get("a", 2))
-
-        start = perf_counter()
-        prog, _ = pyquil_shors_value.shors_algorithm(N, a=a)
-        compilation_time = perf_counter() - start
-
-        metrics = describe_pyquil_program(prog, Gate)
-        metrics["backend"] = "pyquil.NumpyWavefunctionSimulator"
-        metrics["compilation_time_seconds"] = compilation_time
-        return metrics, None
+        return {}, None
     
     else:
         return {}, f"PyQuil metric extractor not implemented for {case_name}"
@@ -895,6 +877,47 @@ def pennylane_metric_provider(
         from programs.pennylane import lcu_common as pennylane_lcu  # type: ignore
     except Exception as exc:  # pragma: no cover
         return {}, f"PennyLane unavailable: {exc}"
+
+    if case_name == "shors21_2":
+        try:
+            from programs.pennylane import shors as pennylane_shors  # type: ignore
+        except Exception as exc:  # pragma: no cover
+            return {}, f"PennyLane Shor's module unavailable: {exc}"
+
+        start = perf_counter()
+        circuit, total_wires = pennylane_shors.build_circuit(config)
+        specs = qml.specs(circuit)()
+        compilation_time = perf_counter() - start
+
+        resources = specs.get("resources")
+        total_ops = getattr(resources, "num_gates", None) if resources else None
+        depth = getattr(resources, "depth", None) if resources else None
+        two_qubit = None
+        gate_names = None
+        qubit_count = total_wires
+
+        if resources is not None:
+            sizes = getattr(resources, "gate_sizes", {})
+            two_qubit = sizes.get(2)
+            gate_types = getattr(resources, "gate_types", {})
+            gate_names = sorted(gate_types.keys()) if gate_types else None
+            qubit_count = getattr(resources, "num_wires", total_wires)
+
+        metrics = {
+            "backend": "qml.default.qubit",
+            "compilation_time_seconds": compilation_time,
+            "total_gate_count": total_ops,
+            "two_qubit_gate_count": two_qubit,
+            "circuit_depth": depth,
+            "qubit_count": qubit_count,
+            "native_gate_set": gate_names,
+        }
+        return metrics, None
+
+    elif case_name == "shors21_2_value":
+        return {}, None
+    
+    
     num_sites = int(config["num_sites"])
     time_total = float(config["time"])
     params = config.get("params", {})
@@ -1324,10 +1347,52 @@ def qsharp_metric_provider(
     try:
         import qsharp  # type: ignore
         from programs.qsharp import ensure_compiled  # type: ignore
+        from programs.qsharp import shors as qsharp_shors  # type: ignore
     except Exception as exc:  # pragma: no cover
         return {}, f"Q# runtime unavailable: {exc}"
 
     ensure_compiled()
+
+    if case_name == "shors21_2":
+        try:
+            operation, args = qsharp_shors.build_operation(config)
+        except Exception as exc:  # pragma: no cover
+            return {}, f"Failed to build Q# Shor operation for shors21_2: {exc}"
+
+        try:
+            logical_counts = qsharp.logical_counts(operation, *args)
+        except Exception as exc:  # pragma: no cover
+            return {}, f"Failed to gather logical counts for shors21_2: {exc}"
+
+        total_gate_count = int(
+            logical_counts.get("rotationCount", 0)
+            + logical_counts.get("cczCount", 0)
+            + logical_counts.get("ccixCount", 0)
+            + logical_counts.get("measurementCount", 0)
+        )
+        two_qubit = int(
+            logical_counts.get("cczCount", 0)
+            + logical_counts.get("ccixCount", 0)
+        )
+
+        metrics = {
+            "backend": "qsharp.logical_counts",
+            "compilation_time_seconds": None,
+            "total_gate_count": total_gate_count,
+            "two_qubit_gate_count": two_qubit,
+            "circuit_depth": int(logical_counts.get("rotationDepth", 0)),
+            "qubit_count": int(logical_counts.get("numQubits", config.get("t", 6) + int(config.get("N", 21)).bit_length())),
+            "native_gate_set": None,
+        }
+        return metrics, (
+            "Used Azure Quantum Resource Estimator logical counts via qsharp.logical_counts "
+            "on the Q# Shor QPE operation; these are logical resource counts, not "
+            "backend-native transpiled circuit metrics."
+        )
+
+    elif case_name == "shors21_2_value":
+        return {}, None
+
     try:
         operation, args = _qsharp_operation_and_args(case_name, config, qsharp)
     except KeyError as exc:

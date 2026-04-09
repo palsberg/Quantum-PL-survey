@@ -10,6 +10,24 @@ def reorder_to_reference(sv: np.ndarray, n: int) -> np.ndarray:
     return sv.reshape([2]*n).transpose(list(range(n))[::-1]).reshape(-1)
 
 
+# For benchmark metrics collection. 
+def build_operation(config: Dict[str, Any]):
+    """
+    Return the Q# operation handle and arguments for Shor QPE.
+    This is the Q# analogue of the qiskit build_circuit(config) helper,
+    except that for Q# we pass the operation directly to logical_counts
+    rather than materializing a Python-side circuit object.
+    """
+    ensure_compiled()
+
+    t = int(config.get("t", 6))
+    N = int(config.get("N", 21))
+    a = int(config.get("a", 2))
+
+    op = qsharp.code.HamiltonianSimulation.Shors.QPESubroutine
+    args = (N, a, t)
+    return op, args
+
 def run_simulation(config: Dict[str, Any]) -> np.ndarray:
     """Run Shor's quantum phase estimation circuit.
     

@@ -316,6 +316,8 @@ def classical_postprocessing(measured_value, a, N, n_count):
 #     statevector = simulate_statevector(p, n_count+n_target)
 #     print
 
+
+
 def run_simulation(config: Dict[str, Any]):
     """
     Run Shor's algorithm given N and a
@@ -351,6 +353,18 @@ def run_simulation(config: Dict[str, Any]):
     statevector = simulate_statevector(p, n_count+n_target)
     return statevector
     
+    
+# for benchmark metrics collection.
+def build_program(config: Dict[str, Any]):
+    """
+    Return the PyQuil program for the Shor QPE/statevector benchmark.
+    This is the PyQuil analogue of qiskit's build_circuit(config).
+    """
+    N = int(config.get("N", 21))
+    a = int(config.get("a", 2))
+    prog, _ = shors_algorithm(N, a=a)
+    return prog
+
 
 # Example usage
 if __name__ == "__main__":

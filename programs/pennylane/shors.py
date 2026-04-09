@@ -69,6 +69,40 @@ def qpe_circuit(a, N, t):
     
     return circuit(matrix)
 
+# Additional helper for metric evaluation
+def build_qpe_qnode(a: int, N: int, t: int):
+    """
+    Return a QNode for the PennyLane Shor QPE subroutine, without executing it.
+    This is the canonical circuit builder that both the harness and runtime path
+    should use.
+    """
+    n_pe_qubits = t
+    n_comp_qubits = int(np.ceil(np.log2(N)))
+    total_wires = n_pe_qubits + n_comp_qubits
+
+    pe_wires = list(range(n_pe_qubits))
+    comp_wires = list(range(n_pe_qubits, n_pe_qubits + n_comp_qubits))
+    matrix = get_Ma(a, N, n_comp_qubits)
+
+    dev = qml.device("default.qubit", wires=total_wires)
+
+    @qml.qnode(dev)
+    def circuit():
+        qml.PauliX(wires=comp_wires[-1])
+        qml.QuantumPhaseEstimation(matrix, target_wires=comp_wires, estimation_wires=pe_wires)
+        return qml.state()
+
+    return circuit, total_wires
+
+def build_circuit(config: Dict[str, Any]):
+    """
+    Harness-facing helper: return an unexecuted QNode plus wire count.
+    """
+    t = int(config.get("t", 6))
+    N = int(config.get("N", 21))
+    a = int(config.get("a", 2))
+    return build_qpe_qnode(a=a, N=N, t=t)
+
 def run_simulation(config: Dict[str, Any]):
     t=int(config.get("t",6))
     N=int(config.get("N",21))

@@ -66,9 +66,8 @@ us to run on any platform (with or without an Nvidia GPU).
 2. Run the provided script: `./cudaq.sh`. This script automatically downloads
    the CUDA-Q Docker image and starts a container in your current shell.
 3. You should now be in the container's shell, and you should see a prompt like
-   `cudaq@<container-id>:~$`. From this shell, run `cd Hamiltonian-Simulation`.
-   This takes you to a mounted version of the repo from inside the container.
-   Now you can execute the CUDA-Q programs normally with our test harness.
+   `cudaq@cudaq:~/Hamiltonian-Simulation$`. Now you can execute the
+   CUDA-Q programs normally with our test harness (see below).
 4. To stop the container, type `exit` or `Ctrl+D`. To restart the container,
    rerun `./cudaq.sh`.
 

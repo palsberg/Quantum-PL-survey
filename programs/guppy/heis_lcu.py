@@ -19,7 +19,7 @@ def run_simulation(config: Dict[str, Any]) -> np.ndarray:
     gamma = pauli_models.taylor_coefficients(ham, total_time)
     coeffs, paulis, phases = pauli_models.lcu_weights_from_gamma(gamma)
 
-    state = lcu_common.lcu_state(coeffs, paulis, phases)
+    state = lcu_common.lcu_state(coeffs, paulis, phases, no_loop=True)
     return state
 
 

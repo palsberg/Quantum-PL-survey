@@ -27,7 +27,7 @@ def run_simulation(config: Dict[str, Any]) -> np.ndarray:
     field = float(params.get("field", 0.2))
 
     H = create_hamiltonian_heisenberg(num_sites, J, field)
-    state = lcu_common.lcu(num_sites, H, total_time)
+    state = lcu_common.lcu(num_sites, H, total_time, no_loop=True)
     return state
 
 

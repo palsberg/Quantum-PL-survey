@@ -25,7 +25,7 @@ def run_simulation(config: Dict[str, Any]) -> np.ndarray:
     h = float(params.get("h", 1.0))
 
     H = create_hamiltonian_tfim(num_sites, J, h)
-    state = lcu_common.lcu(num_sites, H, total_time)
+    state = lcu_common.lcu(num_sites, H, total_time, no_loop=True)
     return state
 
 

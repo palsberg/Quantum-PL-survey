@@ -54,7 +54,7 @@ namespace HamiltonianSimulation.Shors{
             Message($"*** Factorizing {number}, attempt {attempt}.");
             // Try to guess a number co-prime to number by getting a random
             // integer in the interval [1, number-1]
-            let generator = DrawRandomInt(1, number - 1);
+            let generator = 2;
 
             // Check if the random integer is indeed co-prime.
             // If true use Quantum algorithm for Period finding.
@@ -300,4 +300,28 @@ namespace HamiltonianSimulation.Shors{
             }
         }
     }
+
+
+    operation MeasureFrequency(N: Int, a: Int, t: Int) : Int {
+        let bitsize = BitSizeI(N);
+        use targ_qubits = Qubit[bitsize];
+        use est_qubits  = Qubit[t];
+
+        ApplyXorInPlace(1, targ_qubits);
+        ApplyToEachCA(H, est_qubits);
+
+        for idx in 0..t - 1 {
+            Controlled ApplyOrderFindingOracle(
+                [est_qubits[idx]],
+                (a, N, 1 <<< (t - 1 - idx), targ_qubits)
+            );
+        }
+
+        Adjoint ApplyQFT(est_qubits);
+        let freq = MeasureInteger(est_qubits);
+        ResetAll(est_qubits);
+        ResetAll(targ_qubits);
+        return freq;
+     }
 }
+

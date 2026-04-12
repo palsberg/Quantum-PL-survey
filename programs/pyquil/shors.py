@@ -3,7 +3,7 @@ from pyquil.gates import H, CNOT, SWAP, X, MEASURE, Gate
 from pyquil.quilbase import DefGate
 from pyquil.simulation import NumpyWavefunctionSimulator
 import numpy as np
-from reference_shors import shor_qpe_statevector_small, make_shors
+from .reference_shors import shor_qpe_statevector_small, make_shors
 from math import gcd
 from fractions import Fraction
 import random

@@ -128,29 +128,55 @@ def run_simulation(config: Dict[str, Any]) -> np.ndarray:
 
 
 
-    for _ in range(retries):
-        a = random.randint(2, N-1)
-        K = gcd(a, N)
-        if K != 1:
-            return np.array(K)
+    # for _ in range(retries):
+    #     a = random.randint(2, N-1)
+    #     K = gcd(a, N)
+    #     if K != 1:
+    #         return np.array(K)
 
-        register_oracle(N, a)
-        for _ in range(shots):
-            res = cudaq.sample(shors, N, a, t, True, shots_count=10)
-            bitstring = max(res, key=lambda b:res[b])
-            n = int(bitstring[::-1], 2)
+    #     register_oracle(N, a)
+    #     for _ in range(shots):
+    #         res = cudaq.sample(shors, N, a, t, True, shots_count=10)
+    #         bitstring = max(res, key=lambda b:res[b])
+    #         n = int(bitstring[::-1], 2)
 
-            r = find_order(n, t, a, N)
-            if r == None or r % 2 == 1:
-                continue
+    #         r = find_order(n, t, a, N)
+    #         if r == None or r % 2 == 1:
+    #             continue
 
-            g = gcd(N, int(a**(r//2) + 1))
-            if g == 1 or g == N:
-                continue
+    #         g = gcd(N, int(a**(r//2) + 1))
+    #         if g == 1 or g == N:
+    #             continue
 
-            return np.array(g)
+    #         return np.array(g)
 
-    raise RuntimeError('Failed to find a factor')
+    # raise RuntimeError('Failed to find a factor')
+
+
+    # For now, we just run one instance with a=2, but we can add retries and randomization later if needed.
+    a = int(config.get("a", 2))                                                                                                                                     
+                                                        
+    K = gcd(a, N)
+    if K != 1:
+        return np.array(K)
+
+
+    #Only run ones with a=2 across languages for now, but we can add randomization later if needed.
+    register_oracle(N, a)
+    res = cudaq.sample(shors, N, a, t, True, shots_count=2048)   # unify 2048 shots across languages for now                                                                                                   
+    bitstring = max(res, key=lambda b: res[b])                                           
+    n_meas = int(bitstring[::-1], 2)                           
+
+    r = find_order(n_meas, t, a, N)                                               
+    if r is None or r % 2 == 1:                       
+        raise RuntimeError('Failed to find a factor')                                                                                                               
+
+    g = gcd(N, int(a**(r//2) + 1))                                                        
+    if g == 1 or g == N:                              
+        raise RuntimeError('Failed to find a factor')
+    
+    return np.array(g)
+
 
 
 

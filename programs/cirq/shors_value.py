@@ -22,7 +22,7 @@ def find_factor_of_prime_power(n: int) -> int | None:
 def find_factor(
     n: int,
     order_finder: Callable[[int, int], int | None] = quantum_order_finder,
-    max_attempts: int = 30, ) -> int | None:
+    max_attempts: int = 1, random : bool = False) -> int | None:
     """Returns a non-trivial factor of composite integer n.
         n: Integer to factor.
         order_finder: Function for finding the order
@@ -44,7 +44,15 @@ def find_factor(
 
     for _ in range(max_attempts):
         # Choose a random number between 2 and n - 1
-        x = random.randint(2, n - 1)
+
+        # for now, we use a=2 across the langauges, but we can add randomization later if needed
+        if random:
+            x = random.randint(2, n - 1)
+        else:
+            x = 2
+
+        
+        
 
         # Most likely x and n will be relatively prime
         c = math.gcd(x, n)
@@ -76,8 +84,8 @@ def run_simulation(config: Dict[str, Any]) -> int:
     n = int(config.get("N", 21))
     if n < 2:
         raise ValueError("N must be >= 2")
-    max_attempts = int(config.get("max_attempts", 30))
-    retries = int(config.get("retries", 3))
+    max_attempts =  int(config.get("max_attempts", 1))
+    retries = int(config.get("retries", 1)) # 1 retry across langaufes
 
     for _ in range(retries):
         factor = find_factor(n=n, max_attempts=max_attempts)

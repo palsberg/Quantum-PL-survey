@@ -213,36 +213,62 @@ def run_simulation(config: Dict[str, Any]) -> np.ndarray:
     seed = int(config.get("seed", 0))
     allow_random_a = bool(config.get("allow_random_a", True))
 
-    shots = int(config.get("shots", 10))
-    retries = int(config.get("retries", 16))
+    # shots = int(config.get("shots", 10))
+    # retries = int(config.get("retries", 16))
+
+    # no shots or retries for now since we are only running with a=2 across languages, but we can add them back later if needed
 
 
+    # for i in range(retries):
+    #     a = random.randint(2, N-1)
+    #     K = gcd(a, N)
+    #     if K != 1:
+    #         return np.array(K)
 
-    for i in range(retries):
-        a = random.randint(2, N-1)
-        K = gcd(a, N)
-        if K != 1:
-            return np.array(K)
+    #     shors = build_shors(N, a, t, True)
+    #     emu = shors.emulator().with_seed(seed + i).with_shots(1)
 
-        shors = build_shors(N, a, t, True)
-        emu = shors.emulator().with_seed(seed + i).with_shots(1)
+    #     for _ in range(shots):
+    #         res = emu.run().register_counts()['ctrl']
+    #         bitstring = max(res, key=lambda b:res[b])
+    #         n = int(bitstring, 2)
 
-        for _ in range(shots):
-            res = emu.run().register_counts()['ctrl']
-            bitstring = max(res, key=lambda b:res[b])
-            n = int(bitstring, 2)
+    #         r = find_order(n, t, a, N)
+    #         if r == None or r % 2 == 1:
+    #             continue
 
-            r = find_order(n, t, a, N)
-            if r == None or r % 2 == 1:
-                continue
+    #         g = gcd(N, int(a**(r//2) + 1))
+    #         if g == 1 or g == N:
+    #             continue
 
-            g = gcd(N, int(a**(r//2) + 1))
-            if g == 1 or g == N:
-                continue
+    #         return np.array(g)
 
-            return np.array(g)
+    # raise RuntimeError('Failed to find a factor')
 
-    raise RuntimeError('Failed to find a factor')
+
+    a = int(config.get("a", 2))                       
+    if t is None:                               
+        t = 6
+    
+    K = gcd(a, N)                                     
+    if K != 1:
+        return np.array(K)
+
+    shors_fn = build_shors(N, a, t, True)                 
+    emu = shors_fn.emulator().with_seed(seed).with_shots(2048) # unify 2048 shots across languages for now
+
+    res = emu.run().register_counts()['ctrl']         
+    bitstring = max(res, key=lambda b: res[b])
+    n_meas = int(bitstring, 2)
+    r = find_order(n_meas, t, a, N)      
+
+    if r is None or r % 2 == 1:                       
+        raise RuntimeError('Failed to find a factor')
+    g = gcd(N, int(a**(r//2) + 1))
+    if g == 1 or g == N:                                 
+        raise RuntimeError('Failed to find a factor') 
+
+    return np.array(g)             
 
 
 

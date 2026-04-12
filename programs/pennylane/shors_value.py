@@ -35,7 +35,7 @@ def FindOrderCandidate(a, N, t):
 
     dev = qml.device("default.qubit", wires=n_comp_qubits + n_pe_qubits)
 
-    @qml.set_shots(10)
+    @qml.set_shots(2048) # unify 2048 shots across languages for now
     @qml.qnode(dev)
     def qpe_circuit(matrix):
         qml.PauliX(wires=comp_wires[-1])
@@ -81,43 +81,66 @@ def is_not_one(x, N):
         return True
     return False
 
-def shor(N, t):
-    """
-    Return the factorization of a given integer.
+# def shor(N, t):
+#     """
+#     Return the factorization of a given integer.
 
-    Args:
-       N (int): integer we want to factorize.
-       t (int): number of qubits in the estimation register.
+#     Args:
+#        N (int): integer we want to factorize.
+#        t (int): number of qubits in the estimation register.
 
-    Returns:
-        array[(int)]: [p,q] Prime factors of N.
+#     Returns:
+#         array[(int)]: [p,q] Prime factors of N.
 
-    """
+#     """
     
-    period = 1
-    while is_odd(period):
-        a = np.random.randint(2, N - 2)
+#     period = 1
+#     while is_odd(period):
+#         a = np.random.randint(2, N - 2)
 
-        if not is_coprime(a, N):
-            p = np.gcd(a, N)
-            return [p]
+#         if not is_coprime(a, N):
+#             p = np.gcd(a, N)
+#             return [p]
 
-        period = FindOrderCandidate(a, N, t)
+#         period = FindOrderCandidate(a, N, t)
 
-        x = (a ** (period // 2)) % N
+#         x = (a ** (period // 2)) % N
 
-        if is_not_one(x, N) and not is_odd(period):
-            p = np.gcd(x - 1, N)
-            return p
+#         if is_not_one(x, N) and not is_odd(period):
+#             p = np.gcd(x - 1, N)
+#             return p
 
-        period = 1
+#         period = 1
 
-def run_simulation(config: Dict[str, Any]):
-    t=int(config.get("t",6))
-    N=int(config.get("N",21))
-    a=int(config.get("a",2))
+# def run_simulation(config: Dict[str, Any]):
+#     t=int(config.get("t",6))
+#     N=int(config.get("N",21))
+#     a=int(config.get("a",2))
 
-    return np.array(shor(N,t))
+#     return np.array(shor(N,t))
+
+
+
+def shor(N, a, t):
+    if not is_coprime(a, N):
+        return np.gcd(a, N)                           
+
+    period = FindOrderCandidate(a, N, t)
+    if is_odd(period):
+        raise RuntimeError("Got odd period for a=2; try different N or t.")
+
+    x = (a ** (period // 2)) % N                      
+ 
+    if not is_not_one(x, N):
+        raise RuntimeError("Got trivial x; try different N or t.")
+    p = np.gcd(x - 1, N)
+    return p
+
+def run_simulation(config: Dict[str, Any]):           
+    t = int(config.get("t", 6))
+    N = int(config.get("N", 21))
+    a = int(config.get("a", 2))
+    return np.array(shor(N, a, t))
 
 if __name__ == "__main__":
     N = 64

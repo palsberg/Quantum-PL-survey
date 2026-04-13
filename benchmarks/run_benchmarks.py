@@ -166,8 +166,6 @@ def execution_repetitions(case_name: str) -> int:
         return SHOR_VALUE_RUNS
     return DEFAULT_RUNS
 
-
-# Should add seed with ave
 def timed_execution_average(
     language: str,
     case: Case,

@@ -50,7 +50,7 @@ def run_simulation(config: Dict[str, Any]) -> np.ndarray:
     op = qsharp.code.HamiltonianSimulation.Shors.QPESubroutine
     
     # Get statevector using helper from __init__.py
-    state = run_state(op, N, a, t
+    state = run_state(op, N, a, t)
     #print(type(state), state.shape)
 
     #Reorder to reference (big-endian) bit order

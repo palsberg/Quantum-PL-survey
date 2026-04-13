@@ -255,7 +255,7 @@ def run_simulation(config: Dict[str, Any]) -> np.ndarray:
         return np.array(K)
 
     shors_fn = build_shors(N, a, t, True)                 
-    emu = shors_fn.emulator().with_seed(seed).with_shots(2048) # unify 2048 shots across languages for now
+    emu = shors_fn.emulator().with_seed(seed).with_shots(1) # unify 1 shots across languages for now
 
     res = emu.run().register_counts()['ctrl']         
     bitstring = max(res, key=lambda b: res[b])

@@ -354,7 +354,7 @@ def run_simulation(config: Dict[str, Any]):
 
 
 
-    measured_values = measure_statevector(statevector, count_qubits, num_shots=2048)
+    measured_values = measure_statevector(statevector, count_qubits, num_shots=1) # unify 1 shots across languages for now
 
     from collections import Counter
     counts = Counter(measured_values)

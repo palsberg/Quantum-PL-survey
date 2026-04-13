@@ -35,7 +35,7 @@ def FindOrderCandidate(a, N, t):
 
     dev = qml.device("default.qubit", wires=n_comp_qubits + n_pe_qubits)
 
-    @qml.set_shots(2048) # unify 2048 shots across languages for now
+    @qml.set_shots(1) # unify 1 shots across languages for now
     @qml.qnode(dev)
     def qpe_circuit(matrix):
         qml.PauliX(wires=comp_wires[-1])

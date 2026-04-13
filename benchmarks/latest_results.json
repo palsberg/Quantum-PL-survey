@@ -19,10 +19,10 @@
     "circuit_depth": null,
     "qubit_count": null,
     "native_gate_set": null,
-    "success_rate": 0.24,
-    "avg_time_all_runs": 0.0234433987387456,
-    "avg_time_successful_runs": 0.01938882120703056,
-    "timestamp_utc": "2026-04-13T03:55:42.942308+00:00",
+    "success_rate": 0.28,
+    "avg_time_all_runs": 0.02485785416967701,
+    "avg_time_successful_runs": 0.03781605207145081,
+    "timestamp_utc": "2026-04-13T05:20:43.880702+00:00",
     "tool_versions": {
       "pyquil": "4.17.0"
     },

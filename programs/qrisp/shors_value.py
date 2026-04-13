@@ -3,7 +3,12 @@ from typing import Any, Dict, Sequence
 import math
 import numpy as np
 from sympy import continued_fraction_convergents, continued_fraction_iterator, Rational
-from reference_shors import shor_qpe_statevector_small, make_shors
+try:
+    # package import (benchmark / python -m ...)
+    from .reference_shors import shor_qpe_statevector_small, make_shors
+except ImportError:
+    # script mode (python programs/qrisp/shors.py)
+    from reference_shors import shor_qpe_statevector_small, make_shors
 from qrisp.simulator import statevector_sim
 from qiskit.quantum_info import Statevector
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister

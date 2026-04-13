@@ -77,6 +77,12 @@ def find_factor(
     print(f"Failed to find a non-trivial factor in {max_attempts} attempts.")
     return None
 
+def measure_vector(statevector: np.ndarray) -> int:
+    """Sample a basis state from a statevector and return its integer index."""
+    probs = np.abs(statevector) ** 2
+    probs = probs / probs.sum()
+    return int(np.random.choice(len(probs), p=probs))
+
 def run_simulation(config: Dict[str, Any]) -> int:
     n = int(config.get("N", 21))
     if n < 2:

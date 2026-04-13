@@ -13,6 +13,7 @@ import argparse
 import copy
 import csv
 import json
+import importlib
 import subprocess
 import sys
 from dataclasses import asdict, dataclass
@@ -20,6 +21,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
 import math
+from fractions import Fraction
+from math import gcd
+import numpy as np
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 from statistics import mean
 
@@ -177,8 +181,6 @@ def timed_execution_average(
     for i in range(runs):
         cfg = copy.deepcopy(base_config)
 
-        if case.name == "shors21_2_value":
-            cfg["seed"] = i
 
         start = perf_counter()
         try:
@@ -190,6 +192,35 @@ def timed_execution_average(
 
     return mean(samples), fail
 
+def measure_vector(statevector: np.ndarray) -> int:
+    """Sample a basis state from a statevector and return its integer index."""
+    probs = np.abs(statevector) ** 2
+    probs = probs / probs.sum()
+    return int(np.random.choice(len(probs), p=probs))
+
+
+def _factor_from_basis(basis: int, t: int, a: int, N: int) -> Optional[int]:
+    x = basis / (2 ** t)
+    frac = Fraction(x).limit_denominator(N)
+
+    candidates: List[int] = []
+    for q in range(1, frac.denominator + 1):
+        if abs(x - round(x * q) / q) < 2 ** (-(t + 1)):
+            candidates.append(q)
+
+    for r in candidates:
+        if pow(a, r, N) != 1:
+            continue
+        if r % 2 == 1:
+            continue
+
+        x_val = pow(a, r // 2, N)
+        for g in (gcd(x_val - 1, N), gcd(x_val + 1, N)):
+            if 1 < g < N and N % g == 0:
+                return g
+
+    return None
+
 
 def timed_execution_stats(
     language: str,
@@ -197,25 +228,72 @@ def timed_execution_stats(
     adapter,
     base_config: Dict[str, Any],
 ) -> Dict[str, Any]:
+    """
+    Run repeated single-shot Shor trials using statevector simulation.
+
+    Register structure:
+        - counting register: t qubits (QPE output)
+        - work register:     m = ceil(log2(N)) qubits
+        - full statevector dimension: 2^(t + m)
+
+    Procedure per trial:
+        1. Generate full statevector via shors.py (statevector simulation)
+        2. Marginalize over work register → obtain distribution over counting register
+        3. Sample one counting-register basis outcome
+        4. Perform classical post-processing (continued fractions + gcd)
+    """
+
     runs = execution_repetitions(case.name)
+
     all_times: List[float] = []
     success_times: List[float] = []
     successful_runs = 0
     failure_messages: List[str] = []
 
-    for i in range(runs):
-        cfg = copy.deepcopy(base_config)
+    N = int(base_config["N"])
+    t = int(base_config["t"])
+    a = int(base_config["a"])
 
-        if case.name == "shors21_2_value":
-            cfg["seed"] = i
+    # Work register size: m = ceil(log2(N))
+    m = int(math.ceil(math.log2(N)))
+
+    # Dimensions:
+    dim_c = 1 << t   # counting register size
+    dim_w = 1 << m   # work register size
+
+    for _ in range(runs):
+        cfg = copy.deepcopy(base_config)
 
         start = perf_counter()
         try:
-            adapter.run(cfg)
+            # 1. Generate full statevector (dimension = 2^(t+m))
+            state = adapter.run(cfg)
+            state = np.asarray(state, dtype=np.complex128).flatten()
+
+            if state.size != dim_c * dim_w:
+                raise ValueError(
+                    f"Statevector size mismatch: got {state.size}, expected {dim_c * dim_w}"
+                )
+
+            # 2. Reshape into (counting, work) and marginalize work register
+            #    This yields probability distribution over counting register
+            probs = np.abs(state.reshape(dim_c, dim_w)) ** 2
+            marginal = probs.sum(axis=1)
+            marginal = marginal / marginal.sum()
+
+            # 3. Sample a counting-register measurement outcome
+            basis = int(np.random.choice(dim_c, p=marginal))
+
+            # 4. Classical post-processing to extract factor
+            factor = _factor_from_basis(basis, t, a, N)
+
             dt = perf_counter() - start
             all_times.append(dt)
-            success_times.append(dt)
-            successful_runs += 1
+
+            if factor is not None:
+                successful_runs += 1
+                success_times.append(dt)
+
         except Exception as exc:
             dt = perf_counter() - start
             all_times.append(dt)

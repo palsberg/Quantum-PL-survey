@@ -51,6 +51,9 @@ def find_factor(
         else:
             x = 2
 
+        
+        
+
         # Most likely x and n will be relatively prime
         c = math.gcd(x, n)
 

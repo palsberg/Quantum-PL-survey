@@ -9,7 +9,6 @@ from math import gcd
 from fractions import Fraction
 import random
 from typing import Any, Dict, Sequence
-import math
 
 def _qubit_indices(inst):
     """Extract qubit indices from an instruction."""
@@ -325,7 +324,7 @@ def run_simulation(config: Dict[str, Any]):
     """
     n_count=int(config.get("t",6))
     N=int(config.get("N",21))
-    a=int(config.get("a",2)) # default to 2 for now, but we can add randomization later if needed.
+    a=int(config.get("a",2))
     n_target = int(np.ceil(np.log2(N))) 
     count_qubits = list(range(n_count))
 
@@ -352,62 +351,28 @@ def run_simulation(config: Dict[str, Any]):
     p += inverse_qft(count_qubits)
     statevector = simulate_statevector(p, n_count+n_target)
 
-
-
-    measured_values = measure_statevector(statevector, count_qubits, num_shots=2048)
-
-    from collections import Counter
-    counts = Counter(measured_values)
-
-    r = None
-    for meas_int, _ in sorted(counts.items(), key=lambda x: x[1], reverse=True):
-        approx = meas_int / (1 << n_count)
-        for cand in get_r_candidates(Rational(approx)):
-            if cand > 0 and (a**cand) % N == 1:
-                r = cand
-                break
-        if r is not None:
+    psi_tensor = statevector.reshape(2**n_count, -1)
+    probs_array = np.sum(np.abs(psi_tensor)**2, axis=1)
+    results = {}
+    normalization = 1 << n_count
+    for k, p in enumerate(probs_array):
+        if p > 1e-9:  # Filter out numerical noise
+            phase_val = k / normalization
+            results[phase_val] = float(p)
+    sorted_results = dict(sorted(results.items(), key=lambda item: item[1], reverse=True))
+    r_candidates = sum([get_r_candidates(approx) for approx in sorted_results.keys()], [])
+    for cand in r_candidates:
+        if (a**cand) % N == 1:
+            r = cand
             break
-
-    if r is None:
+    else:
         raise Exception("Please sample again")
+
     if r % 2:
         raise Exception("Please choose another a")
-
-
-    half = pow(a, r // 2, N)          # modular pow avoids huge intermediate ints
-    g = math.gcd(half - 1, N)
-    if 1 < g < N:
-        return np.array([g])
-    g = math.gcd(half + 1, N)
-    if 1 < g < N:
-        return np.array([g])
-    return np.array([-1])             # r was valid but gave trivial factor (e.g. r=12)
-
-
-
-    # psi_tensor = statevector.reshape(2**n_count, -1)
-    # probs_array = np.sum(np.abs(psi_tensor)**2, axis=1)
-    # results = {}
-    # normalization = 1 << n_count
-    # for k, p in enumerate(probs_array):
-    #     if p > 1e-9:  # Filter out numerical noise
-    #         phase_val = k / normalization
-    #         results[phase_val] = float(p)
-    # sorted_results = dict(sorted(results.items(), key=lambda item: item[1], reverse=True))
-    # r_candidates = sum([get_r_candidates(approx) for approx in sorted_results.keys()], [])
-    # for cand in r_candidates:
-    #     if (a**cand) % N == 1:
-    #         r = cand
-    #         break
-    # else:
-    #     raise Exception("Please sample again")
-
-    # if r % 2:
-    #     raise Exception("Please choose another a")
     
-    # g = np.gcd(a ** (r // 2) + 1, N)
-    # return np.array([g])
+    g = np.gcd(a ** (r // 2) + 1, N)
+    return np.array([g])
     
 def get_r_candidates(approx):
         rationals = continued_fraction_convergents(

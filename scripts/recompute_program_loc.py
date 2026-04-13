@@ -323,7 +323,7 @@ def main() -> None:
         "cudaq": {
             "trotter_helpers": [ROOT / "programs" / "cudaq" / "common.py"],
             "lcu_helpers": [ROOT / "programs" / "cudaq" / "lcu_common.py"],
-            "shors_helpers": [ROOT / "programs" / "cudaq" / "shors.py"],
+            "shors_helpers": [],
         },
         "guppy": {
             "trotter_helpers": [ROOT / "programs" / "guppy" / "common.py"],
@@ -331,7 +331,7 @@ def main() -> None:
                 ROOT / "programs" / "guppy" / "lcu_common.py",
                 ROOT / "programs" / "common" / "pauli_models.py",
             ],
-            "shors_helpers": [ROOT / "programs" / "guppy" / "shors.py"],
+            "shors_helpers": [],
         },
         "pennylane": {
             "trotter_helpers": [ROOT / "programs" / "pennylane" / "common.py"],

@@ -6,8 +6,10 @@ from typing import Sequence
 import numpy as np
 import sys
 
-from reference_hamiltonians import kron_many
-from reference_hamiltonians import PAULI_I, PAULI_X, PAULI_Z
+try:
+    from .reference_hamiltonians import kron_many, PAULI_I, PAULI_X, PAULI_Z
+except ImportError:
+    from reference_hamiltonians import kron_many, PAULI_I, PAULI_X, PAULI_Z
 
 HADAMARD = (1/np.sqrt(2))*np.array([[1,1],[1,-1]],dtype=np.complex128)
 

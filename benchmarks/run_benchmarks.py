@@ -273,17 +273,23 @@ def timed_execution_stats(
                     f"Statevector size mismatch: got {state.size}, expected {dim_c * dim_w}"
                 )
 
-            # 2. Reshape into (counting, work) and marginalize work register
-            #    This yields probability distribution over counting register
+            # 2. Marginalize onto the counting register.
+            # Default/reference convention is (counting, work).
+
+
             probs = np.abs(state.reshape(dim_c, dim_w)) ** 2
             marginal = probs.sum(axis=1)
             marginal = marginal / marginal.sum()
+
+            print("top marginal indices:", np.argsort(marginal)[-10:][::-1])
+            print("top marginal probs:", marginal[np.argsort(marginal)[-10:][::-1]])
 
             # 3. Sample a counting-register measurement outcome
             basis = int(np.random.choice(dim_c, p=marginal))
 
             # 4. Classical post-processing to extract factor
             factor = _factor_from_basis(basis, t, a, N)
+            print("sampled basis:", basis, "factor:", factor)
 
             dt = perf_counter() - start
             all_times.append(dt)
@@ -293,6 +299,7 @@ def timed_execution_stats(
                 success_times.append(dt)
 
         except Exception as exc:
+            print("ERROR:", exc)   # ← ADD THIS LINE
             dt = perf_counter() - start
             all_times.append(dt)
             failure_messages.append(str(exc))

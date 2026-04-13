@@ -126,12 +126,12 @@ def run_simulation(config: Dict[str, Any]) -> np.ndarray:
     t = config.get("t", None)
     t = int(t) if t is not None else None
 
-    # max_tries = int(config.get("max_tries", 1))
-    # seed = int(config.get("seed", 42))
-    # allow_random_a = bool(config.get("allow_random_a", True))
+    max_tries = int(config.get("max_tries", 25))
+    seed = int(config.get("seed", 0))
+    allow_random_a = bool(config.get("allow_random_a", True))
 
-    # shots = int(config.get("shots", 1))
-    # retries = int(config.get("retries", 1))
+    shots = int(config.get("shots", 256))
+    retries = int(config.get("retries", 16))
 
 
 
@@ -170,7 +170,7 @@ def run_simulation(config: Dict[str, Any]) -> np.ndarray:
 
     #Only run ones with a=2 across languages for now, but we can add randomization later if needed.
     register_oracle(N, a)
-    res = cudaq.sample(shors, N, a, t, True, shots_count=1)   # unify 2048 shots across languages for now                                                                                                   
+    res = cudaq.sample(shors, N, a, t, True, shots_count=2048)   # unify 2048 shots across languages for now                                                                                                   
     bitstring = max(res, key=lambda b: res[b])                                           
     n_meas = int(bitstring[::-1], 2)                           
 

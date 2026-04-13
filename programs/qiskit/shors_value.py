@@ -24,16 +24,10 @@ from qiskit_aer import Aer
 #   from .shors import _build_qpe_circuit, _fraction_with_bounded_denominator_from_counts
 # or
 #   from programs.qiskit.shors import ...
-try:
-    from .shors import (
-        _build_qpe_circuit,
-        _fraction_with_bounded_denominator_from_counts,
-    )
-except ImportError:
-    from shors import (
-        _build_qpe_circuit,
-        _fraction_with_bounded_denominator_from_counts,
-    )
+from .shors import (
+    _build_qpe_circuit,
+    _fraction_with_bounded_denominator_from_counts,
+)
 
 
 # def _measure_counting_register_once(
@@ -60,7 +54,7 @@ def _measure_counting_register_counts(
     tqc,
     backend,
     *,
-    shots: int = 1,
+    shots: int,
     seed: int
 ) -> dict:
     """Run shots on pre-transpiled circuit and return counts dict."""
@@ -72,9 +66,9 @@ def FindOrderCandidate_measured(
     N: int,
     *,
     t: Optional[int] = None,
-    shots: int = 1, # unify 1 shot across languages for now
-    retries: int = 1, # unify 1 retry across languages for now
-    seed: int = 42,
+    shots: int = 256,
+    retries: int = 16,
+    seed: int = 0,
 ) -> int:
     """
     Measured order finding:
@@ -147,9 +141,9 @@ def _try_shor_with_base_a_measured(
     a: int,
     *,
     t: Optional[int],
-    shots: int = 1, # unify 1 shot across languages for now
-    retries: int = 1, # unify 1 retry across languages for now
-    seed: int = 0,
+    shots: int,
+    retries: int,
+    seed: int,
 ) -> int:
     """
     One measured Shor attempt with fixed base a. Returns factor or 0.
@@ -181,11 +175,11 @@ def Shor_value(
     *,
     a: Optional[int] = None,
     t: Optional[int] = None,
-    max_tries: int = 1,
+    max_tries: int = 25,
     seed: int = 0,
-    allow_random_a: bool = False,
-    shots: int = 1, # unify 1 shot across languages for now
-    retries: int = 1, # unify 1 retry across languages for now
+    allow_random_a: bool = True,
+    shots: int = 256,
+    retries: int = 16,
 ) -> int:
     """
     Returns a nontrivial factor of N (measured-style) or raises RuntimeError.
@@ -208,8 +202,6 @@ def Shor_value(
         if a0 < 2:
             a0 = 2
         attempts.append(a0)
-    else:
-        attempts.append(2) # only run with a=2 across languages for now, but we can add randomization later if needed
 
     if allow_random_a:
         while len(attempts) < max_tries:
@@ -230,7 +222,7 @@ def Shor_value(
         if 1 < factor < N:
             return np.array(factor)
 
-    return np.array(-1) # failure case, no factor found
+    raise RuntimeError("Shor failed to find a factor with the given configuration.")
 
 
 def run_simulation(config: Dict[str, Any]) -> int:
@@ -246,12 +238,12 @@ def run_simulation(config: Dict[str, Any]) -> int:
     t = config.get("t", None)
     t = int(t) if t is not None else None
 
-    max_tries = int(config.get("max_tries", 1))
-    seed = int(config.get("seed", np.random.randint(0, 2**31 - 1)))
-    allow_random_a = bool(config.get("allow_random_a", False))
+    max_tries = int(config.get("max_tries", 10))
+    seed = int(config.get("seed", np.random.SeedSequence().entropy))
+    allow_random_a = bool(config.get("allow_random_a", True))
 
-    shots = int(config.get("shots", 1))       # measurement shots per attempt
-    retries = int(config.get("retries", 1))    # reconstruct+measure attempts for order finding
+    shots = int(config.get("shots", 256))       # measurement shots per attempt
+    retries = int(config.get("retries", 16))    # reconstruct+measure attempts for order finding
 
     return Shor_value(
         N,
@@ -269,7 +261,7 @@ def run_simulation(config: Dict[str, Any]) -> int:
 def build_circuit(config: Dict[str, Any]) -> QuantumCircuit:
     N = int(config["N"])
     a = int(config.get("a", 2))
-    t = int(config.get("t", 6))
+    t = int(config.get("t", 8))
 
     qc, _ = _build_qpe_circuit(a, N, t)
 
@@ -281,7 +273,7 @@ def build_circuit(config: Dict[str, Any]) -> QuantumCircuit:
 
 if __name__ == "__main__":
     
-    cfg = {"N": 21, "t": 6, "shots": 4096, "retries": 1, "max_tries": 1}
+    cfg = {"N": 45, "t": 6, "shots": 512, "retries": 10, "max_tries": 1}
     
     print("here")
     print("Factor:", run_simulation(cfg))

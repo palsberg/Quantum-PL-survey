@@ -19,12 +19,14 @@ def shor(n:!ℕ){
 	if n%2=0 { return 2; }
 	(x,y):=asPower(n);
 	if y>1{ return x; }
-	a:=2;
-	d:=gcdn(a,n);
-	if d≠1{ return d; }
-	r:=order(a,n);
-	k:=gcdn(a^(r div 2)+1,n);
-	return k;
+	while true{
+		a:=2+uniform(n sub 2);
+		d:=gcdn(a,n);
+		if d≠1{ return d; }
+		r:=order(a,n);
+		k:=gcdn(a^(r div 2)+1,n);
+		if 1<k∧k<n { return k; }
+	}
 }
 
 def asPower(n:!ℕ){

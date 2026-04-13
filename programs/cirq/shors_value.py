@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Dict
+from typing import Any, Callable, Dict
 import numpy as np
 from .shor.quantumorderfinding import quantum_order_finder
 import sympy

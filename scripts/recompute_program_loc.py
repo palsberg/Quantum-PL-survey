@@ -375,7 +375,8 @@ def main() -> None:
                 ROOT / "programs" / "common" / "pauli_models.py",
             ],
             "shors_helpers": [
-                ROOT / "programs" / "cirq" / "shor" / "shors_common.py",
+                ROOT / "programs" / "qualtran" / "shors.py",
+                ROOT / "programs" / "qualtran" / "shor" / "shors_common.py",
             ],
         },
     }

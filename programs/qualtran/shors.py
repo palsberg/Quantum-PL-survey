@@ -22,6 +22,10 @@ from qualtran.cirq_interop._interop_qubit_manager import InteropQubitManager
 from qualtran._infra.gate_with_registers import get_named_qubits, merge_qubits
 from qualtran.cirq_interop import CirqGateAsBloq
 
+
+SEED = 42
+
+
 """Functions for factoring from start to finish."""
 def find_factor_of_prime_power(n: int) -> int | None:
     """Returns non-trivial factor of n if n is a prime power, else None."""
@@ -70,7 +74,7 @@ def find_factor(
 
     for _ in range(max_attempts):
         # Choose a random number between 2 and n - 1.
-        x = random.randint(2, n - 1)
+        x = 2 # use a=2 for now #random.randint(2, n - 1)
 
         # Most likely x and n will be relatively prime.
         c = math.gcd(x, n)
@@ -142,43 +146,62 @@ def _build_qpe_circuit(t: int, N: int, a: int) -> np.ndarray:
 
     return bb.finalize(exponent=exponent, x=x)
 
-def run_simulation(config: Dict[str, Any]):
-    """
-    Build Shor QPE circuit for factoring 21 with a=2, without measurement.
-    Returns the full final statevector.
-    Expected config keys: t, N, a
-    """
-    t = int(config.get("t", 6))
-    N = int(config.get("N", 21))
-    a = int(config.get("a", 2))
 
-    if N != 21 or a != 2:
-        raise ValueError(
-            f"This implementation is specialized for N=21, a=2 (got N={N}, a={a})."
-        )
-
-    print(f"\t**Building Qualtran QPE Bloq for N={N}, a={a}, t={t}...")
+def _simulate_qpe_statevector(t: int, N: int, a: int):
+    m = int(ceil(log2(N)))
     qpe_bloq = _build_qpe_circuit(t=t, N=N, a=a)
-    print("\t**Bloq built; simulating...")
-
-    # **Do the stimulation
     init_quregs = get_named_qubits(qpe_bloq.signature)
     qm = InteropQubitManager(cirq.ops.SimpleQubitManager())
     circuit, quregs_out = qpe_bloq.flatten().to_cirq_circuit_and_quregs(qubit_manager=qm, **init_quregs)
     sig_qubits = merge_qubits(qpe_bloq.signature, **quregs_out)
-    sig_set = set(sig_qubits)
     extra_qubits = sorted(set(circuit.all_qubits()) - set(sig_qubits), key=str)
     qubit_order = list(sig_qubits) + extra_qubits
     result = cirq.Simulator(dtype=np.complex128).simulate(circuit, qubit_order=qubit_order)
     full_sv = np.asarray(result.final_state_vector, dtype=np.complex128)
-
-    # **Throw away ancilla qubits by projecting to |0...0>
     sig_bits = sum(reg.total_bits() for reg in qpe_bloq.signature)
     anc_bits = len(extra_qubits)
     sv2 = full_sv.reshape((1 << sig_bits, 1 << anc_bits)) if anc_bits else full_sv.reshape((1 << sig_bits, 1))
     projected = sv2[:, 0]
+    projected /= np.linalg.norm(projected)
+    return np.asarray(projected, dtype=np.complex128), t, m
 
-    return np.asarray(projected / np.linalg.norm(projected), dtype=np.complex128)
+
+def run_simulation(config: Dict[str, Any]):
+    t     = int(config.get("t", 6))
+    N     = int(config.get("N", 21))
+    a     = 2                            # FORCED for cross-language comparison
+    shots = int(config.get("shots", 2048))
+
+    if N != 21:
+        raise ValueError(f"Specialised for N=21 (got N={N}).")
+
+    print(f"\n\t**Building QPE for N={N}, a={a} (forced), t={t}...")
+    sv, t_bits, m_bits = _simulate_qpe_statevector(t=t, N=N, a=a)
+    print(f"\t**Statevector ready. Drawing {shots} shots...")
+
+    probs = np.abs(sv) ** 2
+    probs /= probs.sum()
+    rng = np.random.default_rng(seed=SEED)
+    
+    
+    two_t = 1 << t_bits
+
+    s = int(rng.choice(1 << (t_bits + m_bits), p=probs))
+    s_exp = (s & ((1 << t_bits) - 1) << m_bits) >> m_bits
+
+    factor = -1
+    if s_exp != 0:
+        r = Fraction(s_exp, two_t).limit_denominator(N).denominator
+        if r >= 2 and r % 2 == 0 and pow(a, r, N) == 1:
+            c = gcd(pow(a, r // 2, N) - 1, N)
+            if 1 < c < N:
+                factor = c
+                print(f"\t**Factor {factor} from r={r}.")
+
+    if factor == -1:
+        print(f"\t**No factor found (s={s_exp}).")
+
+    return sv, factor
     
 if __name__ == "__main__":
     N = 21

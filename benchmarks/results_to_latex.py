@@ -20,7 +20,6 @@ COLUMNS = [
     (("HeisenbergXXX", "LCU"), "LCU"),
 ]
 
-# First group gets \midrule, second group gets \hline before it
 LANG_GROUP_1 = [
     "cirq", "cuda-q", "guppy", "pennylane", "pyquil",
     "qsharp", "qiskit", "qualtran",
@@ -46,17 +45,14 @@ def build_table(results):
         table.setdefault(lang, {})[key] = r.get("avg_time_all_runs")
     return table
 
-
 def fmt(val):
     return f"{val:.4f}" if val is not None else "??"
-
 
 def lang_row(lang, table):
     col_keys = [k for k, _ in COLUMNS]
     display = DISPLAY_NAMES.get(lang, lang)
     cells = [fmt(table.get(lang, {}).get(k)) for k in col_keys]
     return f"    {display:<16s} & " + " & ".join(f"{c:>5s}" for c in cells) + r" \\"
-
 
 def generate_latex(table):
     all_langs = LANG_GROUP_1 + LANG_GROUP_2

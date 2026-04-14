@@ -11,6 +11,7 @@ from ..common import pauli_models
 def run_simulation(config: Dict[str, Any]) -> np.ndarray:
     num_sites = int(config["num_sites"])
     total_time = float(config["time"])
+    no_loop = bool(config.get("no_loop", True))
     params = config.get("params", {})
     J = float(params.get("J", 1.0))
     h = float(params.get("h", 1.0))
@@ -19,7 +20,7 @@ def run_simulation(config: Dict[str, Any]) -> np.ndarray:
     gamma = pauli_models.taylor_coefficients(ham, total_time)
     coeffs, paulis, phases = pauli_models.lcu_weights_from_gamma(gamma)
 
-    state = lcu_common.lcu_state(coeffs, paulis, phases, no_loop=True)
+    state = lcu_common.lcu_state(coeffs, paulis, phases, no_loop)
     return state
 
 

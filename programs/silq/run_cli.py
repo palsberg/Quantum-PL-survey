@@ -80,7 +80,7 @@ def _bits_to_index(bits: Any) -> int:
     return idx
 
 
-def _parse_silq_output(output: str, case: str, num_sites: int) -> np.ndarray | int:
+def _parse_silq_output(output: str, case: str, num_sites: int, no_loop: bool) -> np.ndarray | int:
     """Parse Silq's Dirac-notation output into a statevector over system qubits."""
     # Take the last non-empty line; Silq typically prints a single line of amplitudes.
     if case == "shors21_2_value":
@@ -174,6 +174,10 @@ def _parse_silq_output(output: str, case: str, num_sites: int) -> np.ndarray | i
     if case in ("tfim_trotter", "heis_trotter", "tfim_lcu", "heis_lcu"):
         # Basis labels are tuples like (q0,q1) for two-system-qubit states.
         for amp, basis in terms:
+            if case[-3:] == "lcu" and no_loop:
+                if basis[1] != (0,) * len(basis[1]):
+                    continue
+                basis = basis[0]
             if not isinstance(basis, tuple):
                 continue
             system_bits = list(basis)
@@ -337,11 +341,11 @@ def _instantiate_shor_value_template(config: Dict[str, Any]) -> Path:
     src = base_path.read_text()
     new_main = f"""
 def main(){{
-	n:={N};
-	r:=shor(n);
-	assert(1<r&&r<n);
-	assert(n%r=0);
-	return r;
+    n:={N};
+    r:=shor(n);
+    assert(1<r&&r<n);
+    assert(n%r=0);
+    return r;
 }}
 """.strip()
 
@@ -360,6 +364,11 @@ def main(){{
 
 
 def _run_case(case: str, config: Dict[str, Any]) -> np.ndarray:
+    no_loop = config.get("no_loop", True)
+    if no_loop:
+        CASE_FILES["tfim_lcu"] = "tfim_lcu_no_loop.slq"
+        CASE_FILES["heis_lcu"] = "heis_lcu_no_loop.slq"
+
     num_sites = int(config.get("num_sites", 2))
     if case in ("tfim_trotter", "heis_trotter", "tfim_lcu", "heis_lcu"):
         # Use the Trotter template mechanism to specialise to the requested
@@ -390,7 +399,7 @@ def _run_case(case: str, config: Dict[str, Any]) -> np.ndarray:
         raise RuntimeError(
             f"silq exited with code {proc.returncode}: {proc.stderr.strip()}"
         )
-    return _parse_silq_output(proc.stdout, case, num_sites)
+    return _parse_silq_output(proc.stdout, case, num_sites, no_loop)
 
 
 

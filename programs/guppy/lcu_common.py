@@ -1,7 +1,7 @@
 # pyright: reportCallIssue=false, reportArgumentType=false, reportOperatorIssue=false, reportIndexIssue=false, reportPrivateImportUsage=false
 from guppylang import guppy
 from guppylang.defs import GuppyFunctionDefinition
-from guppylang.std.builtins import comptime, array
+from guppylang.std.builtins import comptime, array, panic
 from guppylang.std.quantum import discard_array, measure_array, qubit, reset, x
 from guppylang.std.debug import state_result
 
@@ -90,7 +90,7 @@ def build_select(paulis: list[str], phases: list[str]) -> GuppyFunctionDefinitio
     return select
 
 
-def build_lcu(coeffs: list[float], paulis: list[str], phases: list[str]):
+def build_lcu(coeffs: list[float], paulis: list[str], phases: list[str], no_loop: bool):
     m = math.ceil(math.log2(len(coeffs)))
     M = 2 ** m
     n = len(paulis[0])
@@ -123,6 +123,21 @@ def build_lcu(coeffs: list[float], paulis: list[str], phases: list[str]):
             select(ctrl, opr, phase_qb)
             prepare_dag(ctrl)
 
+            if comptime(1 if no_loop else 0) == 1:
+                ### ADD NEW CASES HERE FOR EACH TEST ###
+                if len(ctrl) == 4 and len(opr) == 2: # heis_lcu
+                    state_result('final', ctrl[0], ctrl[1], ctrl[2], ctrl[3], opr[0], opr[1])
+                elif len(ctrl) == 3 and len(opr) == 2: # tfim_lcu
+                    state_result('final', ctrl[0], ctrl[1], ctrl[2], opr[0], opr[1])
+                else:
+                    # This line should never be reached. Add cases above to
+                    # handle any tests that you have.
+                    pass
+                discard_array(opr)
+                discard_array(ctrl)
+                discard_array(phase_qb)
+                return
+
             measurement = measure_array(ctrl)
             success = True
             for b in measurement:
@@ -140,9 +155,28 @@ def build_lcu(coeffs: list[float], paulis: list[str], phases: list[str]):
     return lcu
 
 
-def lcu_state(coeffs, paulis, phases):
-    lcu = build_lcu(coeffs, paulis, phases)
+def lcu_state(coeffs, paulis, phases, no_loop: bool):
+    lcu = build_lcu(coeffs, paulis, phases, no_loop)
     res = lcu.emulator().statevector_sim().with_shots(1).run()
 
-    state = res.partial_state_dicts()[0]['final'].as_single_state()
+    states = res.partial_state_dicts()[0]
+    if 'final' not in states:
+        raise NotImplementedError('Missing case for state_result.\n'
+            '  When running LCU without the RUS loop, we need to do something\n'
+            '  weird in order to get the state from Guppy. Every time we add a\n'
+            '  new test with a new combination of #ancilla and #operand qubits,\n'
+            '  we need to manually add a case to extract the state of the qubits\n'
+            '  using state_result().\n'
+            '  \n'
+            '  To fix this problem, look in build_lcu() in lcu_common.py for\n'
+            '  a comment that says\n'
+            '      ### ADD NEW CASES HERE FOR EACH TEST ###\n'
+            '  and add a new case for your test. Adding the new case involves\n'
+            '  adding an elif statement checking for the size of your ctrl\n'
+            '  and opr qubits, and calling state_result() with each\n'
+            '  individual qubit.'
+        )
+    state = states['final'].as_single_state()
+    if no_loop:
+        state = state[:2**len(paulis[0])]
     return np.array(state)

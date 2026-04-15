@@ -23,5 +23,7 @@ else
   # Container does not exist
   docker run -it --name "$CONTAINER_NAME" \
     --mount type=bind,source="$SCRIPT_DIR",target=/home/"$CONTAINER_NAME"/Hamiltonian-Simulation \
+    -w /home/"$CONTAINER_NAME"/Hamiltonian-Simulation \
+    -h cudaq \
     "$IMAGE_NAME"
 fi

@@ -20,12 +20,13 @@ def create_hamiltonian_tfim(n_sites: int, coupling: float, field: float):
 def run_simulation(config: Dict[str, Any]) -> np.ndarray:
     num_sites = int(config["num_sites"])
     total_time = float(config["time"])
+    no_loop = bool(config.get("no_loop", True))
     params = config.get("params", {})
     J = float(params.get("J", 1.0))
     h = float(params.get("h", 1.0))
 
     H = create_hamiltonian_tfim(num_sites, J, h)
-    state = lcu_common.lcu(num_sites, H, total_time)
+    state = lcu_common.lcu(num_sites, H, total_time, no_loop)
     return state
 
 

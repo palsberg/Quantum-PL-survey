@@ -9,10 +9,14 @@ import os
 import pathlib
 import subprocess
 import sys
+import time
+import warnings
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 import numpy as np
+
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 try:
     from harness.reference_hamiltonians import (
@@ -287,6 +291,8 @@ class Result:
     case: str
     success: bool
     fidelity: Optional[float]
+    time_mean: Optional[float]
+    time_std: Optional[float]
     message: str
 
 
@@ -311,6 +317,12 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         "--list",
         action="store_true",
         help="List available languages and cases, then exit.",
+    )
+    parser.add_argument(
+        "--runs",
+        type=int,
+        default=1,
+        help="Number of runs for benchmarking (default: 1).",
     )
     return parser.parse_args(argv)
 
@@ -343,6 +355,8 @@ def resolve_selection(
 
 def main(argv: Optional[List[str]] = None):
     args = parse_args(argv)
+    if args.runs <= 0:
+        raise ValueError("Number of runs must be at least 1.")
 
     if args.list:
         print("Languages:", ", ".join(ALL_LANGUAGES))
@@ -360,10 +374,21 @@ def main(argv: Optional[List[str]] = None):
             # Handle N/A cases up front (delegations or partial implementations).
             adapter = ADAPTERS.get(language, {}).get(case.name)
             if adapter is None:
-                results.append(Result(language, case.name, False, None, "No adapter"))
+                results.append(Result(language, case.name, False, None, None, None, "No adapter"))
                 continue
             try:
-                state = adapter.run(case.config)
+                times = []
+                state = None
+                for _ in range(args.runs):
+                    start = time.perf_counter()
+                    state = adapter.run(case.config)
+                    end = time.perf_counter()
+                    times.append(end - start)
+                assert state is not None
+                times = np.array(times)
+                time_mean = float(np.mean(times))
+                time_std = float(np.std(times))
+
                 expected = compute_reference(case)
                 print("\t**Computing fidelity...")
                 if isinstance(expected, list):
@@ -374,15 +399,15 @@ def main(argv: Optional[List[str]] = None):
                         success = True
                     message = f"ok" if success else f"incorrect value {state}, expected one of {expected}"
                     fidelity = 1.0 if success else 0.0
-                    results.append(Result(language, case.name, success, fidelity, message))
+                    results.append(Result(language, case.name, success, fidelity, time_mean, time_std, message))
                     continue
                 else:
                     fidelity = compute_fidelity(state, expected)
                     success = fidelity >= 1 - TOLERANCE
                     message = "ok" if success else "low fidelity"
-                    results.append(Result(language, case.name, success, fidelity, message))
+                    results.append(Result(language, case.name, success, fidelity, time_mean, time_std, message))
             except Exception as exc:
-                results.append(Result(language, case.name, False, None, str(exc)))
+                results.append(Result(language, case.name, False, None, None, None, str(exc)))
     print_summary(results)
 
 
@@ -402,7 +427,7 @@ def normalize(vec: np.ndarray) -> np.ndarray:
 
 def print_summary(results: List[Result]):
     print("\n")
-    header = f"{'Language':<20}{'Case':<15}{'Status':<8}{'Fidelity':<12}Message"
+    header = f"{'Language':<20}{'Case':<16}{'Status':<8}{'Fidelity':<12}{'Execution Time':<16}Message"
     print(header)
     print("-" * len(header))
     for res in results:
@@ -411,7 +436,9 @@ def print_summary(results: List[Result]):
         else:
             status = "PASS" if res.success else "FAIL"
         fid_str = f"{res.fidelity:.4f}" if res.fidelity is not None else "-"
-        print(f"{res.language:<20}{res.case:<15}{status:<8}{fid_str:<12}{res.message}")
+        time_str = f"{res.time_mean:.3f}±{res.time_std:.3f}" \
+            if (res.time_mean is not None and res.time_std is not None) else "-"
+        print(f"{res.language:<20}{res.case:<16}{status:<8}{fid_str:<12}{time_str:<16}{res.message}")
 
 
 if __name__ == "__main__":

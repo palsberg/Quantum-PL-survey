@@ -378,7 +378,10 @@ def main(argv: Optional[List[str]] = None):
                 continue
             try:
                 times = []
-                state = None
+                if args.runs > 1:
+                    state = adapter.run(case.config)  # Unmeasured warmup run
+                else:
+                    state = None
                 for _ in range(args.runs):
                     start = time.perf_counter()
                     state = adapter.run(case.config)
@@ -436,7 +439,7 @@ def print_summary(results: List[Result]):
         else:
             status = "PASS" if res.success else "FAIL"
         fid_str = f"{res.fidelity:.4f}" if res.fidelity is not None else "-"
-        time_str = f"{res.time_mean:.3f}±{res.time_std:.3f}" \
+        time_str = f"{res.time_mean:.4f}±{res.time_std:.4f}" \
             if (res.time_mean is not None and res.time_std is not None) else "-"
         print(f"{res.language:<20}{res.case:<16}{status:<8}{fid_str:<12}{time_str:<16}{res.message}")
 

@@ -11,7 +11,7 @@ import subprocess
 import sys
 import time
 import warnings
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -322,7 +322,14 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         "--runs",
         type=int,
         default=1,
+        metavar="N",
         help="Number of runs for benchmarking (default: 1).",
+    )
+    parser.add_argument(
+        "--json",
+        nargs=1,
+        metavar="FILE",
+        help="Output results to a json file.",
     )
     return parser.parse_args(argv)
 
@@ -335,9 +342,9 @@ def resolve_selection(
 
     # If items in `requested` contain commas, we want to split them
     for item in requested:
-        if ',' in item:
-            requested += item.split(',')
-    requested = [item for item in requested if ',' not in item]
+        if "," in item:
+            requested += item.split(",")
+    requested = [item for item in requested if "," not in item]
 
     unknown = [item for item in requested if item not in available]
     if unknown:
@@ -412,6 +419,16 @@ def main(argv: Optional[List[str]] = None):
             except Exception as exc:
                 results.append(Result(language, case.name, False, None, None, None, str(exc)))
     print_summary(results)
+
+    if args.json is not None:
+        filename = args.json[0]
+        with open(filename, 'w') as f:
+            d = dict()
+            for res in results:
+                d[res.language + "/" + res.case] = asdict(res)
+            print(type(d))
+            print(d)
+            json.dump(d, f, indent=2)
 
 
 def compute_fidelity(state: np.ndarray, reference: np.ndarray) -> float:

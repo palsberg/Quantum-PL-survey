@@ -426,8 +426,6 @@ def main(argv: Optional[List[str]] = None):
             d = dict()
             for res in results:
                 d[res.language + "/" + res.case] = asdict(res)
-            print(type(d))
-            print(d)
             json.dump(d, f, indent=2)
 
 

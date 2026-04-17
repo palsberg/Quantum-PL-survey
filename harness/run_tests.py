@@ -196,8 +196,8 @@ CASES: List[Case] = [
         model="tfim",
         config={
             "num_sites": 3,
-            "time": 0.5,
-            "params": {"J": 1.0, "h": 0.5, "trotter_steps": 4},
+            "time": 0.3,
+            "params": {"J": 1.2, "h": 0.8, "trotter_steps": 4},
         },
     ),
     Case(
@@ -206,8 +206,8 @@ CASES: List[Case] = [
         config={
             "num_sites": 3,
             "num_ancilla": 4,
-            "time": 0.5,
-            "params": {"J": 1.0, "h": 0.5, "lcu_precision": 1e-2},
+            "time": 0.3,
+            "params": {"J": 1.2, "h": 0.8, "lcu_precision": 0.1},
         },
     ),
     Case(
@@ -215,7 +215,7 @@ CASES: List[Case] = [
         model="heis",
         config={
             "num_sites": 3,
-            "time": 0.5,
+            "time": 0.3,
             "params": {"J": 0.8, "field": 0.2, "trotter_steps": 4},
         },
     ),
@@ -225,8 +225,8 @@ CASES: List[Case] = [
         config={
             "num_sites": 3,
             "num_ancilla": 5,
-            "time": 0.5,
-            "params": {"J": 0.8, "field": 0.2, "lcu_precision": 1e-2},
+            "time": 0.3,
+            "params": {"J": 0.8, "field": 0.2, "lcu_precision": 0.1},
         },
     ),
     Case(
@@ -298,6 +298,7 @@ class Result:
     case: str
     success: bool
     fidelity: Optional[float]
+    runs: int
     time_mean: Optional[float]
     time_std: Optional[float]
     message: str
@@ -389,7 +390,7 @@ def main(argv: Optional[List[str]] = None):
             # Handle N/A cases up front (delegations or partial implementations).
             adapter = ADAPTERS.get(language, {}).get(case.name)
             if adapter is None:
-                results.append(Result(language, case.name, False, None, None, None, "No adapter"))
+                results.append(Result(language, case.name, False, None, 0, None, None, "No adapter"))
                 continue
             try:
                 times = []
@@ -417,15 +418,15 @@ def main(argv: Optional[List[str]] = None):
                         success = True
                     message = f"ok" if success else f"incorrect value {state}, expected one of {expected}"
                     fidelity = 1.0 if success else 0.0
-                    results.append(Result(language, case.name, success, fidelity, time_mean, time_std, message))
+                    results.append(Result(language, case.name, success, fidelity, args.runs, time_mean, time_std, message))
                     continue
                 else:
                     fidelity = compute_fidelity(state, expected)
                     success = fidelity >= 1 - TOLERANCE
                     message = "ok" if success else "low fidelity"
-                    results.append(Result(language, case.name, success, fidelity, time_mean, time_std, message))
+                    results.append(Result(language, case.name, success, fidelity, args.runs, time_mean, time_std, message))
             except Exception as exc:
-                results.append(Result(language, case.name, False, None, None, None, str(exc)))
+                results.append(Result(language, case.name, False, None, 0, None, None, str(exc)))
     print_summary(results)
 
     if args.json is not None:

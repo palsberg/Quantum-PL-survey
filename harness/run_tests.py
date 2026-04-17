@@ -338,7 +338,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         nargs=1,
         metavar="FILE",
         type=pathlib.Path,
-        help="Output results to a json file.",
+        help="Output results to a json file. If FILE already exists, the new results will be merged into the existing file.",
     )
     return parser.parse_args(argv)
 

@@ -1,12 +1,21 @@
 # Hamiltonian Simulation Survey
 
-This repository accompanies our ACM CSUR-style survey of Hamiltonian simulation across a dozen quantum programming ecosystems. For each language we implement the Transverse-Field Ising Model (TFIM) and the Heisenberg XXX Hamiltonian with both Lie–Trotterization and Linear Combination of Unitaries (LCU), evaluate qualitative ergonomics, and collect quantitative metrics (gate counts, depth, runtime).
+This repository accompanies our ACM CSUR-style survey of Hamiltonian simulation
+across a dozen quantum programming ecosystems. For each language we implement
+the Transverse-Field Ising Model (TFIM) and the Heisenberg XXX Hamiltonian with
+both Lie–Trotterization and Linear Combination of Unitaries (LCU), evaluate
+qualitative ergonomics, and collect quantitative metrics (gate counts, depth,
+runtime).
 
 ## Repository Layout
 
-- `programs/` – Reference implementations grouped by language (Cirq, CUDA-Q, Guppy, Pennylane, PyQuil, Q#, Qiskit, Qualtran, Qrisp, Quipper, and Silq).
-- `programs/common/` – Shared utilities for Pauli models and Taylor-series helpers used by several LCU backends.
-- `harness/` – Cross-language correctness runner that compares each program against NumPy reference evolutions.
+- `programs/` – Reference implementations grouped by language (Cirq, CUDA-Q,
+                Guppy, Pennylane, PyQuil, Q#, Qiskit, Qualtran, Qrisp, Quipper,
+                and Silq).
+- `programs/common/` – Shared utilities for Pauli models and Taylor-series
+                       helpers used by several LCU backends.
+- `harness/` – Cross-language correctness runner that compares each program
+               against NumPy reference evolutions.
 - `benchmarks/` – Automated benchmarking scripts plus the latest JSON/CSV output.
 
 ## Getting Started
@@ -54,7 +63,9 @@ This repository accompanies our ACM CSUR-style survey of Hamiltonian simulation 
 | Common math / tooling (multi-language)| `scipy==1.17.0`, `numpy==2.3.0`, `sympy==1.13.0`, `pandas==2.3.3`, `matplotlib==3.10.7` | Shared across multiple languages. |
 | Non-Python toolchains                 | **Quipper** (requires GHC + Quipper libraries, see https://www.mathstat.dal.ca/~selinger/quipper, also see the section below).<br>**Silq** (requires the Silq compiler toolchain, install from https://github.com/silq-lang/silq, compiling from commit 99aa556). | Our CLI wrappers assume those toolchains are on `PATH`. |
 
-Install whichever rows correspond to the languages you intend to execute (e.g., `pip install qsharp==1.22.0` before running the Q# programs). The versions above mirror the ones in our `.venv` and are what we cite in the paper.
+Install whichever rows correspond to the languages you intend to execute (e.g.,
+`pip install qsharp==1.22.0` before running the Q# programs). The versions above
+mirror the ones in our `.venv` and are what we cite in the paper.
 
 ### Running CUDA-Q in Docker
 
@@ -75,55 +86,74 @@ us to run on any platform (with or without an Nvidia GPU).
 
 To install Quipper on Apple Silicon, see `programs/quipper/Quipper_setup.md`.
 
-Quipper is the only stack in this repo that depends on our machine-specific setup (Apple Silicon running GHC 8.6.5 under Rosetta). The key points for the harness are:
+Quipper is the only stack in this repo that depends on our machine-specific
+setup (Apple Silicon running GHC 8.6.5 under Rosetta). The key points for the
+harness are:
 
-1. We launch Quipper via Rosetta: `arch -x86_64 zsh --login` and source `~/.zshrc-quipper`, which exports `PATH` (to include `~/.local/bin`), sources `~/.ghcup/env`, and pins `GHC_ENVIRONMENT`.
-2. `programs/quipper/run_cli.py` shells out twice: once to compile each `.hs` file and once to run it, prepending that Rosetta command each time. The relevant snippets are the `command = ("source ~/.zshrc-quipper && ...")` strings inside `compile_case(...)` and `invoke_quipper(...)`.
+1. We launch Quipper via Rosetta: `arch -x86_64 zsh --login` and source
+   `~/.zshrc-quipper`, which exports `PATH` (to include `~/.local/bin`), sources
+   `~/.ghcup/env`, and pins `GHC_ENVIRONMENT`.
+2. `programs/quipper/run_cli.py` shells out twice: once to compile each `.hs`
+   file and once to run it, prepending that Rosetta command each time. The
+   relevant snippets are the `command = ("source ~/.zshrc-quipper && ...")`
+   strings inside `compile_case(...)` and `invoke_quipper(...)`.
 
-If you are running on native x86 Linux/Windows, or if your ghcup install lives somewhere else, edit those two command builders:
+If you are running on native x86 Linux/Windows, or if your ghcup install lives
+somewhere else, edit those two command builders:
 
-- Replace `["arch","-x86_64","zsh","--login","-c", "source ~/.zshrc-quipper && ..."]` with whatever launches a shell where `quipper` and its libraries are available (e.g., `["/bin/bash","-lc", "source /opt/quipper/env.sh && ..."]`).
-- Adjust the include/output flags if you store `QuipperCommon.hs` or the build artifacts in a different directory (`-i`, `-odir`, `-hidir` arguments in `compile_case`).
+- Replace `["arch","-x86_64","zsh","--login","-c", "source ~/.zshrc-quipper && ..."]`
+  with whatever launches a shell where `quipper` and its libraries are available
+  (e.g., `["/bin/bash","-lc", "source /opt/quipper/env.sh && ..."]`).
+- Adjust the include/output flags if you store `QuipperCommon.hs` or the build
+  artifacts in a different directory (`-i`, `-odir`, `-hidir` arguments in
+  `compile_case`).
 
-Once you can run `python programs/quipper/run_cli.py tfim_trotter <<< '{}'` successfully, the harness/benchmarks will work on your system as well.
+Once you can run `python programs/quipper/run_cli.py tfim_trotter <<< '{}'`
+successfully, the harness/benchmarks will work on your system as well.
 
 ## Running the Cross-Language Test Harness
 
-The harness executes every available language/case pair, normalizes the resulting statevector, and reports fidelity against a NumPy reference evolution.
+The test harness executes every available language/case pair and calculates the
+fidelity compared to a reference implementation.
 
 ```bash
 source .venv/bin/activate
 python harness/run_tests.py
 ```
 
-Useful options:
-
-- `--languages LANG1,LANG2` limits execution to specific languages (matching the keys in `languages.py`).
-- `--cases tfim_trotter,heis_lcu` restricts which benchmark cases run.
+Options:
+```
+-h, --help            show this help message and exit
+--languages LANG [LANG ...]
+                      Subset of languages to run (default: all).
+--cases CASE [CASE ...]
+                      Subset of cases to run (default: all).
+--list                List available languages and cases, then exit.
+--runs N              Number of runs for benchmarking (default: 1).
+--json FILE           Output results to a json file. If FILE already exists,
+                        the new results will be merged into the existing file.
+```
 
 Example (only Q# and Pennylane, TFIM trotter):
 
 ```bash
-python harness/run_tests.py --languages qsharp,pennylane --cases tfim_trotter
+python harness/run_tests.py --languages=qsharp,pennylane --cases=tfim_trotter
 ```
 
-The harness automatically sets `DOTNET_CLI_HOME`, `PYTKET_CONFIG_DIR`, etc., so no extra environment preparation is needed beyond installing the packages above.
+### Benchmarking Execution Time
 
-## Running Benchmarks
+The test harness can also be used to benchmark the programs, recording the mean
+and standard deviation of execution time across a number of runs. All testing
+results can be outputted to a JSON file.
 
-The benchmarking script reuses the harness adapters, but additionally collects compilation/runtime METRICS per language and persists them to JSON or CSV (matching `benchmarks/benchmark_results_schema.json`).
+For example, the following executes the LCU programs for Qiskit and Silq,
+performing 20 runs and writing the results to `results.json`:
 
 ```bash
 source .venv/bin/activate
-python benchmarks/run_benchmarks.py \
-    --languages qsharp,qiskit \
-    --cases tfim_trotter,heis_trotter \
-    --format json \
-    --output benchmarks/latest_results.json
+python harness/run_tests.py \
+  --languages=qiskit,silq \
+  --cases=tfim_lcu,heis_lcu \
+  --runs=20 \
+  --json=results.json
 ```
-
-What you get:
-
-- Human-readable progress plus a summary of successes/failures.
-- Structured output (JSON/CSV) with gate counts, depth, qubit counts, backend/compilation timings, and fidelity status for each `(language, case)` combination.
-- For Q#, the script now calls the modern QDK resource estimator (`qsharp.logical_counts`) so you get logical gate metrics in addition to simulator timings.

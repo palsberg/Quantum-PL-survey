@@ -21,9 +21,9 @@ if docker ps -a --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
   fi
 else
   # Container does not exist
-  docker run -it --name "$CONTAINER_NAME" \
-    --mount type=bind,source="$SCRIPT_DIR",target=/home/"$CONTAINER_NAME"/Hamiltonian-Simulation \
-    -w /home/"$CONTAINER_NAME"/Hamiltonian-Simulation \
+  docker run -it --rm --name "$CONTAINER_NAME" \
+    --mount type=bind,source="$SCRIPT_DIR",target=/home/"$CONTAINER_NAME"/"$(basename "$SCRIPT_DIR")" \
+    -w /home/"$CONTAINER_NAME"/"$(basename "$SCRIPT_DIR")" \
     -h cudaq \
     "$IMAGE_NAME"
 fi

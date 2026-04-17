@@ -71,7 +71,7 @@ def tfim_pauli_terms(n:!N, J:!R, h:!R) lifted :(Pauli^n x !R)[] {
 
 
 n := __NUM_SITES__:!N;
-n_ancilla := 3:!N;
+n_ancilla := __NUM_ANCILLA__:!N;
 def main() {
     J := __J__:!R;
     h := __H__:!R;

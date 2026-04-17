@@ -79,7 +79,7 @@ def heis_pauli_terms(n:!N, J:!R, B:!R) lifted :(Pauli^n x !R)[] {
 
 
 n := __NUM_SITES__:!N;
-n_ancilla := 4:!N;
+n_ancilla := __NUM_ANCILLA__:!N;
 def main() {
     J := __J__:!R;
     field := __FIELD__:!R;

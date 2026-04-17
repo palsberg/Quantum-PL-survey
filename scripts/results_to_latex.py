@@ -19,13 +19,13 @@ COLUMNS = [
 ]
 
 LANG_GROUP_1 = [
-    "cirq", "cuda-q", "guppy", "pennylane", "pyquil",
+    "cirq", "cudaq", "guppy", "pennylane", "pyquil",
     "qsharp", "qiskit", "qualtran",
 ]
 LANG_GROUP_2 = ["qrisp", "quipper", "silq"]
 
 DISPLAY_NAMES = {
-    "cirq": "Cirq", "cuda-q": "CUDA-Q", "guppy": "Guppy",
+    "cirq": "Cirq", "cudaq": "CUDA-Q", "guppy": "Guppy",
     "pennylane": "PennyLane", "pyquil": "PyQuil", "qsharp": r"Q\#",
     "qiskit": "Qiskit", "qualtran": "Qualtran", "qrisp": "Qrisp",
     "quipper": "Quipper", "silq": "Silq",

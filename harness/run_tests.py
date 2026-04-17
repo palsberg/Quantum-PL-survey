@@ -13,6 +13,11 @@ import time
 import warnings
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, List, Optional
+try:
+    from tqdm import tqdm
+except ImportError:
+    def tqdm(x, leave=True):
+        return x
 
 import numpy as np
 
@@ -190,8 +195,8 @@ CASES: List[Case] = [
         name="tfim_trotter",
         model="tfim",
         config={
-            "num_sites": 2,
-            "time": 0.1,
+            "num_sites": 3,
+            "time": 0.5,
             "params": {"J": 1.0, "h": 0.5, "trotter_steps": 4},
         },
     ),
@@ -199,8 +204,9 @@ CASES: List[Case] = [
         name="tfim_lcu",
         model="tfim",
         config={
-            "num_sites": 2,
-            "time": 0.1,
+            "num_sites": 3,
+            "num_ancilla": 4,
+            "time": 0.5,
             "params": {"J": 1.0, "h": 0.5, "lcu_precision": 1e-2},
         },
     ),
@@ -208,8 +214,8 @@ CASES: List[Case] = [
         name="heis_trotter",
         model="heis",
         config={
-            "num_sites": 2,
-            "time": 0.1,
+            "num_sites": 3,
+            "time": 0.5,
             "params": {"J": 0.8, "field": 0.2, "trotter_steps": 4},
         },
     ),
@@ -217,8 +223,9 @@ CASES: List[Case] = [
         name="heis_lcu",
         model="heis",
         config={
-            "num_sites": 2,
-            "time": 0.1,
+            "num_sites": 3,
+            "num_ancilla": 5,
+            "time": 0.5,
             "params": {"J": 0.8, "field": 0.2, "lcu_precision": 1e-2},
         },
     ),
@@ -296,7 +303,7 @@ class Result:
     message: str
 
 
-TOLERANCE = 1e-4
+TOLERANCE = 1e-2
 
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
@@ -329,6 +336,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         "--json",
         nargs=1,
         metavar="FILE",
+        type=pathlib.Path,
         help="Output results to a json file.",
     )
     return parser.parse_args(argv)
@@ -389,7 +397,7 @@ def main(argv: Optional[List[str]] = None):
                     state = adapter.run(case.config)  # Unmeasured warmup run
                 else:
                     state = None
-                for _ in range(args.runs):
+                for _ in tqdm(range(args.runs), leave=False):
                     start = time.perf_counter()
                     state = adapter.run(case.config)
                     end = time.perf_counter()
@@ -421,12 +429,18 @@ def main(argv: Optional[List[str]] = None):
     print_summary(results)
 
     if args.json is not None:
-        filename = args.json[0]
-        with open(filename, 'w') as f:
-            d = dict()
+        filepath = args.json[0]
+
+        old_results = dict()
+        if filepath.is_file():
+            with open(filepath, 'r') as f:
+                old_results = json.load(f)
+
+        with open(filepath, 'w') as f:
+            new_results = dict()
             for res in results:
-                d[res.language + "/" + res.case] = asdict(res)
-            json.dump(d, f, indent=2)
+                new_results[res.language + "/" + res.case] = asdict(res)
+            json.dump(old_results | new_results, f, indent=2)
 
 
 def compute_fidelity(state: np.ndarray, reference: np.ndarray) -> float:

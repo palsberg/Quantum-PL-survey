@@ -276,7 +276,6 @@ for lang, base in PYTHON_BASES.items():
 
 CLI_LANGUAGES = {
     "silq": [sys.executable, str(ROOT / "programs" / "silq" / "run_cli.py")],
-    "quipper": [sys.executable, str(ROOT / "programs" / "quipper" / "run_cli.py")],
 }
 
 for lang, cmd in CLI_LANGUAGES.items():

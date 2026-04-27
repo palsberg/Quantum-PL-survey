@@ -22,13 +22,13 @@ LANG_GROUP_1 = [
     "cirq", "cudaq", "guppy", "pennylane", "pyquil",
     "qsharp", "qiskit", "qualtran",
 ]
-LANG_GROUP_2 = ["qrisp", "quipper", "silq"]
+LANG_GROUP_2 = ["qrisp", "silq"]
 
 DISPLAY_NAMES = {
     "cirq": "Cirq", "cudaq": "CUDA-Q", "guppy": "Guppy",
     "pennylane": "PennyLane", "pyquil": "PyQuil", "qsharp": r"Q\#",
     "qiskit": "Qiskit", "qualtran": "Qualtran", "qrisp": "Qrisp",
-    "quipper": "Quipper", "silq": "Silq",
+    "silq": "Silq",
 }
 
 
@@ -51,13 +51,13 @@ def build_table(results):
     return table
 
 def fmt(val):
-    return f"{val:.4f}" if val is not None else "??"
+    return f"{val*1000:.2f}" if val is not None else "??"
 
 def lang_row(lang, table):
     col_keys = [k for k, _ in COLUMNS]
     display = DISPLAY_NAMES.get(lang, lang)
     cells = [fmt(table.get(lang, {}).get(k)) for k in col_keys]
-    return f"    {display:<16s} & " + " & ".join(f"{c:>5s}" for c in cells) + r" \\"
+    return f"    {display:<16s} & " + " & ".join(f"{c:>8s}" for c in cells) + r" \\"
 
 def generate_latex(table):
     all_langs = LANG_GROUP_1 + LANG_GROUP_2
@@ -69,7 +69,7 @@ def generate_latex(table):
     lines = [
         r"\begin{table*}[t]",
         r"  \centering",
-        r"  \caption{Execution times in seconds.}",
+        r"  \caption{Execution times in milliseconds.}",
         r"  \begin{tabular}{c|r|rr|rr}",
         r"    \toprule",
         r"             & \multicolumn{1}{c|}{Factoring}",

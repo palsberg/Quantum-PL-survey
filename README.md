@@ -1,22 +1,24 @@
-# Hamiltonian Simulation Survey
+# A Survey of Quantum Programming Languages
 
-This repository accompanies our ACM CSUR-style survey of Hamiltonian simulation
-across a dozen quantum programming ecosystems. For each language we implement
-the Transverse-Field Ising Model (TFIM) and the Heisenberg XXX Hamiltonian with
-both Lie–Trotterization and Linear Combination of Unitaries (LCU), evaluate
-qualitative ergonomics, and collect quantitative metrics (gate counts, depth,
-runtime).
+This repository accompanies our ACM CSUR-style survey of ten different quantum
+programming languages. For each language we implement four versions of
+Hamiltonian simulation (Transverse-Field Ising Model and Heisenberg XXX
+Hamiltonian, using Trotterization and Linear Combination of Unitaries) and one
+version of Shor's algorithm, for a total of five programs in each language.
+We provide a testing harness that measures the fidelity and execution times
+of our programs, as well as scripts to generate the tables in our paper.
 
 ## Repository Layout
 
 - `programs/` – Reference implementations grouped by language (Cirq, CUDA-Q,
-                Guppy, Pennylane, PyQuil, Q#, Qiskit, Qualtran, Qrisp, Quipper,
-                and Silq).
+                Guppy, Pennylane, PyQuil, Q#, Qiskit, Qualtran, Qrisp,
+                and Silq). We also provide implementations in Quipper, which we
+                decided to not include in the paper.
 - `programs/common/` – Shared utilities for Pauli models and Taylor-series
                        helpers used by several LCU backends.
 - `harness/` – Cross-language correctness runner that compares each program
-               against NumPy reference evolutions.
-- `benchmarks/` – Automated benchmarking scripts plus the latest JSON/CSV output.
+               against NumPy reference evolutions and measures execution times.
+- `scripts/` – Scripts to generate the LaTeX tables.
 
 ## Getting Started
 
@@ -83,6 +85,9 @@ us to run on any platform (with or without an Nvidia GPU).
    rerun `./cudaq.sh`.
 
 ### Quipper on Apple Silicon (and how to adapt the CLI elsewhere)
+
+We chose not to discuss Quipper in our paper, but we do have implementations of
+the benchmarks in this repository. This section outlines how do install Quipper.
 
 To install Quipper on Apple Silicon, see `programs/quipper/Quipper_setup.md`.
 

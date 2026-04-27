@@ -479,7 +479,7 @@ def main() -> None:
         silq_res[f"{ham}_{method}"] = loc
     results["silq"] = silq_res
 
-    # Sanity: ensure we have all 11 languages used in the table.
+    # Sanity: ensure we have all 10 languages used in the table.
     ordered_langs = [
         "cirq",
         "cudaq",
@@ -490,7 +490,6 @@ def main() -> None:
         "qiskit",
         "qualtran",
         "qrisp",
-        "quipper",
         "silq",
     ]
 
@@ -500,7 +499,7 @@ def main() -> None:
         f.write("\\begin{table*}[t]\n")
         f.write("  \\centering\n")
         f.write(
-            "  \\caption{The eleven languages and the lines of source code for our benchmark programs.}\n"
+            "  \\caption{The ten languages and the lines of source code for our benchmark programs.}\n"
         )
         f.write("  \\label{tab:program-size}\n")
         f.write("  \\begin{tabular}{l|r|rr|rr}\n")
@@ -522,7 +521,6 @@ def main() -> None:
             "qrisp": "Qrisp",
             "qsharp": "Q\\#",
             "qualtran": "Qualtran",
-            "quipper": "Quipper",
             "silq": "Silq",
         }
 

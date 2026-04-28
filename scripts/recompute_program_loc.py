@@ -317,7 +317,6 @@ def main() -> None:
             "shors_helpers": [
                 ROOT / "programs" / "cirq" / "shor" / "modularexponentiation.py",
                 ROOT / "programs" / "cirq" / "shor" / "quantumorderfinding.py",
-                ROOT / "programs" / "cirq" / "shor" / "shors_common.py",
             ],
         },
         "cudaq": {
@@ -339,9 +338,7 @@ def main() -> None:
                 ROOT / "programs" / "pennylane" / "lcu_common.py",
                 ROOT / "programs" / "common" / "pauli_models.py",
             ],
-            "shors_helpers": [
-                ROOT / "programs" / "pennylane" / "shors.py",
-            ],
+            "shors_helpers": [],
         },
         "pyquil": {
             "trotter_helpers": [ROOT / "programs" / "pyquil" / "common.py"],

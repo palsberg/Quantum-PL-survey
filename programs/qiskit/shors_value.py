@@ -239,7 +239,7 @@ def run_simulation(config: Dict[str, Any]) -> int:
     t = int(t) if t is not None else None
 
     max_tries = int(config.get("max_tries", 10))
-    seed = int(config.get("seed", np.random.SeedSequence().entropy))
+    seed = int(config.get("seed", np.random.randint(0, 10000000)))
     allow_random_a = bool(config.get("allow_random_a", True))
 
     shots = int(config.get("shots", 256))       # measurement shots per attempt

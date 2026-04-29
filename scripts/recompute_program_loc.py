@@ -317,7 +317,6 @@ def main() -> None:
             "shors_helpers": [
                 ROOT / "programs" / "cirq" / "shor" / "modularexponentiation.py",
                 ROOT / "programs" / "cirq" / "shor" / "quantumorderfinding.py",
-                ROOT / "programs" / "cirq" / "shor" / "shors_common.py",
             ],
         },
         "cudaq": {
@@ -339,9 +338,7 @@ def main() -> None:
                 ROOT / "programs" / "pennylane" / "lcu_common.py",
                 ROOT / "programs" / "common" / "pauli_models.py",
             ],
-            "shors_helpers": [
-                ROOT / "programs" / "pennylane" / "shors.py",
-            ],
+            "shors_helpers": [],
         },
         "pyquil": {
             "trotter_helpers": [ROOT / "programs" / "pyquil" / "common.py"],
@@ -479,7 +476,7 @@ def main() -> None:
         silq_res[f"{ham}_{method}"] = loc
     results["silq"] = silq_res
 
-    # Sanity: ensure we have all 11 languages used in the table.
+    # Sanity: ensure we have all 10 languages used in the table.
     ordered_langs = [
         "cirq",
         "cudaq",
@@ -490,7 +487,6 @@ def main() -> None:
         "qiskit",
         "qualtran",
         "qrisp",
-        "quipper",
         "silq",
     ]
 
@@ -500,7 +496,7 @@ def main() -> None:
         f.write("\\begin{table*}[t]\n")
         f.write("  \\centering\n")
         f.write(
-            "  \\caption{The eleven languages and the lines of source code for our benchmark programs.}\n"
+            "  \\caption{The ten languages and the lines of source code for our benchmark programs.}\n"
         )
         f.write("  \\label{tab:program-size}\n")
         f.write("  \\begin{tabular}{l|r|rr|rr}\n")
@@ -522,7 +518,6 @@ def main() -> None:
             "qrisp": "Qrisp",
             "qsharp": "Q\\#",
             "qualtran": "Qualtran",
-            "quipper": "Quipper",
             "silq": "Silq",
         }
 

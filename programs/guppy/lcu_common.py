@@ -125,10 +125,18 @@ def build_lcu(coeffs: list[float], paulis: list[str], phases: list[str], no_loop
 
             if comptime(1 if no_loop else 0) == 1:
                 ### ADD NEW CASES HERE FOR EACH TEST ###
-                if len(ctrl) == 4 and len(opr) == 2: # heis_lcu
+                if len(ctrl) == 4 and len(opr) == 2:
                     state_result('final', ctrl[0], ctrl[1], ctrl[2], ctrl[3], opr[0], opr[1])
-                elif len(ctrl) == 3 and len(opr) == 2: # tfim_lcu
+                if len(ctrl) == 5 and len(opr) == 3:
+                    state_result('final', ctrl[0], ctrl[1], ctrl[2], ctrl[3], ctrl[4], opr[0], opr[1], opr[2])
+                if len(ctrl) == 6 and len(opr) == 4:
+                    state_result('final', ctrl[0], ctrl[1], ctrl[2], ctrl[3], ctrl[4], ctrl[5], opr[0], opr[1], opr[2], opr[3])
+                elif len(ctrl) == 3 and len(opr) == 2:
                     state_result('final', ctrl[0], ctrl[1], ctrl[2], opr[0], opr[1])
+                elif len(ctrl) == 4 and len(opr) == 3:
+                    state_result('final', ctrl[0], ctrl[1], ctrl[2], ctrl[3], opr[0], opr[1], opr[2])
+                elif len(ctrl) == 5 and len(opr) == 4:
+                    state_result('final', ctrl[0], ctrl[1], ctrl[2], ctrl[3], ctrl[4], opr[0], opr[1], opr[2], opr[3])
                 else:
                     # This line should never be reached. Add cases above to
                     # handle any tests that you have.

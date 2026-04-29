@@ -1,3 +1,4 @@
+import qrisp
 from qrisp import *
 from typing import Any, Dict, Sequence
 import math
@@ -52,6 +53,44 @@ def shor(N, a):
     g = np.gcd(a ** (r // 2) + 1, N)
     return g
 
+def bit_reversal_permutation(arr, bit_range=None):
+    """
+    Perform a bit-reversal permutation on a 1D numpy array.
+
+    Parameters:
+        arr: 1D numpy array (length must be a power of 2)
+        bit_range: tuple (low, high) specifying which bits to reverse (inclusive).
+                   Defaults to all bits.
+
+    Example:
+        arr of length 16 (4 bits: b3 b2 b1 b0)
+        bit_range=(0, 1) reverses bits 0-1:  b3 b2 b1 b0 -> b3 b2 b0 b1
+        bit_range=(1, 3) reverses bits 1-3:  b3 b2 b1 b0 -> b0 b1 b2 b3 (shifts into position)
+    """
+    n = len(arr)
+    assert n & (n - 1) == 0, "Array length must be a power of 2"
+    num_bits = n.bit_length() - 1
+
+    if bit_range is None:
+        bit_range = (0, num_bits - 1)
+
+    low, high = bit_range
+    assert 0 <= low <= high < num_bits, f"bit_range must be within [0, {num_bits - 1}]"
+
+    indices = np.arange(n, dtype=np.int32)
+
+    # Extract all bits as a (n, num_bits) array, bit 0 = LSB
+    bits = (indices[:, None] >> np.arange(num_bits)) & 1
+
+    # Reverse only the bits in [low, high]
+    bits_to_reverse = bits[:, low:high+1].copy()
+    bits[:, low:high+1] = bits_to_reverse[:, ::-1]
+
+    # Reconstruct indices from modified bits
+    reversed_indices = (bits * (1 << np.arange(num_bits))).sum(axis=1)
+
+    return arr[reversed_indices]
+
 def run_simulation(config: Dict[str, Any]):
     """
     Run Shor's algorithm given N and a
@@ -64,15 +103,14 @@ def run_simulation(config: Dict[str, Any]):
 
     qpe_res,qg = find_order(a, N, t) # This returns the QuantumFloat
     qs = qpe_res.qs            # Get the session
-    qc = qs.compile().to_qiskit()
-    full_state = Statevector(qc).data
+    qc = qs.compile()
+    full_state = qc.statevector_array()
     dim_target = 1 << m   # Qubits 0-4  (LSBs -> Last Axis)
     dim_count  = 1 << t   # Qubits 5-10 (Middle -> Middle Axis)
-    dim_work   = 1 << 10  # Qubits 11-20 (MSBs -> First Axis)
-    psi_tensor = full_state.reshape((-1, dim_count, dim_target))
-    psi_clean_tensor = psi_tensor[0, :, :]
+    psi_tensor = full_state.reshape((dim_count, dim_target, -1))
+    psi_clean_tensor = psi_tensor[:, :, 0]
     psi_final = psi_clean_tensor.reshape(-1)
-    return psi_final
+    return bit_reversal_permutation(psi_final)
 
 if __name__ == "__main__":
     # 1. Setup and Run

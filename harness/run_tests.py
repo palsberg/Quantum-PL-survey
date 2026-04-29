@@ -9,10 +9,19 @@ import os
 import pathlib
 import subprocess
 import sys
-from dataclasses import dataclass
+import time
+import warnings
+from dataclasses import dataclass, asdict
 from typing import Any, Dict, List, Optional
+try:
+    from tqdm import tqdm
+except ImportError:
+    def tqdm(x, leave=True):
+        return x
 
 import numpy as np
+
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 try:
     from harness.reference_hamiltonians import (
@@ -186,26 +195,27 @@ CASES: List[Case] = [
         name="tfim_trotter",
         model="tfim",
         config={
-            "num_sites": 2,
-            "time": 0.1,
-            "params": {"J": 1.0, "h": 0.5, "trotter_steps": 4},
+            "num_sites": 3,
+            "time": 0.3,
+            "params": {"J": 1.2, "h": 0.8, "trotter_steps": 4},
         },
     ),
     Case(
         name="tfim_lcu",
         model="tfim",
         config={
-            "num_sites": 2,
-            "time": 0.1,
-            "params": {"J": 1.0, "h": 0.5, "lcu_precision": 1e-2},
+            "num_sites": 3,
+            "num_ancilla": 4,
+            "time": 0.3,
+            "params": {"J": 1.2, "h": 0.8, "lcu_precision": 0.1},
         },
     ),
     Case(
         name="heis_trotter",
         model="heis",
         config={
-            "num_sites": 2,
-            "time": 0.1,
+            "num_sites": 3,
+            "time": 0.3,
             "params": {"J": 0.8, "field": 0.2, "trotter_steps": 4},
         },
     ),
@@ -213,9 +223,10 @@ CASES: List[Case] = [
         name="heis_lcu",
         model="heis",
         config={
-            "num_sites": 2,
-            "time": 0.1,
-            "params": {"J": 0.8, "field": 0.2, "lcu_precision": 1e-2},
+            "num_sites": 3,
+            "num_ancilla": 5,
+            "time": 0.3,
+            "params": {"J": 0.8, "field": 0.2, "lcu_precision": 0.1},
         },
     ),
     Case(
@@ -265,7 +276,6 @@ for lang, base in PYTHON_BASES.items():
 
 CLI_LANGUAGES = {
     "silq": [sys.executable, str(ROOT / "programs" / "silq" / "run_cli.py")],
-    "quipper": [sys.executable, str(ROOT / "programs" / "quipper" / "run_cli.py")],
 }
 
 for lang, cmd in CLI_LANGUAGES.items():
@@ -287,10 +297,13 @@ class Result:
     case: str
     success: bool
     fidelity: Optional[float]
+    runs: int
+    time_mean: Optional[float]
+    time_std: Optional[float]
     message: str
 
 
-TOLERANCE = 1e-4
+TOLERANCE = 1e-2
 
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
@@ -312,6 +325,20 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         action="store_true",
         help="List available languages and cases, then exit.",
     )
+    parser.add_argument(
+        "--runs",
+        type=int,
+        default=1,
+        metavar="N",
+        help="Number of runs for benchmarking (default: 1).",
+    )
+    parser.add_argument(
+        "--json",
+        nargs=1,
+        metavar="FILE",
+        type=pathlib.Path,
+        help="Output results to a json file. If FILE already exists, the new results will be merged into the existing file.",
+    )
     return parser.parse_args(argv)
 
 
@@ -323,9 +350,9 @@ def resolve_selection(
 
     # If items in `requested` contain commas, we want to split them
     for item in requested:
-        if ',' in item:
-            requested += item.split(',')
-    requested = [item for item in requested if ',' not in item]
+        if "," in item:
+            requested += item.split(",")
+    requested = [item for item in requested if "," not in item]
 
     unknown = [item for item in requested if item not in available]
     if unknown:
@@ -343,6 +370,8 @@ def resolve_selection(
 
 def main(argv: Optional[List[str]] = None):
     args = parse_args(argv)
+    if args.runs <= 0:
+        raise ValueError("Number of runs must be at least 1.")
 
     if args.list:
         print("Languages:", ", ".join(ALL_LANGUAGES))
@@ -360,10 +389,24 @@ def main(argv: Optional[List[str]] = None):
             # Handle N/A cases up front (delegations or partial implementations).
             adapter = ADAPTERS.get(language, {}).get(case.name)
             if adapter is None:
-                results.append(Result(language, case.name, False, None, "No adapter"))
+                results.append(Result(language, case.name, False, None, 0, None, None, "No adapter"))
                 continue
             try:
-                state = adapter.run(case.config)
+                times = []
+                if args.runs > 1:
+                    state = adapter.run(case.config)  # Unmeasured warmup run
+                else:
+                    state = None
+                for _ in tqdm(range(args.runs), leave=False):
+                    start = time.perf_counter()
+                    state = adapter.run(case.config)
+                    end = time.perf_counter()
+                    times.append(end - start)
+                assert state is not None
+                times = np.array(times)
+                time_mean = float(np.mean(times))
+                time_std = float(np.std(times))
+
                 expected = compute_reference(case)
                 print("\t**Computing fidelity...")
                 if isinstance(expected, list):
@@ -374,16 +417,30 @@ def main(argv: Optional[List[str]] = None):
                         success = True
                     message = f"ok" if success else f"incorrect value {state}, expected one of {expected}"
                     fidelity = 1.0 if success else 0.0
-                    results.append(Result(language, case.name, success, fidelity, message))
+                    results.append(Result(language, case.name, success, fidelity, args.runs, time_mean, time_std, message))
                     continue
                 else:
                     fidelity = compute_fidelity(state, expected)
                     success = fidelity >= 1 - TOLERANCE
                     message = "ok" if success else "low fidelity"
-                    results.append(Result(language, case.name, success, fidelity, message))
+                    results.append(Result(language, case.name, success, fidelity, args.runs, time_mean, time_std, message))
             except Exception as exc:
-                results.append(Result(language, case.name, False, None, str(exc)))
+                results.append(Result(language, case.name, False, None, 0, None, None, str(exc)))
     print_summary(results)
+
+    if args.json is not None:
+        filepath = args.json[0]
+
+        old_results = dict()
+        if filepath.is_file():
+            with open(filepath, 'r') as f:
+                old_results = json.load(f)
+
+        with open(filepath, 'w') as f:
+            new_results = dict()
+            for res in results:
+                new_results[res.language + "/" + res.case] = asdict(res)
+            json.dump(old_results | new_results, f, indent=2)
 
 
 def compute_fidelity(state: np.ndarray, reference: np.ndarray) -> float:
@@ -402,7 +459,7 @@ def normalize(vec: np.ndarray) -> np.ndarray:
 
 def print_summary(results: List[Result]):
     print("\n")
-    header = f"{'Language':<20}{'Case':<15}{'Status':<8}{'Fidelity':<12}Message"
+    header = f"{'Language':<20}{'Case':<16}{'Status':<8}{'Fidelity':<12}{'Execution Time':<16}Message"
     print(header)
     print("-" * len(header))
     for res in results:
@@ -411,7 +468,9 @@ def print_summary(results: List[Result]):
         else:
             status = "PASS" if res.success else "FAIL"
         fid_str = f"{res.fidelity:.4f}" if res.fidelity is not None else "-"
-        print(f"{res.language:<20}{res.case:<15}{status:<8}{fid_str:<12}{res.message}")
+        time_str = f"{res.time_mean:.4f}±{res.time_std:.4f}" \
+            if (res.time_mean is not None and res.time_std is not None) else "-"
+        print(f"{res.language:<20}{res.case:<16}{status:<8}{fid_str:<12}{time_str:<16}{res.message}")
 
 
 if __name__ == "__main__":

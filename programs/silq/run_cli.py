@@ -200,6 +200,7 @@ def _instantiate_template(case: str, config: Dict[str, Any]) -> Path:
     template = template_path.read_text()
 
     num_sites = int(config.get("num_sites", 2))
+    num_ancilla = int(config.get("num_ancilla", 3))
     total_time = float(config.get("time", 0.1))
     params = config.get("params", {})
     steps = int(params.get("trotter_steps", 1))
@@ -229,6 +230,7 @@ def _instantiate_template(case: str, config: Dict[str, Any]) -> Path:
         h = float(params.get("h", 0.0))
         replacements = {
             "__NUM_SITES__": str(num_sites),
+            "__NUM_ANCILLA__": str(num_ancilla),
             "__J__": repr(J),
             "__H__": repr(h),
             "__TOTAL_TIME__": repr(total_time),
@@ -239,6 +241,7 @@ def _instantiate_template(case: str, config: Dict[str, Any]) -> Path:
         field = float(params.get("field", 0.0))
         replacements = {
             "__NUM_SITES__": str(num_sites),
+            "__NUM_ANCILLA__": str(num_ancilla),
             "__J__": repr(J),
             "__FIELD__": repr(field),
             "__TOTAL_TIME__": repr(total_time),

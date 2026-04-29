@@ -1,0 +1,25 @@
+\begin{table*}[t]
+  \centering
+  \caption{Execution times in milliseconds.}
+  \begin{tabular}{c|r|rr|rr}
+    \toprule
+             & \multicolumn{1}{c|}{Factoring}
+             & \multicolumn{2}{c|}{TFIM} & \multicolumn{2}{c}{Heisenberg} \\
+    Language & Shor's alg. & Trotter & LCU & Trotter & LCU \\
+    \midrule
+    Cirq             &    10.92 &     4.73 &     3.44 &     9.14 &     7.28 \\
+    CUDA-Q           &    10.90 &    12.70 &    45.80 &    30.71 &   109.22 \\
+    Guppy            & 12416.42 &   510.61 &  2164.28 &   609.92 & 12391.13 \\
+    PennyLane        &     1.98 &     0.97 &     7.46 &     1.53 &    16.28 \\
+    PyQuil           &    16.18 &     1.59 &    20.74 &     3.57 &   157.83 \\
+    Q\#              &     8.78 &     0.05 &     1.57 &     0.07 &     5.18 \\
+    Qiskit           &  1992.70 &     0.37 &    29.10 &     0.49 &   171.21 \\
+    Qualtran         &  3003.63 &     8.92 &   899.62 &    18.34 & 10028.29 \\
+    \hline
+    Qrisp            &  2716.12 &     4.52 &    39.70 &     9.88 &    88.18 \\
+    Silq             &   238.24 &    63.81 &    93.09 &    68.11 &   142.35 \\
+    \bottomrule
+  \end{tabular}
+  \label{tab:experimental-results}
+\end{table*}
+%

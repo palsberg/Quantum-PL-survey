@@ -24,7 +24,7 @@ def amps_from_weights(weights: Sequence[float]) -> np.ndarray:
 
 def apply_index_mask(index_wires: Sequence[int], index_value: int) -> None:
     bits = [(index_value >> k) & 1 for k in range(len(index_wires))]
-    for pos, bit in enumerate(bits):
+    for pos, bit in enumerate(bits[::-1]):
         if bit == 0:
             qml.PauliX(index_wires[pos])
 

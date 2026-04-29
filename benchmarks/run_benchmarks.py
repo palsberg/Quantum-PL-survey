@@ -13,6 +13,7 @@ import argparse
 import copy
 import csv
 import json
+import importlib
 import subprocess
 import sys
 from dataclasses import asdict, dataclass
@@ -20,7 +21,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
 import math
+from fractions import Fraction
+from math import gcd
+import numpy as np
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
+from statistics import mean
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -37,12 +42,15 @@ from harness.run_tests import (  # type: ignore  # noqa: E402
 
 from programs.common import pauli_models  # type: ignore  # noqa: E402
 
+# increase these to ensure more robust measurement
+SHOR_STATEVECTOR_RUNS = 5
+SHOR_VALUE_RUNS = 100
+DEFAULT_RUNS = 1
 
 LANGUAGE_ALIASES = {
     # Languages that reuse another stack for metrics should not appear here;
     # instead they are handled via METRIC_NA_REASONS below.
 }
-
 
 @dataclass
 class BenchmarkResult:
@@ -61,6 +69,9 @@ class BenchmarkResult:
     circuit_depth: Optional[int]
     qubit_count: Optional[int]
     native_gate_set: Optional[Iterable[str]]
+    success_rate: Optional[float]
+    avg_time_all_runs: Optional[float]
+    avg_time_successful_runs: Optional[float]
     timestamp_utc: str
     tool_versions: Dict[str, str]
     status: str
@@ -93,7 +104,7 @@ def parse_args() -> argparse.Namespace:
         "--cases",
         type=str,
         default=",".join(case.name for case in CASES),
-        help="Comma-separated subset of cases (tfim_trotter, tfim_lcu, heis_trotter, heis_lcu).",
+        help="Comma-separated subset of cases (tfim_trotter, tfim_lcu, heis_trotter, heis_lcu, shors21_2, shors21_2_value).",
     )
     return parser.parse_args()
 
@@ -124,8 +135,8 @@ def main() -> None:
                 )
             continue
         for case_name, case in case_lookup.items():
-            adapter = adapters.get(case_name)
-            result = run_single_benchmark(language, case, adapter, timestamp)
+            benchmark_case, adapter = benchmark_case_and_adapter(language, case, adapters)
+            result = run_single_benchmark(language, case, adapter, timestamp, benchmark_case)
             results.append(result)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -145,19 +156,209 @@ def main() -> None:
     print(f"Wrote {len(results)} benchmark rows to {args.output}")
 
 
+
+
+
+def execution_repetitions(case_name: str) -> int:
+    if case_name == "shors21_2":
+        return SHOR_STATEVECTOR_RUNS
+    if case_name == "shors21_2_value":
+        return SHOR_VALUE_RUNS
+    return DEFAULT_RUNS
+
+def timed_execution_average(
+    language: str,
+    case: Case,
+    adapter,
+    base_config: Dict[str, Any],
+) -> Tuple[float, int]:
+    runs = execution_repetitions(case.name)
+    samples: List[float] = []
+    fail = 0
+
+    for i in range(runs):
+        cfg = copy.deepcopy(base_config)
+
+
+        start = perf_counter()
+        try:
+            adapter.run(cfg)
+        except Exception:
+            fail += 1
+        finally:
+            samples.append(perf_counter() - start)
+
+    return mean(samples), fail
+
+def measure_vector(statevector: np.ndarray) -> int:
+    """Sample a basis state from a statevector and return its integer index."""
+    probs = np.abs(statevector) ** 2
+    probs = probs / probs.sum()
+    return int(np.random.choice(len(probs), p=probs))
+
+
+def _factor_from_basis(basis: int, t: int, a: int, N: int) -> Optional[int]:
+    x = basis / (2 ** t)
+    frac = Fraction(x).limit_denominator(N)
+
+    candidates: List[int] = []
+    for q in range(1, frac.denominator + 1):
+        if abs(x - round(x * q) / q) < 2 ** (-(t + 1)):
+            candidates.append(q)
+
+    for r in candidates:
+        if pow(a, r, N) != 1:
+            continue
+        if r % 2 == 1:
+            continue
+
+        x_val = pow(a, r // 2, N)
+        for g in (gcd(x_val - 1, N), gcd(x_val + 1, N)):
+            if 1 < g < N and N % g == 0:
+                return g
+
+    return None
+
+
+def timed_execution_stats(
+    language: str,
+    case: Case,
+    adapter,
+    base_config: Dict[str, Any],
+) -> Dict[str, Any]:
+    """
+    Run repeated single-shot Shor trials using statevector simulation.
+
+    Register structure:
+        - counting register: t qubits (QPE output)
+        - work register:     m = ceil(log2(N)) qubits
+        - full statevector dimension: 2^(t + m)
+
+    Procedure per trial:
+        1. Generate full statevector via shors.py (statevector simulation)
+        2. Marginalize over work register → obtain distribution over counting register
+        3. Sample one counting-register basis outcome
+        4. Perform classical post-processing (continued fractions + gcd)
+    """
+
+    runs = execution_repetitions(case.name)
+
+    all_times: List[float] = []
+    success_times: List[float] = []
+    successful_runs = 0
+    failure_messages: List[str] = []
+
+    N = int(base_config["N"])
+    t = int(base_config["t"])
+    a = int(base_config["a"])
+
+    # Work register size: m = ceil(log2(N))
+    m = int(math.ceil(math.log2(N)))
+
+    # Dimensions:
+    dim_c = 1 << t   # counting register size
+    dim_w = 1 << m   # work register size
+
+    for _ in range(runs):
+        cfg = copy.deepcopy(base_config)
+
+        start = perf_counter()
+        try:
+            # 1. Generate full statevector (dimension = 2^(t+m))
+            state = adapter.run(cfg)
+            state = np.asarray(state, dtype=np.complex128).flatten()
+
+            if state.size != dim_c * dim_w:
+                raise ValueError(
+                    f"Statevector size mismatch: got {state.size}, expected {dim_c * dim_w}"
+                )
+
+            # 2. Marginalize onto the counting register.
+            # Default/reference convention is (counting, work).
+
+
+            probs = np.abs(state.reshape(dim_c, dim_w)) ** 2
+            marginal = probs.sum(axis=1)
+            marginal = marginal / marginal.sum()
+
+            print("top marginal indices:", np.argsort(marginal)[-10:][::-1])
+            print("top marginal probs:", marginal[np.argsort(marginal)[-10:][::-1]])
+
+            # 3. Sample a counting-register measurement outcome
+            basis = int(np.random.choice(dim_c, p=marginal))
+
+            # 4. Classical post-processing to extract factor
+            factor = _factor_from_basis(basis, t, a, N)
+            print("sampled basis:", basis, "factor:", factor)
+
+            dt = perf_counter() - start
+            all_times.append(dt)
+
+            if factor is not None:
+                successful_runs += 1
+                success_times.append(dt)
+
+        except Exception as exc:
+            print("ERROR:", exc)   # ← ADD THIS LINE
+            dt = perf_counter() - start
+            all_times.append(dt)
+            failure_messages.append(str(exc))
+
+    failed_runs = runs - successful_runs
+
+    return {
+        "total_runs": runs,
+        "successful_runs": successful_runs,
+        "failed_runs": failed_runs,
+        "success_rate": successful_runs / runs if runs else 0.0,
+        "avg_time_all_runs": mean(all_times) if all_times else None,
+        "avg_time_successful_runs": mean(success_times) if success_times else None,
+        "failure_messages": sorted(set(failure_messages)),
+    }
+
+
 def run_single_benchmark(
-    language: str, case: Case, adapter, timestamp: str
+    language: str, case: Case, adapter, timestamp: str, benchmark_case: Optional[Case] = None
 ) -> BenchmarkResult:
     # Use a small configuration for correctness (to keep the harness fast and robust)
     # but allow the metric extractor to operate on a larger, more ambitious problem
     # instance (for example, 10-site TFIM).
-    config_correct = copy.deepcopy(case.config)
-    config_metrics = benchmark_config_for_metrics(language, case, config_correct)
-    hamiltonian = "TFIM" if case.name.startswith("tfim") else "HeisenbergXXX"
-    method = "Trotter" if "trotter" in case.name else "LCU"
-    system_size = int(config_metrics.get("num_sites", 0))
-    parameter_set = {"time": config_metrics.get("time")}
-    parameter_set.update(config_metrics.get("params", {}))
+    benchmark_case = benchmark_case or case
+
+    # use statevector extraction time to approximate value extraction time for shor's, since the latter is just running the circuit multiple times with different seeds, and the former is the dominant cost in each run.
+    config_correct = copy.deepcopy(benchmark_case.config)
+    config_correct = benchmark_config_for_metrics(language, benchmark_case, config_correct)
+
+    config_metrics = benchmark_config_for_metrics(
+        language, benchmark_case, copy.deepcopy(benchmark_case.config)
+    )
+
+    # Also consider the shor's case
+    def classify_case(case: Case, config: Dict[str, Any]) -> Tuple[str, str, int]:
+        if case.name == "shors21_2":
+            return "Shors", "Statevector", int(config.get("N", 0))
+        if case.name == "shors21_2_value":
+            return "Shors", "Value", int(config.get("N", 0))
+        if case.name.startswith("tfim"):
+            ham = "TFIM"
+        else:
+            ham = "HeisenbergXXX"
+
+        method = "Trotter" if "trotter" in case.name else "LCU"
+        size = int(config.get("num_sites", 0))
+        return ham, method, size
+    
+    hamiltonian, method, system_size = classify_case(case, config_metrics)
+    if case.name.startswith("shors"):
+        parameter_set = {
+            "N": config_metrics.get("N"),
+            "t": config_metrics.get("t"),
+            "a": config_metrics.get("a"),
+        }
+    else:
+        parameter_set = {"time": config_metrics.get("time")}
+        parameter_set.update(config_metrics.get("params", {}))
+
     impl_path = resolve_implementation_path(language, case.name)
 
     backend_name = None
@@ -165,13 +366,21 @@ def run_single_benchmark(
     gate_metrics: Dict[str, Any] = {}
     metric_note: Optional[str] = None
 
-    metrics, metric_note = collect_metrics(language, case.name, config_metrics)
-    if metrics:
-        backend_name = metrics.get("backend")
-        compilation_time = metrics.get("compilation_time_seconds")
-        gate_metrics = metrics
+    success_rate: Optional[float] = None
+    avg_time_all_runs: Optional[float] = None
+    avg_time_successful_runs: Optional[float] = None
+
+    if case.name != "shors21_2_value":
+        metrics, metric_note = collect_metrics(language, case.name, config_metrics)
+        if metrics:
+            backend_name = metrics.get("backend")
+            compilation_time = metrics.get("compilation_time_seconds")
+            gate_metrics = metrics
 
     notes = metric_note
+    if case.name == "shors21_2_value":
+        remap_note = "Benchmark timing redirected to shors21_2 statevector implementation (N=21, t=6, a=2)."
+        notes = f"{notes} | {remap_note}" if notes else remap_note
 
     if adapter is None:
         status = "skipped"
@@ -190,42 +399,31 @@ def run_single_benchmark(
             notes = reason
         return empty_result(language, case, timestamp, status=status, notes=notes)
 
-    run_start = perf_counter()
-    try:
-        # Correctness is evaluated on the original harness configuration (typically
-        # small system sizes) to keep runs lightweight and robust across tools.
-        adapter.run(config_correct)
-        execution_time = perf_counter() - run_start
-        status = "ok"
-        message = notes
-    except Exception as exc:  # pragma: no cover - defensive logging
-        execution_time = perf_counter() - run_start
-        status = "error"
-        message = f"Execution failed: {exc}"
-        if notes:
-            message = f"{notes} | {message}"
-        notes = message
-        return BenchmarkResult(
-            benchmark_id=build_benchmark_id(language, case, config_metrics),
-            language=language,
-            hamiltonian=hamiltonian,
-            method=method,
-            system_size=system_size,
-            parameter_set=parameter_set,
-            implementation_path=impl_path,
-            backend=backend_name,
-            compilation_time_seconds=compilation_time,
-            execution_time_seconds=execution_time,
-            total_gate_count=gate_metrics.get("total_gate_count"),
-            two_qubit_gate_count=gate_metrics.get("two_qubit_gate_count"),
-            circuit_depth=gate_metrics.get("circuit_depth"),
-            qubit_count=gate_metrics.get("qubit_count"),
-            native_gate_set=gate_metrics.get("native_gate_set"),
-            timestamp_utc=timestamp,
-            tool_versions=detect_tool_versions(language),
-            status=status,
-            notes=message,
+    # new logic for shors value VS others in timing
+    if case.name == "shors21_2_value":
+        stats = timed_execution_stats(language, case, adapter, config_correct)
+
+        execution_time = None
+        success_rate = stats["success_rate"]
+        avg_time_all_runs = stats["avg_time_all_runs"]
+        avg_time_successful_runs = stats["avg_time_successful_runs"]
+
+        status = "ok" if stats["successful_runs"] > 0 else "error"
+
+    else:
+        execution_time, failed_runs = timed_execution_average(
+            language, case, adapter, config_correct
         )
+
+        if failed_runs == 0:
+            status = "ok"
+        else:
+            status = "error"
+            extra = f"failed_runs={failed_runs}/{execution_repetitions(case.name)}"
+            if notes:
+                notes = f"{notes} | {extra}"
+            else:
+                notes = extra
 
     return BenchmarkResult(
         benchmark_id=build_benchmark_id(language, case, config_metrics),
@@ -243,6 +441,9 @@ def run_single_benchmark(
         circuit_depth=gate_metrics.get("circuit_depth"),
         qubit_count=gate_metrics.get("qubit_count"),
         native_gate_set=gate_metrics.get("native_gate_set"),
+        success_rate=success_rate,
+        avg_time_all_runs=avg_time_all_runs,
+        avg_time_successful_runs=avg_time_successful_runs,
         timestamp_utc=timestamp,
         tool_versions=detect_tool_versions(language),
         status=status,
@@ -251,10 +452,22 @@ def run_single_benchmark(
 
 
 def build_benchmark_id(language: str, case: Case, config: Dict[str, Any]) -> str:
+    # also consider shor's on top of pre-existing hamiltonian
+    parts = [language, case.name]
+
+    if "num_sites" in config:
+        parts.append(f"n{config['num_sites']}")
+    if "N" in config:
+        parts.append(f"N{config['N']}")
+    if "t" in config:
+        parts.append(f"t{config['t']}")
+    if "a" in config:
+        parts.append(f"a{config['a']}")
+
     params = config.get("params", {})
-    parts = [language, case.name, f"n{config.get('num_sites', 0)}"]
     for key in sorted(params):
         parts.append(f"{key}{params[key]}")
+
     return "-".join(parts)
 
 
@@ -278,11 +491,31 @@ def empty_result(
     language: str, case: Case, timestamp: str, status: str, notes: Optional[str]
 ) -> BenchmarkResult:
     config = benchmark_config_for_metrics(language, case, case.config)
-    hamiltonian = "TFIM" if case.name.startswith("tfim") else "HeisenbergXXX"
-    method = "Trotter" if "trotter" in case.name else "LCU"
-    system_size = int(config.get("num_sites", 0))
-    parameter_set = {"time": config.get("time")}
-    parameter_set.update(config.get("params", {}))
+    # shors OR Hamiltonian config data 
+    if case.name == "shors21_2":
+        hamiltonian = "Shors"
+        method = "Statevector"
+        system_size = int(config.get("N", 0))
+        parameter_set = {
+            "N": config.get("N"),
+            "t": config.get("t"),
+            "a": config.get("a"),
+        }
+    elif case.name == "shors21_2_value":
+        hamiltonian = "Shors"
+        method = "Value"
+        system_size = int(config.get("N", 0))
+        parameter_set = {
+            "N": config.get("N"),
+            "t": config.get("t"),
+            "a": config.get("a"),
+        }
+    else:
+        hamiltonian = "TFIM" if case.name.startswith("tfim") else "HeisenbergXXX"
+        method = "Trotter" if "trotter" in case.name else "LCU"
+        system_size = int(config.get("num_sites", 0))
+        parameter_set = {"time": config.get("time")}
+        parameter_set.update(config.get("params", {}))
     return BenchmarkResult(
         benchmark_id=build_benchmark_id(language, case, config),
         language=language,
@@ -299,12 +532,14 @@ def empty_result(
         circuit_depth=None,
         qubit_count=None,
         native_gate_set=None,
+        success_rate=None,
+        avg_time_all_runs=None,
+        avg_time_successful_runs=None,
         timestamp_utc=timestamp,
         tool_versions=detect_tool_versions(language),
         status=status,
         notes=notes,
     )
-
 
 def benchmark_config_for_metrics(
     language: str, case: Case, base_config: Dict[str, Any]
@@ -317,11 +552,28 @@ def benchmark_config_for_metrics(
     spin-chain benchmarks.
     """
     cfg = copy.deepcopy(base_config)
-    # Use a more demanding problem size for circuit metrics.
+
+    if case.name.startswith("shors"):
+        cfg["N"] = 21
+        cfg["t"] = 6
+        cfg["a"] = 2
+        return cfg
+
     if "num_sites" in cfg:
         cfg["num_sites"] = 10
     return cfg
 
+
+def benchmark_case_and_adapter(
+    language: str,
+    case: Case,
+    adapters: Dict[str, Any],
+) -> Tuple[Case, Any]:
+    """redirect to shors21_2 for both shors21_2 and shors21_2_value, since they share the same implementation and metrics extraction logic in this artifact. We will use the time of statevector extraction to approximate the time of value extraction, since the latter is just running the circuit multiple times with different seeds."""
+    if case.name.startswith("shors"):
+        benchmark_case = next(c for c in CASES if c.name == "shors21_2")
+        return benchmark_case, adapters.get("shors21_2")
+    return case, adapters.get(case.name)
 
 def collect_metrics(
     language: str, case_name: str, config: Dict[str, Any]
@@ -358,10 +610,14 @@ def cirq_metric_provider(
         from programs.cirq import common as cirq_common  # type: ignore
         from programs.cirq import tfim_lcu as cirq_tfim_lcu  # type: ignore
         from programs.cirq import heis_lcu as cirq_heis_lcu  # type: ignore
+        from programs.cirq import shors as cirq_shors  # type: ignore
+        from programs.cirq import shors_value as cirq_shors_value  # type: ignore
     except Exception as exc:  # pragma: no cover
         return {}, f"Cirq stack unavailable: {exc}"
-    num_sites = int(config["num_sites"])
-    time_total = float(config["time"])
+    
+    # Only set num_sites and time_total if it's Hamiltonian.
+    num_sites = int(config["num_sites"]) if "num_sites" in config else None
+    time_total = float(config["time"]) if "time" in config else None
     params = config.get("params", {})
     start = perf_counter()
     if case_name == "tfim_trotter":
@@ -404,6 +660,19 @@ def cirq_metric_provider(
         circuit, qubits, _ = cirq_heis_lcu._build_lcu_circuit(
             num_sites, list(weights), list(paulis), list(phases)
         )
+    elif case_name == "shors21_2":
+        t = int(config["t"])
+        N = int(config["N"])
+        a = int(config["a"])
+
+        circuit, qubits = cirq_shors._build_qpe_circuit(t=t, N=N, a=a)
+        compilation_time = perf_counter() - start
+        metrics = describe_cirq_circuit(circuit, qubits)
+        metrics["backend"] = "cirq.Simulator"
+        metrics["compilation_time_seconds"] = compilation_time
+        return metrics, None
+    elif case_name == "shors21_2_value":
+        return {}, None
     else:
         return {}, f"Unsupported case {case_name} for Cirq metrics"
     compilation_time = perf_counter() - start
@@ -411,6 +680,11 @@ def cirq_metric_provider(
     metrics["backend"] = "cirq.Simulator"
     metrics["compilation_time_seconds"] = compilation_time
     return metrics, None
+
+
+    
+
+
 
 
 def qiskit_metric_provider(
@@ -421,13 +695,17 @@ def qiskit_metric_provider(
         from qiskit.providers.fake_provider import GenericBackendV2  # type: ignore
         from programs.qiskit import common as qiskit_common  # type: ignore
         from programs.qiskit import lcu_common as qiskit_lcu_common  # type: ignore
+        from programs.qiskit import shors as qiskit_shors # type: ignore
+        from programs.qiskit import shors_value as qiskit_shors_value # type: ignore
     except Exception as exc:  # pragma: no cover
         return {}, f"Qiskit stack unavailable: {exc}"
-    num_sites = int(config["num_sites"])
-    time_total = float(config["time"])
-    params = config.get("params", {})
+    
+    
     backend: Optional[GenericBackendV2] = None
     if case_name == "tfim_trotter":
+        num_sites = int(config["num_sites"])
+        time_total = float(config["time"])
+        params = config.get("params", {})
         steps = int(params.get("trotter_steps", 2))
         circuit, _ = qiskit_common.trotterize_tfim(
             num_sites,
@@ -437,7 +715,16 @@ def qiskit_metric_provider(
             steps,
         )
         backend = GenericBackendV2(num_qubits=num_sites)
+        start = perf_counter()
+        compiled = transpile(circuit, backend=backend, optimization_level=2)
+        compilation_time = perf_counter() - start
+        metrics = describe_qiskit_circuit(compiled)
+        metrics["backend"] = getattr(backend, "name", str(backend))
+        metrics["compilation_time_seconds"] = compilation_time
     elif case_name == "heis_trotter":
+        num_sites = int(config["num_sites"])
+        time_total = float(config["time"])
+        params = config.get("params", {})
         steps = int(params.get("trotter_steps", 2))
         circuit, _ = qiskit_common.trotterize_heisenberg_xxx(
             num_sites,
@@ -447,7 +734,16 @@ def qiskit_metric_provider(
             steps,
         )
         backend = GenericBackendV2(num_qubits=num_sites)
+        start = perf_counter()
+        compiled = transpile(circuit, backend=backend, optimization_level=2)
+        compilation_time = perf_counter() - start
+        metrics = describe_qiskit_circuit(compiled)
+        metrics["backend"] = getattr(backend, "name", str(backend))
+        metrics["compilation_time_seconds"] = compilation_time
     elif case_name == "tfim_lcu":
+        num_sites = int(config["num_sites"])
+        time_total = float(config["time"])
+        params = config.get("params", {})
         gamma = pauli_models.taylor_coefficients(
             pauli_models.tfim_pauli_terms(
                 num_sites, float(params.get("J", 1.0)), float(params.get("h", 1.0))
@@ -459,7 +755,16 @@ def qiskit_metric_provider(
             num_sites, list(weights), list(paulis), list(phases)
         )
         backend = GenericBackendV2(num_qubits=circuit.num_qubits)
+        start = perf_counter()
+        compiled = transpile(circuit, backend=backend, optimization_level=2)
+        compilation_time = perf_counter() - start
+        metrics = describe_qiskit_circuit(compiled)
+        metrics["backend"] = getattr(backend, "name", str(backend))
+        metrics["compilation_time_seconds"] = compilation_time
     elif case_name == "heis_lcu":
+        num_sites = int(config["num_sites"])
+        time_total = float(config["time"])
+        params = config.get("params", {})
         gamma = pauli_models.taylor_coefficients(
             pauli_models.heisenberg_pauli_terms(
                 num_sites, float(params.get("J", 1.0)), float(params.get("field", 0.2))
@@ -471,16 +776,31 @@ def qiskit_metric_provider(
             num_sites, list(weights), list(paulis), list(phases)
         )
         backend = GenericBackendV2(num_qubits=circuit.num_qubits)
+        start = perf_counter()
+        compiled = transpile(circuit, backend=backend, optimization_level=2)
+        compilation_time = perf_counter() - start
+        metrics = describe_qiskit_circuit(compiled)
+        metrics["backend"] = getattr(backend, "name", str(backend))
+        metrics["compilation_time_seconds"] = compilation_time
+
+    elif case_name == "shors21_2":
+        start = perf_counter()
+        circuit = qiskit_shors.build_circuit(config)
+        backend = GenericBackendV2(num_qubits=circuit.num_qubits)
+        compiled = transpile(circuit, backend=backend, optimization_level=2)
+        compilation_time = perf_counter() - start
+        metrics = describe_qiskit_circuit(compiled)
+        metrics["backend"] = getattr(backend, "name", str(backend))
+        metrics["compilation_time_seconds"] = compilation_time
+        return metrics, None
+
+    elif case_name == "shors21_2_value":
+        return {}, None
     else:
         return {}, f"Unsupported case {case_name} for Qiskit metrics"
     if backend is None:
         backend = GenericBackendV2(num_qubits=circuit.num_qubits)
-    start = perf_counter()
-    compiled = transpile(circuit, backend=backend, optimization_level=2)
-    compilation_time = perf_counter() - start
-    metrics = describe_qiskit_circuit(compiled)
-    metrics["backend"] = getattr(backend, "name", str(backend))
-    metrics["compilation_time_seconds"] = compilation_time
+    
     return metrics, None
 
 
@@ -538,12 +858,15 @@ def pyquil_metric_provider(
         from pyquil.quilbase import Gate  # type: ignore
         from programs.pyquil import common as pyquil_common  # type: ignore
         from programs.pyquil import lcu_common as pyquil_lcu  # type: ignore
+        from programs.pyquil import shors as pyquil_shors  # type: ignore
+        
     except Exception as exc:  # pragma: no cover
         return {}, f"PyQuil stack unavailable: {exc}"
-    num_sites = int(config["num_sites"])
-    time_total = float(config["time"])
+    
     params = config.get("params", {})
     if case_name == "tfim_trotter":
+        num_sites = int(config["num_sites"])
+        time_total = float(config["time"])
         steps = int(params.get("trotter_steps", 2))
         prog, _ = pyquil_common.trotterize_tfim(
             num_sites,
@@ -552,7 +875,10 @@ def pyquil_metric_provider(
             time_total,
             steps,
         )
+        return describe_pyquil_program(prog, Gate), None
     elif case_name == "heis_trotter":
+        num_sites = int(config["num_sites"])
+        time_total = float(config["time"])
         steps = int(params.get("trotter_steps", 2))
         prog, _ = pyquil_common.trotterize_heisenberg_xxx(
             num_sites,
@@ -561,23 +887,43 @@ def pyquil_metric_provider(
             time_total,
             steps,
         )
+        return describe_pyquil_program(prog, Gate), None
     elif case_name == "tfim_lcu":
+        num_sites = int(config["num_sites"])
+        time_total = float(config["time"])
         H = pauli_models.tfim_pauli_terms(
             num_sites, float(params.get("J", 1.0)), float(params.get("h", 1.0))
         )
         gamma = pauli_models.taylor_coefficients(H, time_total)
         weights, paulis, phases = pauli_models.lcu_weights_from_gamma(gamma)
         prog, _ = pyquil_lcu.build_lcu_program(num_sites, list(weights), list(paulis), list(phases))
+        return describe_pyquil_program(prog, Gate), None
     elif case_name == "heis_lcu":
+        num_sites = int(config["num_sites"])
+        time_total = float(config["time"])
         H = pauli_models.heisenberg_pauli_terms(
             num_sites, float(params.get("J", 1.0)), float(params.get("field", 0.2))
         )
         gamma = pauli_models.taylor_coefficients(H, time_total)
         weights, paulis, phases = pauli_models.lcu_weights_from_gamma(gamma)
         prog, _ = pyquil_lcu.build_lcu_program(num_sites, list(weights), list(paulis), list(phases))
+        return describe_pyquil_program(prog, Gate), None
+
+    if case_name == "shors21_2":
+        start = perf_counter()
+        prog = pyquil_shors.build_program(config)
+        compilation_time = perf_counter() - start
+
+        metrics = describe_pyquil_program(prog, Gate)
+        metrics["backend"] = "pyquil.NumpyWavefunctionSimulator"
+        metrics["compilation_time_seconds"] = compilation_time
+        return metrics, None
+
+    elif case_name == "shors21_2_value":
+        return {}, None
+    
     else:
         return {}, f"PyQuil metric extractor not implemented for {case_name}"
-    return describe_pyquil_program(prog, Gate), None
 
 
 def _pennylane_lcu_terms(num_sites: int, hamiltonian: Dict[str, complex], total_time: float):
@@ -642,6 +988,47 @@ def pennylane_metric_provider(
         from programs.pennylane import lcu_common as pennylane_lcu  # type: ignore
     except Exception as exc:  # pragma: no cover
         return {}, f"PennyLane unavailable: {exc}"
+
+    if case_name == "shors21_2":
+        try:
+            from programs.pennylane import shors as pennylane_shors  # type: ignore
+        except Exception as exc:  # pragma: no cover
+            return {}, f"PennyLane Shor's module unavailable: {exc}"
+
+        start = perf_counter()
+        circuit, total_wires = pennylane_shors.build_circuit(config)
+        specs = qml.specs(circuit)()
+        compilation_time = perf_counter() - start
+
+        resources = specs.get("resources")
+        total_ops = getattr(resources, "num_gates", None) if resources else None
+        depth = getattr(resources, "depth", None) if resources else None
+        two_qubit = None
+        gate_names = None
+        qubit_count = total_wires
+
+        if resources is not None:
+            sizes = getattr(resources, "gate_sizes", {})
+            two_qubit = sizes.get(2)
+            gate_types = getattr(resources, "gate_types", {})
+            gate_names = sorted(gate_types.keys()) if gate_types else None
+            qubit_count = getattr(resources, "num_wires", total_wires)
+
+        metrics = {
+            "backend": "qml.default.qubit",
+            "compilation_time_seconds": compilation_time,
+            "total_gate_count": total_ops,
+            "two_qubit_gate_count": two_qubit,
+            "circuit_depth": depth,
+            "qubit_count": qubit_count,
+            "native_gate_set": gate_names,
+        }
+        return metrics, None
+
+    elif case_name == "shors21_2_value":
+        return {}, None
+    
+    
     num_sites = int(config["num_sites"])
     time_total = float(config["time"])
     params = config.get("params", {})
@@ -773,10 +1160,6 @@ def strawberryfields_metric_provider(
 def qrisp_metric_provider(
     language: str, case_name: str, config: Dict[str, Any]
 ) -> Tuple[Dict[str, Any], Optional[str]]:
-    # LCU cases delegate execution to Qiskit, and we report metrics only under
-    # the Qiskit language to avoid double-counting.
-    if "lcu" in case_name:
-        return {}, "N/A: Qrisp LCU programs delegate to Qiskit; see Qiskit metrics."
     # For Trotter cases, build the Qrisp QuantumCircuit via the same
     # Hamiltonian + trotterization path used in the simulation helpers,
     # then convert to a Qiskit circuit for metric extraction.
@@ -788,6 +1171,7 @@ def qrisp_metric_provider(
     except Exception as exc:  # pragma: no cover
         return {}, f"Qrisp stack unavailable: {exc}"
 
+
     num_sites = int(config["num_sites"])
     total_time = float(config["time"])
     params = config.get("params", {})
@@ -796,11 +1180,11 @@ def qrisp_metric_provider(
     init_angle = float(params.get("init_angle", np.pi / 8))
 
     # Build the Qrisp Hamiltonian operator.
-    if case_name == "tfim_trotter":
+    if case_name in ("tfim_trotter", "tfim_lcu"):
         J = float(params.get("J", 1.0))
         h = float(params.get("h", 1.0))
         H = qrisp_common.build_tfim_operator(num_sites, J, h)
-    elif case_name == "heis_trotter":
+    elif case_name in ("heis_trotter", "heis_lcu"):
         J = float(params.get("J", 1.0))
         field = float(params.get("field", 0.2))
         H = qrisp_common.build_heisenberg_operator(num_sites, J, field)
@@ -978,6 +1362,9 @@ def qualtran_metric_provider(
         from qualtran.cirq_interop._interop_qubit_manager import InteropQubitManager  # type: ignore
     except Exception as exc:  # pragma: no cover
         return {}, f"Qualtran dependencies unavailable: {exc}"
+    
+    # Hamiltonian Cases:
+    
     num_sites = int(config["num_sites"])
     total_time = float(config["time"])
     params = config.get("params", {})
@@ -1055,6 +1442,9 @@ def qualtran_metric_provider(
     metrics["compilation_time_seconds"] = None
     return metrics, None
 
+    # Shor case:
+
+
 
 def placeholder_metric_provider(
     language: str, case_name: str, config: Dict[str, Any]
@@ -1068,10 +1458,52 @@ def qsharp_metric_provider(
     try:
         import qsharp  # type: ignore
         from programs.qsharp import ensure_compiled  # type: ignore
+        from programs.qsharp import shors as qsharp_shors  # type: ignore
     except Exception as exc:  # pragma: no cover
         return {}, f"Q# runtime unavailable: {exc}"
 
     ensure_compiled()
+
+    if case_name == "shors21_2":
+        try:
+            operation, args = qsharp_shors.build_operation(config)
+        except Exception as exc:  # pragma: no cover
+            return {}, f"Failed to build Q# Shor operation for shors21_2: {exc}"
+
+        try:
+            logical_counts = qsharp.logical_counts(operation, *args)
+        except Exception as exc:  # pragma: no cover
+            return {}, f"Failed to gather logical counts for shors21_2: {exc}"
+
+        total_gate_count = int(
+            logical_counts.get("rotationCount", 0)
+            + logical_counts.get("cczCount", 0)
+            + logical_counts.get("ccixCount", 0)
+            + logical_counts.get("measurementCount", 0)
+        )
+        two_qubit = int(
+            logical_counts.get("cczCount", 0)
+            + logical_counts.get("ccixCount", 0)
+        )
+
+        metrics = {
+            "backend": "qsharp.logical_counts",
+            "compilation_time_seconds": None,
+            "total_gate_count": total_gate_count,
+            "two_qubit_gate_count": two_qubit,
+            "circuit_depth": int(logical_counts.get("rotationDepth", 0)),
+            "qubit_count": int(logical_counts.get("numQubits", config.get("t", 6) + int(config.get("N", 21)).bit_length())),
+            "native_gate_set": None,
+        }
+        return metrics, (
+            "Used Azure Quantum Resource Estimator logical counts via qsharp.logical_counts "
+            "on the Q# Shor QPE operation; these are logical resource counts, not "
+            "backend-native transpiled circuit metrics."
+        )
+
+    elif case_name == "shors21_2_value":
+        return {}, None
+
     try:
         operation, args = _qsharp_operation_and_args(case_name, config, qsharp)
     except KeyError as exc:

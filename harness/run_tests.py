@@ -9,10 +9,19 @@ import os
 import pathlib
 import subprocess
 import sys
-from dataclasses import dataclass
+import time
+import warnings
+from dataclasses import dataclass, asdict
 from typing import Any, Dict, List, Optional
+try:
+    from tqdm import tqdm
+except ImportError:
+    def tqdm(x, leave=True):
+        return x
 
 import numpy as np
+
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 try:
     from harness.reference_hamiltonians import (
@@ -21,9 +30,9 @@ try:
         time_evolve,
         zero_state,
     )
-    from harness.reference_shors import (
-        make_shors
-    )
+    # from harness.reference_shors import (
+    #     make_shors
+    # )
 except ImportError:  # pragma: no cover
     import pathlib
     import sys
@@ -39,6 +48,7 @@ except ImportError:  # pragma: no cover
     from harness.reference_shors import (
         make_shors
     )
+    from harness.reference_shors_value import calculate_shors_factors
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 os.environ.setdefault("MPLCONFIGDIR", str(ROOT / ".mplconfig"))
@@ -111,6 +121,8 @@ class CliAdapter(Adapter):
             raise RuntimeError(
                 f"Invalid JSON from {' '.join(self.command)}: {proc.stdout.decode(errors='ignore')}"
             ) from exc
+        if "value" in payload:
+            return payload["value"]
         state = payload.get("statevector")
         if state is None:
             raise RuntimeError("CLI result missing 'statevector' key")
@@ -131,28 +143,48 @@ def ensure_statevector(obj: Any) -> np.ndarray:
     raise TypeError(f"Cannot convert object of type {type(obj)} to statevector")
 
 
-def compute_reference(case: Case) -> np.ndarray:
+def compute_reference(case: Case) -> np.ndarray | list[int]:
     cfg = case.config
-    num_sites = int(cfg["num_sites"])
-    params = cfg.get("params", {})
-    total_time = float(cfg["time"])
-    J = float(params.get("J", 1.0))
-    h = float(params.get("h", 0.5))
-    field = float(params.get("field", 0.2))
-
-    t=8 # keep it small so that our computer don't explode :)
-    N=21
-    a=2
-
+    
     if case.model == "tfim":
+        num_sites = int(cfg["num_sites"])
+        params = cfg.get("params", {})
+        total_time = float(cfg["time"])
+        J = float(params.get("J", 1.0))
+        h = float(params.get("h", 0.5))
+        field = float(params.get("field", 0.2))
+
         H = tfim_hamiltonian(num_sites, J, h)
     elif case.model == "heis":
+        num_sites = int(cfg["num_sites"])
+        params = cfg.get("params", {})
+        total_time = float(cfg["time"])
+        J = float(params.get("J", 1.0))
+        h = float(params.get("h", 0.5))
+        field = float(params.get("field", 0.2))
+
         H = heis_xxx_hamiltonian(num_sites, J, field)
+    elif case.model == "shors21_2":
+        # shor's case, get corresponding parameters
+        t=cfg.get("t",6) 
+        N=cfg.get("N",21)
+        a=cfg.get("a",2)
+        print("\t**Making Shor's circuit...")
+        state = make_shors(t, N, a)
+        print("\t**Shor's circuit made")
+        return state # final state vector for shor's
+    elif case.model == "shors_21_2_value":
+        # shor's value case, get corresponding parameters
+        t=cfg.get("t",6) 
+        N=cfg.get("N",21)
+        a=cfg.get("a",2)
+        print("\t**Calculating Shor's factors...")
+        factors = calculate_shors_factors(N)
+        print(f"\t**Expected factors: {factors}")
+        
+        return factors # return the list of factors for shor's value case
     else:
-        U = make_shors(t, N,a)
-        m = int(np.ceil(np.log2(N)))
-        psi0 = zero_state(t+m)   # make sure num_sites == t+m
-        return U @ psi0
+        raise ValueError(f"Unknown model: {case.model}")
 
     psi0 = zero_state(num_sites)
     return time_evolve(H, psi0, total_time)
@@ -163,26 +195,27 @@ CASES: List[Case] = [
         name="tfim_trotter",
         model="tfim",
         config={
-            "num_sites": 2,
-            "time": 0.1,
-            "params": {"J": 1.0, "h": 0.5, "trotter_steps": 4},
+            "num_sites": 3,
+            "time": 0.3,
+            "params": {"J": 1.2, "h": 0.8, "trotter_steps": 4},
         },
     ),
     Case(
         name="tfim_lcu",
         model="tfim",
         config={
-            "num_sites": 2,
-            "time": 0.1,
-            "params": {"J": 1.0, "h": 0.5, "lcu_precision": 1e-2},
+            "num_sites": 3,
+            "num_ancilla": 4,
+            "time": 0.3,
+            "params": {"J": 1.2, "h": 0.8, "lcu_precision": 0.1},
         },
     ),
     Case(
         name="heis_trotter",
         model="heis",
         config={
-            "num_sites": 2,
-            "time": 0.1,
+            "num_sites": 3,
+            "time": 0.3,
             "params": {"J": 0.8, "field": 0.2, "trotter_steps": 4},
         },
     ),
@@ -190,11 +223,29 @@ CASES: List[Case] = [
         name="heis_lcu",
         model="heis",
         config={
-            "num_sites": 2,
-            "time": 0.1,
-            "params": {"J": 0.8, "field": 0.2, "lcu_precision": 1e-2},
+            "num_sites": 3,
+            "num_ancilla": 5,
+            "time": 0.3,
+            "params": {"J": 0.8, "field": 0.2, "lcu_precision": 0.1},
         },
     ),
+    Case(
+        name="shors21_2",
+        model="shors21_2",
+        config={
+            "t":6, # keep it small so that our computer don't explode :)
+            "N":21,
+            "a":2
+        }
+    ),
+    Case(
+        name="shors21_2_value",
+        model="shors_21_2_value",
+        config={
+            "t":6, 
+            "N":21
+        }
+    )
 ]
 
 CASE_SUFFIX = {
@@ -202,20 +253,20 @@ CASE_SUFFIX = {
     "tfim_lcu": "tfim_lcu",
     "heis_trotter": "heis_trotter",
     "heis_lcu": "heis_lcu",
+    "shors21_2":"shors", # general shor's file
+    "shors21_2_value":"shors_value" # shor's value file
 }
 
 PYTHON_BASES = {
     "cirq": "programs.cirq",
-    "hml": "programs.hml",
-    "openqasm": "programs.openqasm",
+    "cudaq": "programs.cudaq",
+    "guppy": "programs.guppy",
     "pennylane": "programs.pennylane",
     "pyquil": "programs.pyquil",
     "qsharp": "programs.qsharp",
     "qiskit": "programs.qiskit",
     "qrisp": "programs.qrisp",
     "qualtran": "programs.qualtran",
-    "tket": "programs.tket",
-    "strawberryfields": "programs.strawberryfields",
 }
 
 ADAPTERS: Dict[str, Dict[str, Adapter]] = {}
@@ -225,7 +276,6 @@ for lang, base in PYTHON_BASES.items():
 
 CLI_LANGUAGES = {
     "silq": [sys.executable, str(ROOT / "programs" / "silq" / "run_cli.py")],
-    "quipper": [sys.executable, str(ROOT / "programs" / "quipper" / "run_cli.py")],
 }
 
 for lang, cmd in CLI_LANGUAGES.items():
@@ -247,59 +297,13 @@ class Result:
     case: str
     success: bool
     fidelity: Optional[float]
+    runs: int
+    time_mean: Optional[float]
+    time_std: Optional[float]
     message: str
 
 
-TOLERANCE = 1e-6
-
-# Language×case combinations that we treat as "not applicable" for correctness
-# in this artifact, typically because they delegate execution to another backend
-# (e.g., Cirq or Qiskit) or use only a simplified LCU-style circuit.
-NA_CASES: Dict[tuple[str, str], str] = {
-    # Qrisp LCU delegates to Qiskit.
-    (
-        "qrisp",
-        "tfim_lcu",
-    ): "Qrisp tfim_lcu delegates to Qiskit LCU; correctness covered under Qiskit.",
-    (
-        "qrisp",
-        "heis_lcu",
-    ): "Qrisp heis_lcu delegates to Qiskit LCU; correctness covered under Qiskit.",
-    # Silq LCU programs are only simplified ancilla-controlled blocks and do
-    # not implement the full 2nd-order Taylor LCU used in the primary stacks.
-    (
-        "silq",
-        "tfim_lcu",
-    ): "Silq tfim_lcu uses a simplified ancilla-controlled block; no full 2nd-order LCU implementation in this artifact.",
-    (
-        "silq",
-        "heis_lcu",
-    ): "Silq heis_lcu uses a simplified ancilla-controlled block; no full 2nd-order LCU implementation in this artifact.",
-    # Strawberry Fields Trotter programs use dual-rail CV Trotterization as an
-    # approximate qubit implementation and currently achieve low fidelity
-    # against the reference qubit Hamiltonians. We exclude them from formal
-    # correctness checks in this artifact.
-    (
-        "strawberryfields",
-        "tfim_trotter",
-    ): "Strawberry Fields tfim_trotter uses a dual-rail CV Trotterization with low fidelity versus the reference qubit TFIM; excluded from correctness checks in this artifact.",
-    (
-        "strawberryfields",
-        "heis_trotter",
-    ): "Strawberry Fields heis_trotter uses a dual-rail CV Trotterization with low fidelity versus the reference qubit Heisenberg model; excluded from correctness checks in this artifact.",
-    # Strawberry Fields LCU programs are sequential dual-rail CV circuits, not
-    # full 2nd-order Taylor LCU block encodings with selection ancillas and
-    # PREPARE/SELECT oracles. We keep them N/A in the cross-language LCU
-    # comparison to avoid conflating them with true Taylor LCU implementations.
-    (
-        "strawberryfields",
-        "tfim_lcu",
-    ): "Strawberry Fields tfim_lcu is a sequential dual-rail CV circuit, not a full 2nd-order Taylor LCU block encoding with selection ancillas and PREPARE/SELECT.",
-    (
-        "strawberryfields",
-        "heis_lcu",
-    ): "Strawberry Fields heis_lcu is a sequential dual-rail CV circuit, not a full 2nd-order Taylor LCU block encoding with selection ancillas and PREPARE/SELECT.",
-}
+TOLERANCE = 1e-2
 
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
@@ -321,6 +325,20 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         action="store_true",
         help="List available languages and cases, then exit.",
     )
+    parser.add_argument(
+        "--runs",
+        type=int,
+        default=1,
+        metavar="N",
+        help="Number of runs for benchmarking (default: 1).",
+    )
+    parser.add_argument(
+        "--json",
+        nargs=1,
+        metavar="FILE",
+        type=pathlib.Path,
+        help="Output results to a json file. If FILE already exists, the new results will be merged into the existing file.",
+    )
     return parser.parse_args(argv)
 
 
@@ -329,6 +347,13 @@ def resolve_selection(
 ) -> List[str]:
     if not requested:
         return available
+
+    # If items in `requested` contain commas, we want to split them
+    for item in requested:
+        if "," in item:
+            requested += item.split(",")
+    requested = [item for item in requested if "," not in item]
+
     unknown = [item for item in requested if item not in available]
     if unknown:
         raise SystemExit(f"Unknown {kind}: {', '.join(unknown)}. Available: {', '.join(available)}")
@@ -345,6 +370,8 @@ def resolve_selection(
 
 def main(argv: Optional[List[str]] = None):
     args = parse_args(argv)
+    if args.runs <= 0:
+        raise ValueError("Number of runs must be at least 1.")
 
     if args.list:
         print("Languages:", ", ".join(ALL_LANGUAGES))
@@ -358,27 +385,62 @@ def main(argv: Optional[List[str]] = None):
     results: List[Result] = []
     for language in selected_languages:
         for case in selected_cases:
+            print(f"Running \'{case.name}\' in \'{language}\'")
             # Handle N/A cases up front (delegations or partial implementations).
-            na_reason = NA_CASES.get((language, case.name))
-            if na_reason is not None:
-                results.append(
-                    Result(language, case.name, False, None, f"N/A: {na_reason}")
-                )
-                continue
             adapter = ADAPTERS.get(language, {}).get(case.name)
             if adapter is None:
-                results.append(Result(language, case.name, False, None, "No adapter"))
+                results.append(Result(language, case.name, False, None, 0, None, None, "No adapter"))
                 continue
             try:
-                state = adapter.run(case.config)
+                times = []
+                if args.runs > 1:
+                    state = adapter.run(case.config)  # Unmeasured warmup run
+                else:
+                    state = None
+                for _ in tqdm(range(args.runs), leave=False):
+                    start = time.perf_counter()
+                    state = adapter.run(case.config)
+                    end = time.perf_counter()
+                    times.append(end - start)
+                assert state is not None
+                times = np.array(times)
+                time_mean = float(np.mean(times))
+                time_std = float(np.std(times))
+
                 expected = compute_reference(case)
-                fidelity = compute_fidelity(state, expected)
-                success = fidelity >= 1 - TOLERANCE
-                message = "ok" if success else "low fidelity"
-                results.append(Result(language, case.name, success, fidelity, message))
+                print("\t**Computing fidelity...")
+                if isinstance(expected, list):
+                    # shor's factoring
+                    success = False
+                    if state in expected:
+                        print(f"\t**Factor from shor: {state}")
+                        success = True
+                    message = f"ok" if success else f"incorrect value {state}, expected one of {expected}"
+                    fidelity = 1.0 if success else 0.0
+                    results.append(Result(language, case.name, success, fidelity, args.runs, time_mean, time_std, message))
+                    continue
+                else:
+                    fidelity = compute_fidelity(state, expected)
+                    success = fidelity >= 1 - TOLERANCE
+                    message = "ok" if success else "low fidelity"
+                    results.append(Result(language, case.name, success, fidelity, args.runs, time_mean, time_std, message))
             except Exception as exc:
-                results.append(Result(language, case.name, False, None, str(exc)))
+                results.append(Result(language, case.name, False, None, 0, None, None, str(exc)))
     print_summary(results)
+
+    if args.json is not None:
+        filepath = args.json[0]
+
+        old_results = dict()
+        if filepath.is_file():
+            with open(filepath, 'r') as f:
+                old_results = json.load(f)
+
+        with open(filepath, 'w') as f:
+            new_results = dict()
+            for res in results:
+                new_results[res.language + "/" + res.case] = asdict(res)
+            json.dump(old_results | new_results, f, indent=2)
 
 
 def compute_fidelity(state: np.ndarray, reference: np.ndarray) -> float:
@@ -396,7 +458,8 @@ def normalize(vec: np.ndarray) -> np.ndarray:
 
 
 def print_summary(results: List[Result]):
-    header = f"{'Language':<20}{'Case':<15}{'Status':<8}{'Fidelity':<12}Message"
+    print("\n")
+    header = f"{'Language':<20}{'Case':<16}{'Status':<8}{'Fidelity':<12}{'Execution Time':<16}Message"
     print(header)
     print("-" * len(header))
     for res in results:
@@ -405,7 +468,9 @@ def print_summary(results: List[Result]):
         else:
             status = "PASS" if res.success else "FAIL"
         fid_str = f"{res.fidelity:.4f}" if res.fidelity is not None else "-"
-        print(f"{res.language:<20}{res.case:<15}{status:<8}{fid_str:<12}{res.message}")
+        time_str = f"{res.time_mean:.4f}±{res.time_std:.4f}" \
+            if (res.time_mean is not None and res.time_std is not None) else "-"
+        print(f"{res.language:<20}{res.case:<16}{status:<8}{fid_str:<12}{time_str:<16}{res.message}")
 
 
 if __name__ == "__main__":

@@ -1,78 +1,57 @@
-// Heisenberg XXX + field time evolution via a simple LCU-style block
-// in Silq, specialized to two qubits. As in the TFIM case, we use one
-// ancilla qubit in superposition to control whether a short Heisenberg
-// evolution is applied.
+import lcu_common;
 
-def cnot(const x:𝔹, y:𝔹):𝔹{
-  if x{
-    y := X(y);
-  }
-  return y;
-}
+// Returns the Heisenberg hamiltonian as a list of Pauli strings with their
+// coefficients.
+Pauli := !uint[2];
+def heis_pauli_terms(n:!N, J:!R, B:!R) lifted :(Pauli^n x !R)[] {
+    assert(n > 0);
+    terms := []:(Pauli^n x !R)[];
 
-def evolveZZ(theta:!ℝ, qs:𝔹^2):𝔹^2{
-  (q0,q1) := qs;
-  q1 := cnot(q0,q1);
-  q1 := rotZ(2.0 * theta, q1);
-  q1 := cnot(q0,q1);
-  return (q0,q1);
-}
+    // Interaction terms
+    for i in [0..n-1) {
+        pauli_string_X := vector(n, 0:Pauli);
+        pauli_string_X[i] = 1:Pauli;
+        pauli_string_X[i+1] = 1:Pauli;
+        terms ~= ((pauli_string_X, J),);
 
-def evolveXX(theta:!ℝ, qs:𝔹^2):𝔹^2{
-  (q0,q1) := qs;
-  q0 := H(q0);
-  q1 := H(q1);
-  (q0,q1) := evolveZZ(theta, (q0,q1));
-  q0 := H(q0);
-  q1 := H(q1);
-  return (q0,q1);
-}
+        pauli_string_Y := vector(n, 0:Pauli);
+        pauli_string_Y[i] = 2:Pauli;
+        pauli_string_Y[i+1] = 2:Pauli;
+        terms ~= ((pauli_string_Y, J),);
 
-def evolveYY(theta:!ℝ, qs:𝔹^2):𝔹^2{
-  (q0,q1) := qs;
-  half_pi := 1.5707963267948966:!ℝ;
-  q0 := rotX(-half_pi, q0);
-  q1 := rotX(-half_pi, q1);
-  (q0,q1) := evolveZZ(theta, (q0,q1));
-  q0 := rotX(half_pi, q0);
-  q1 := rotX(half_pi, q1);
-  return (q0,q1);
-}
-
-// One short Heisenberg XXX + field step with
-//   H = J (X_0 X_1 + Y_0 Y_1 + Z_0 Z_1) + B (Z_0 + Z_1).
-def heis_short_step(J:!ℝ, field:!ℝ, dt:!ℝ, qs:𝔹^2):𝔹^2{
-  qs := evolveXX(J * dt, qs);
-  qs := evolveYY(J * dt, qs);
-  qs := evolveZZ(J * dt, qs);
-  angleZ := (2.0 * field * dt):!ℝ;
-  qs[0] := rotZ(angleZ, qs[0]);
-  qs[1] := rotZ(angleZ, qs[1]);
-  return qs;
-}
-
-// LCU-style block with one ancilla controlling a short Heisenberg evolution.
-def heis_lcu(J:!ℝ, field:!ℝ, total_time:!ℝ, qs:𝔹^2):𝔹 × 𝔹^2{
-  anc := false:𝔹;
-  anc := H(anc);
-
-  steps := 4:!ℕ;
-  dt := total_time / (steps as !ℝ);
-  if anc{
-    for k in [0..steps){
-      qs := heis_short_step(J,field,dt,qs);
+        pauli_string_Z := vector(n, 0:Pauli);
+        pauli_string_Z[i] = 3:Pauli;
+        pauli_string_Z[i+1] = 3:Pauli;
+        terms ~= ((pauli_string_Z, J),);
     }
-  }
 
-  anc := H(anc);
-  return (anc,qs);
+    // Longitudinal field
+    for i in [0..n) {
+        pauli_string := vector(n, 0:Pauli);
+        pauli_string[i] = 3:Pauli;
+        terms ~= ((pauli_string, B),);
+    }
+
+    return terms;
 }
 
-// Example configuration: two-site XXX chain with J = 0.8, B = 0.2, t = 0.1.
-def main():𝔹 × 𝔹^2{
-  qs := vector(2,0:𝔹);
-  J := 0.8:!ℝ;
-  field := 0.2:!ℝ;
-  total_time := 0.1:!ℝ;
-  return heis_lcu(J,field,total_time,qs);
+
+n := __NUM_SITES__:!N;
+def main() {
+    J := __J__:!R;
+    field := __FIELD__:!R;
+    total_time := __TOTAL_TIME__:!R;
+
+    ham := heis_pauli_terms(n, J, field);
+    (paulis, coeffs, phases) := taylor_coefficients(ham, total_time);
+
+    unitaries := []:(B^n->mfree B^n)[];
+    for i in [0..paulis.length) {
+        unitaries ~= (pauli_to_unitary(paulis[i], phases[i]),);
+    }
+
+    ground := lambda()=>vector(n, 0:B); // returns some qubits in ground state
+    qs := LCU(ground, unitaries, coeffs);
+
+    return qs;
 }

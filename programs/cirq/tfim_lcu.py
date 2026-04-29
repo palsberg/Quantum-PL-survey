@@ -55,7 +55,7 @@ def _build_lcu_circuit(
                 )
         circuit.append(lcu_common.select_mask_ops(index, idx))
 
-    circuit.append(prepare_gate.on(*index))
+    circuit.append(cirq.inverse(prepare_gate).on(*index))
     ordered_qubits = list(system) + list(index) + [phase]
     return circuit, ordered_qubits, index, phase
 

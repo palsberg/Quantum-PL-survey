@@ -395,8 +395,9 @@ namespace HamiltonianSimulation.Common {
 
     operation ApplyIndexMask(register : Qubit[], value : Int) : Unit is Adj {
         body (...) {
-            for idx in 0 .. Length(register) - 1 {
-                let bit = (value >>> idx) &&& 1;
+            let L = Length(register);
+            for idx in 0 .. L - 1 {
+                let bit = (value >>> (L - 1 - idx)) &&& 1;
                 if (bit == 0) {
                     X(register[idx]);
                 }
@@ -500,8 +501,8 @@ namespace HamiltonianSimulation.Common {
             set idx += 1;
         }
 
-        DumpMachine();
         Adjoint PreparePureStateD(amplitudes, selector);
+        DumpMachine();
         Reset(phase);
         ResetAll(selector);
     }

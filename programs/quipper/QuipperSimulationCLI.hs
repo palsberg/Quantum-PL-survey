@@ -48,6 +48,9 @@ data CaseParams = CaseParams
   , paramField :: !(Maybe Double)
   , paramTrotterSteps :: !(Maybe Int)
   , paramLcuPrecision :: !(Maybe Double)
+  , paramShorT :: !(Maybe Int)
+  , paramShorN :: !(Maybe Int)
+  , paramShorA :: !(Maybe Int)
   } deriving (Show)
 
 data SimConfig = SimConfig
@@ -80,7 +83,7 @@ orderingTag :: String
 orderingTag = "lexicographic_big_endian"
 
 defaultCaseParams :: CaseParams
-defaultCaseParams = CaseParams Nothing Nothing Nothing Nothing Nothing
+defaultCaseParams = CaseParams Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 data JSONValue
   = JSONObject [(String, JSONValue)]
@@ -193,6 +196,9 @@ valueToParams fields =
     , paramField = jsonLookup fields "field" >>= jsonToDouble
     , paramTrotterSteps = jsonLookup fields "trotter_steps" >>= jsonToInt
     , paramLcuPrecision = jsonLookup fields "lcu_precision" >>= jsonToDouble
+    , paramShorT = jsonLookup fields "t" >>= jsonToInt
+    , paramShorN = jsonLookup fields "N" >>= jsonToInt
+    , paramShorA = jsonLookup fields "a" >>= jsonToInt
     }
 
 jsonLookup :: [(String, JSONValue)] -> String -> Maybe JSONValue

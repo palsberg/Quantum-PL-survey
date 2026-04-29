@@ -7,9 +7,10 @@ import argparse
 import json
 import shlex
 import subprocess
+import math
 import sys
 from pathlib import Path
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 ROOT = Path(__file__).resolve().parents[2]
 QUIPPER_DIR = ROOT / "programs" / "quipper"
@@ -21,6 +22,8 @@ HS_SOURCES = {
     "tfim_lcu": "tfim_lcu.hs",
     "heis_trotter": "heis_trotter.hs",
     "heis_lcu": "heis_lcu.hs",
+    "shors21_2":"shors.hs",
+    "shors21_2_value":"shors_value.hs"
 }
 
 
@@ -43,6 +46,12 @@ def main() -> None:
     payload = invoke_quipper(args.case, args.mode, config)
 
     if args.mode == "simulate":
+        if args.case.endswith("_value"):
+            value = payload.get("value")
+            if value is None:
+                raise SystemExit("Quipper value payload missing 'value'.")
+            json.dump({"value": value}, sys.stdout)
+            return
         amplitudes = payload.get("amplitudes")
         if amplitudes is None:
             raise SystemExit("Quipper simulation payload missing 'amplitudes'.")
@@ -63,6 +72,8 @@ def invoke_quipper(case: str, mode: str, config: Dict[str, Any]) -> Dict[str, An
         + f" && cd {shlex.quote(str(ROOT))}"
         + f" && {shlex.quote(str(binary))} {mode_flag}"
     )
+    if case.startswith("shors") and "params" not in config:
+        config = {"params": config}
     proc = subprocess.run(
         ["arch", "-x86_64", "zsh", "--login", "-c", command],
         input=json.dumps(config).encode("utf-8"),
@@ -83,7 +94,6 @@ def invoke_quipper(case: str, mode: str, config: Dict[str, Any]) -> Dict[str, An
 
 def process_amplitudes(case: str, config: Dict[str, Any], amplitudes: Iterable[Dict[str, Any]]) -> List[Dict[str, float]]:
     """Slice Quipper amplitudes to match harness expectations (postselect for LCU)."""
-    num_sites = int(config.get("num_sites", 0))
 
     def bits_to_index_be(bits: str) -> int:
         acc = 0
@@ -98,6 +108,15 @@ def process_amplitudes(case: str, config: Dict[str, Any], amplitudes: Iterable[D
     bitlen = len(amps[0].get("bitstring", ""))
     if any(len(a.get("bitstring", "")) != bitlen for a in amps):
         raise SystemExit("Inconsistent bitstring lengths in amplitudes.")
+
+    # get correct config depending on what we are testing
+    if case.startswith("shors"):
+        t = int(config.get("t", 6))
+        N = int(config.get("N", 21))
+        m = int(math.ceil(math.log2(N)))
+        num_sites = t + m
+    else:
+        num_sites = int(config.get("num_sites", 0))
 
     if case in {"tfim_lcu", "heis_lcu"}:
         ancilla = bitlen - num_sites
@@ -123,6 +142,12 @@ def process_amplitudes(case: str, config: Dict[str, Any], amplitudes: Iterable[D
             slice_vec = [z / norm for z in slice_vec]
             return [{"re": float(z.real), "im": float(z.imag)} for z in slice_vec]
         # No ancillas present: fall through to dense path.
+    
+    if bitlen != num_sites:
+        raise SystemExit(
+            f"Amplitude bitstrings do not match expected num_sites: got bitlen={bitlen}, expected={num_sites}"
+        )
+
 
     dense = [0j] * (2**num_sites)
     for amp in amps:

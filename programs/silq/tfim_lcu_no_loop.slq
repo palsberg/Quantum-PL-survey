@@ -1,0 +1,92 @@
+import lcu_common;
+
+// Same as LCU(), except does not do the repeat-until-success loop. Returns both
+// operand and ancilla qubits.
+def LCU_no_loop[n:!N,n_ancilla:!N](const ground:𝟙->B^n, const unitaries:(B^n->mfree B^n)[], const coeffs:!R[]):(B^n x B^n_ancilla) {
+
+    // Calculate amplitudes from coefficients for state preparation
+    coeffs_sum := 0:!R;
+    for i in [0..coeffs.length) {
+        coeffs_sum += coeffs[i];
+    }
+    amps := array(coeffs.length, 0:!R);
+    for i in [0..coeffs.length) {
+        amps[i] = sqrt(coeffs[i] / coeffs_sum);
+    }
+
+    // Pad amplitudes until length is 2^n
+    //n_ancilla := ceil(log(unitaries.length) / log(2)) coerce !N;
+    amps ~= array((2^n_ancilla - amps.length) coerce !N, 0:!R);
+
+
+    measurement := vector(n_ancilla, 1:!B);
+
+    // Repeat until ancilla is zero
+    qs := ground();
+
+    // State preparation on ancilla
+    ancilla := vector(n_ancilla, 0:B);
+    ancilla := prepare(ancilla, amps);
+
+    // Select unitaries
+    i := 0:!uint[n_ancilla+1];
+    while i < unitaries.length {
+        if ancilla == (i as B^(n_ancilla+1))[0..n_ancilla] {
+            qs := unitaries[i](qs);
+        }
+        i += 1:!uint[n_ancilla+1];
+    }
+
+    // Uncompute ancilla
+    ancilla := unprepare(ancilla, amps);
+    return (qs, ancilla);
+}
+
+// Returns the tfim hamiltonian as a list of Pauli strings with their
+// coefficients.
+Pauli := !uint[2];
+def tfim_pauli_terms(n:!N, J:!R, h:!R) lifted :(Pauli^n x !R)[] {
+    assert(n > 0);
+    terms := []:(Pauli^n x !R)[];
+
+    // ZZ terms
+    for i in [0..n-1) {
+        pauli_string := vector(n, 0:Pauli);
+        pauli_string[i] = 3:Pauli;
+        pauli_string[i+1] = 3:Pauli;
+        coeff := J;
+        terms ~= ((pauli_string, coeff),)
+    }
+
+    // X terms
+    for i in [0..n) {
+        pauli_string := vector(n, 0:Pauli);
+        pauli_string[i] = 1:Pauli;
+        coeff := h;
+        terms ~= ((pauli_string, coeff),)
+    }
+
+    return terms;
+}
+
+
+n := __NUM_SITES__:!N;
+n_ancilla := __NUM_ANCILLA__:!N;
+def main() {
+    J := __J__:!R;
+    h := __H__:!R;
+    total_time := __TOTAL_TIME__:!R;
+
+    ham := tfim_pauli_terms(n, J, h);
+    (paulis, coeffs, phases) := taylor_coefficients(ham, total_time);
+
+    unitaries := []:(B^n->mfree B^n)[];
+    for i in [0..paulis.length) {
+        unitaries ~= (pauli_to_unitary(paulis[i], phases[i]),);
+    }
+
+    ground := lambda()=>vector(n, 0:B); // returns some qubits in ground state
+    qs := LCU_no_loop[n, n_ancilla](ground, unitaries, coeffs);
+
+    return qs;
+}

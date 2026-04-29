@@ -16,6 +16,8 @@ The resulting counts are written into Paper/program_size_table.tex.
 from __future__ import annotations
 
 import re
+import io
+import tokenize
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -26,26 +28,106 @@ def read_lines(path: Path) -> List[str]:
     return path.read_text(encoding="utf-8").splitlines()
 
 
-def count_loc(lines: List[str], lang: str) -> int:
-    """Count non-empty, non-comment lines for a given language."""
+def _strip_c_style_blocks(text: str) -> str:
+    """Strip /* ... */ blocks used by C-style languages."""
+    return re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)
+
+
+def _strip_haskell_blocks(text: str) -> str:
+    """Strip {- ... -} Haskell block comments."""
+    return re.sub(r"\{\-.*?\-\}", "", text, flags=re.DOTALL)
+
+
+def _strip_python_comments_and_docstrings(text: str) -> str:
+    """Remove Python comments and docstrings, preserving code tokens only."""
+    out_parts: List[str] = []
+    prev_toktype = tokenize.INDENT
+    last_lineno = -1
+    last_col = 0
+
+    try:
+        tokens = tokenize.generate_tokens(io.StringIO(text).readline)
+    except Exception:
+        # Fallback: keep original text if tokenization fails.
+        return text
+
+    for tok in tokens:
+        tok_type = tok.type
+        tok_str = tok.string
+        start_line, start_col = tok.start
+        end_line, end_col = tok.end
+
+        if start_line > last_lineno:
+            last_col = 0
+        if start_col > last_col:
+            out_parts.append(" " * (start_col - last_col))
+
+        if tok_type == tokenize.COMMENT:
+            # Drop comments.
+            pass
+        elif tok_type == tokenize.STRING and prev_toktype in {
+            tokenize.INDENT,
+            tokenize.NEWLINE,
+            tokenize.DEDENT,
+            tokenize.NL,
+            tokenize.ENDMARKER,
+        }:
+            # Drop likely module/class/function docstrings.
+            pass
+        else:
+            out_parts.append(tok_str)
+
+        prev_toktype = tok_type
+        last_col = end_col
+        last_lineno = end_line
+
+    return "".join(out_parts)
+
+
+def _count_python_logical_lines(lines: List[str]) -> int:
+    """Count Python logical lines after stripping comments/docstrings."""
+    text = "\n".join(lines)
+    stripped = _strip_python_comments_and_docstrings(text)
     count = 0
-    for raw in lines:
+    try:
+        for tok in tokenize.generate_tokens(io.StringIO(stripped).readline):
+            if tok.type == tokenize.NEWLINE:
+                count += 1
+    except Exception:
+        # Fallback to physical non-empty lines.
+        for raw in stripped.splitlines():
+            if raw.strip():
+                count += 1
+    return count
+
+
+def count_loc(lines: List[str], lang: str) -> int:
+    """Count non-empty, non-comment logical lines for a given language."""
+    if lang == "python":
+        return _count_python_logical_lines(lines)
+
+    text = "\n".join(lines)
+    if lang in {"qsharp", "silq", "cudaq", "openqasm", "guppy"}:
+        text = _strip_c_style_blocks(text)
+    elif lang == "haskell":
+        text = _strip_haskell_blocks(text)
+
+    count = 0
+    for raw in text.splitlines():
         line = raw.rstrip()
         if not line.strip():
             continue
         stripped = line.lstrip()
-        if lang in {"python", "strawberry"}:
-            if stripped.startswith("#"):
-                continue
-        elif lang in {"qsharp", "openqasm", "silq"}:
+        if lang in {"qsharp", "openqasm", "silq", "cudaq", "guppy"}:
             if stripped.startswith("//"):
                 continue
         elif lang == "haskell":
             if stripped.startswith("--"):
                 continue
-        else:
-            # Default: no special comment handling beyond blank lines.
-            pass
+        # For non-Python languages, optionally treat obvious continuation-only
+        # lines as formatting rather than logic.
+        if stripped in {"(", ")", "[", "]", "{", "}"}:
+            continue
         count += 1
     return count
 
@@ -199,60 +281,25 @@ def haskell_case_loc(entry_path: Path, helper_paths: List[Path]) -> int:
     return count_loc(all_lines, lang="haskell")
 
 
-def silq_case_loc(entry_path: Path) -> int:
+def silq_case_loc(silq_paths: List[Path]) -> int:
+    total_loc = 0
+    for path in silq_paths:
+        if not path.exists():
+            continue
+        total_loc += count_loc(read_lines(path), lang="silq")
+    return total_loc
+
+
+def python_shors_case_loc(entry_path: Path, helper_mods: List[Path]) -> int:
+    """Count Shor entry plus helper module files for fairness across languages."""
     if not entry_path.exists():
         return 0
-    return count_loc(read_lines(entry_path), lang="silq")
+    all_lines = read_lines(entry_path)
+    for helper in helper_mods:
+        if helper.exists():
+            all_lines.extend(read_lines(helper))
+    return count_loc(all_lines, lang="python")
 
-
-def openqasm_case_loc(case_name: str) -> int:
-    """Count LOC on a synthetic 10-site OpenQASM program for this case.
-
-    We generate QASM via the project-local emitters for a 10-qubit instance
-    (matching the TFIM/Heisenberg benchmark configuration) and count
-    non-comment, non-blank lines in the resulting IR, without running any
-    simulator or backend.
-    """
-    try:
-        from programs.openqasm import common as oq_common  # type: ignore
-    except Exception:
-        return 0
-
-    num_sites = 10
-    if case_name == "tfim_trotter":
-        qasm, _ = oq_common.render_tfim_trotter_qasm(
-            num_sites=num_sites,
-            J=1.0,
-            h=0.5,
-            total_time=0.1,
-            steps=4,
-        )
-    elif case_name == "heis_trotter":
-        qasm, _ = oq_common.render_heis_trotter_qasm(
-            num_sites=num_sites,
-            J=0.8,
-            field=0.2,
-            total_time=0.1,
-            steps=4,
-        )
-    elif case_name == "tfim_lcu":
-        qasm = oq_common.render_tfim_lcu_qasm(
-            num_sites=num_sites,
-            J=1.0,
-            h=0.5,
-            total_time=0.1,
-        )
-    elif case_name == "heis_lcu":
-        qasm = oq_common.render_heis_lcu_qasm(
-            num_sites=num_sites,
-            J=0.8,
-            field=0.2,
-            total_time=0.1,
-        )
-    else:
-        return 0
-    lines = qasm.splitlines()
-    return count_loc(lines, lang="openqasm")
 
 
 def main() -> None:
@@ -267,10 +314,23 @@ def main() -> None:
                 ROOT / "programs" / "cirq" / "lcu_common.py",
                 ROOT / "programs" / "common" / "pauli_models.py",
             ],
+            "shors_helpers": [
+                ROOT / "programs" / "cirq" / "shor" / "modularexponentiation.py",
+                ROOT / "programs" / "cirq" / "shor" / "quantumorderfinding.py",
+            ],
         },
-        "hml": {
-            "trotter_helpers": [ROOT / "programs" / "hml" / "common.py"],
-            "lcu_helpers": [ROOT / "programs" / "hml" / "common.py"],
+        "cudaq": {
+            "trotter_helpers": [ROOT / "programs" / "cudaq" / "common.py"],
+            "lcu_helpers": [ROOT / "programs" / "cudaq" / "lcu_common.py"],
+            "shors_helpers": [],
+        },
+        "guppy": {
+            "trotter_helpers": [ROOT / "programs" / "guppy" / "common.py"],
+            "lcu_helpers": [
+                ROOT / "programs" / "guppy" / "lcu_common.py",
+                ROOT / "programs" / "common" / "pauli_models.py",
+            ],
+            "shors_helpers": [],
         },
         "pennylane": {
             "trotter_helpers": [ROOT / "programs" / "pennylane" / "common.py"],
@@ -278,6 +338,7 @@ def main() -> None:
                 ROOT / "programs" / "pennylane" / "lcu_common.py",
                 ROOT / "programs" / "common" / "pauli_models.py",
             ],
+            "shors_helpers": [],
         },
         "pyquil": {
             "trotter_helpers": [ROOT / "programs" / "pyquil" / "common.py"],
@@ -285,6 +346,7 @@ def main() -> None:
                 ROOT / "programs" / "pyquil" / "lcu_common.py",
                 ROOT / "programs" / "common" / "pauli_models.py",
             ],
+            "shors_helpers": [],
         },
         "qiskit": {
             "trotter_helpers": [ROOT / "programs" / "qiskit" / "common.py"],
@@ -292,10 +354,16 @@ def main() -> None:
                 ROOT / "programs" / "qiskit" / "lcu_common.py",
                 ROOT / "programs" / "common" / "pauli_models.py",
             ],
+            "shors_helpers": [],
         },
         "qrisp": {
             "trotter_helpers": [ROOT / "programs" / "qrisp" / "common.py"],
-            "lcu_helpers": [ROOT / "programs" / "qrisp" / "common.py"],
+            "lcu_helpers": [
+                ROOT / "programs" / "common" / "pauli_models.py",
+                ROOT / "programs" / "qrisp" / "common.py",
+                ROOT / "programs" / "qrisp" / "lcu_common.py",
+            ],
+            "shors_helpers": [],
         },
         "qualtran": {
             "trotter_helpers": [ROOT / "programs" / "qualtran" / "common.py"],
@@ -303,16 +371,9 @@ def main() -> None:
                 ROOT / "programs" / "qualtran" / "common.py",
                 ROOT / "programs" / "common" / "pauli_models.py",
             ],
-        },
-        "strawberryfields": {
-            "trotter_helpers": [ROOT / "programs" / "strawberryfields" / "common.py"],
-            "lcu_helpers": [ROOT / "programs" / "strawberryfields" / "common.py"],
-        },
-        "tket": {
-            "trotter_helpers": [ROOT / "programs" / "tket" / "common.py"],
-            "lcu_helpers": [
-                ROOT / "programs" / "tket" / "lcu_common.py",
-                ROOT / "programs" / "common" / "pauli_models.py",
+            "shors_helpers": [
+                ROOT / "programs" / "qualtran" / "shors.py",
+                ROOT / "programs" / "qualtran" / "shor" / "shors_common.py",
             ],
         },
     }
@@ -323,6 +384,7 @@ def main() -> None:
         ("tfim_lcu", "TFIM", "LCU"),
         ("heis_trotter", "Heis", "Trotter"),
         ("heis_lcu", "Heis", "LCU"),
+        ("shors_value", "Factoring", "Shors")
     ]
 
     # Python languages first.
@@ -332,20 +394,19 @@ def main() -> None:
             entry = ROOT / "programs" / lang / f"{case_name}.py"
             if method == "Trotter":
                 helpers = cfg["trotter_helpers"]
-            else:
+            elif method == "LCU":
                 helpers = cfg["lcu_helpers"]
-            loc = python_case_loc(entry, helpers)
+            elif method == "Shors":
+                helpers = cfg["shors_helpers"]
+            else:
+                assert False
+            if method == "Shors":
+                loc = python_shors_case_loc(entry, helpers)
+            else:
+                loc = python_case_loc(entry, helpers)
             key = f"{ham}_{method}"
             lang_res[key] = loc
         results[lang] = lang_res
-
-    # OpenQASM: count the generated QASM artifacts.
-    oq_lang = "openqasm"
-    oq_res: Dict[str, int] = {}
-    for case_name, ham, method in cases:
-        loc = openqasm_case_loc(case_name)
-        oq_res[f"{ham}_{method}"] = loc
-    results[oq_lang] = oq_res
 
     # Q#: use Q# source only (no Python shims).
     qsharp_res: Dict[str, int] = {}
@@ -356,9 +417,13 @@ def main() -> None:
         "tfim_lcu": qsharp_dir / "TFIMLCU.qs",
         "heis_trotter": qsharp_dir / "HeisenbergTrotter.qs",
         "heis_lcu": qsharp_dir / "HeisenbergLCU.qs",
+        "shors_value": qsharp_dir / "shors.qs",
     }
     for case_name, ham, method in cases:
-        loc = qsharp_case_loc(qsharp_entry[case_name], common_qs)
+        if case_name in qsharp_entry:
+            loc = qsharp_case_loc(qsharp_entry[case_name], common_qs)
+        else:
+            loc = 0
         qsharp_res[f"{ham}_{method}"] = loc
     results["qsharp"] = qsharp_res
 
@@ -370,13 +435,18 @@ def main() -> None:
         "tfim_lcu": quipper_dir / "tfim_lcu.hs",
         "heis_trotter": quipper_dir / "heis_trotter.hs",
         "heis_lcu": quipper_dir / "heis_lcu.hs",
+        "shors_value": quipper_dir / "shors.hs",
     }
     quipper_helpers = [
         quipper_dir / "QuipperCommon.hs",
         quipper_dir / "QuipperLcuCommon.hs",
+        quipper_dir / "QuipperSimulationCLI.hs",
     ]
     for case_name, ham, method in cases:
-        loc = haskell_case_loc(quipper_entry[case_name], quipper_helpers)
+        if case_name in quipper_entry:
+            loc = haskell_case_loc(quipper_entry[case_name], quipper_helpers)
+        else:
+            loc = 0
         quipper_res[f"{ham}_{method}"] = loc
     results["quipper"] = quipper_res
 
@@ -384,31 +454,40 @@ def main() -> None:
     silq_res: Dict[str, int] = {}
     silq_dir = ROOT / "programs" / "silq"
     silq_entry = {
-        "tfim_trotter": silq_dir / "tfim_trotter.slq",
-        "tfim_lcu": silq_dir / "tfim_lcu.slq",
-        "heis_trotter": silq_dir / "heis_trotter.slq",
-        "heis_lcu": silq_dir / "heis_lcu.slq",
+        "tfim_trotter": [silq_dir / "tfim_trotter.slq"],
+        "tfim_lcu": [
+            silq_dir / "tfim_lcu.slq",
+            silq_dir / "lcu_common.slq",
+            silq_dir / "map.slq",
+        ],
+        "heis_trotter": [silq_dir / "heis_trotter.slq"],
+        "heis_lcu": [
+            silq_dir / "heis_lcu.slq",
+            silq_dir / "lcu_common.slq",
+            silq_dir / "map.slq",
+        ],
+        "shors_value": [silq_dir / "shors_value.slq"],
     }
     for case_name, ham, method in cases:
-        loc = silq_case_loc(silq_entry[case_name])
+        if case_name in silq_entry:
+            loc = silq_case_loc(silq_entry[case_name])
+        else:
+            loc = 0
         silq_res[f"{ham}_{method}"] = loc
     results["silq"] = silq_res
 
-    # Sanity: ensure we have all 13 languages used in the table.
+    # Sanity: ensure we have all 10 languages used in the table.
     ordered_langs = [
         "cirq",
-        "hml",
-        "openqasm",
+        "cudaq",
+        "guppy",
         "pennylane",
         "pyquil",
-        "qiskit",
-        "qrisp",
         "qsharp",
+        "qiskit",
         "qualtran",
-        "quipper",
+        "qrisp",
         "silq",
-        "strawberryfields",
-        "tket",
     ]
 
     # Pretty-print to LaTeX table.
@@ -417,25 +496,21 @@ def main() -> None:
         f.write("\\begin{table*}[t]\n")
         f.write("  \\centering\n")
         f.write(
-            "  \\caption{Lines of source code for TFIM and Heisenberg isotropic chain benchmark programs. "
-            "Counts are computed from a temporary version of each program where language--local helper "
-            "definitions actually used by the benchmark (for example, \\texttt{common.py}, "
-            "\\texttt{lcu\\_common.py}, and \\texttt{pauli\\_models.py}) are inlined, comments and blank "
-            "lines are removed, and non--Python stacks are measured on their native artifacts (Q\\#, "
-            "Quipper, Silq, and generated OpenQASM~3).}\n"
+            "  \\caption{The ten languages and the lines of source code for our benchmark programs.}\n"
         )
         f.write("  \\label{tab:program-size}\n")
-        f.write("  \\begin{tabular}{l|rr|rr}\n")
+        f.write("  \\begin{tabular}{l|r|rr|rr}\n")
         f.write("    \\toprule\n")
         f.write(
-            "             & \\multicolumn{2}{c|}{TFIM} & \\multicolumn{2}{c}{Heisenberg} \\\\\n"
+            "             & Factoring & \\multicolumn{2}{c|}{TFIM} & \\multicolumn{2}{c}{Heisenberg} \\\\\n"
         )
-        f.write("    Language & Trotter & LCU & Trotter & LCU \\\\\n")
+        f.write("    Language & Shor's & Trotter & LCU & Trotter & LCU \\\\\n")
         f.write("    \\midrule\n")
 
         name_map = {
             "cirq": "Cirq",
-            "hml": "HML",
+            "cudaq": "CUDA-Q",
+            "guppy": "Guppy",
             "openqasm": "OpenQASM~3",
             "pennylane": "PennyLane",
             "pyquil": "PyQuil",
@@ -443,14 +518,8 @@ def main() -> None:
             "qrisp": "Qrisp",
             "qsharp": "Q\\#",
             "qualtran": "Qualtran",
-            "quipper": "Quipper",
             "silq": "Silq",
-            "strawberryfields": "Strawberry Fields",
-            "tket": "pytket",
         }
-
-        # Languages whose LCU entries are pseudocode / delegated.
-        dagger_langs = {"hml", "qrisp", "silq", "strawberryfields"}
 
         for lang in ordered_langs:
             row = results.get(lang, {})
@@ -458,27 +527,17 @@ def main() -> None:
             tfim_l = row.get("TFIM_LCU", 0)
             heis_t = row.get("Heis_Trotter", 0)
             heis_l = row.get("Heis_LCU", 0)
+            shors = row.get("Factoring_Shors", 0)
 
-            def fmt_lcu(val: int, is_dagger: bool) -> str:
-                if is_dagger:
-                    return f"{val}$^{{\\dagger}}$"
-                return str(val)
-
-            is_dagger = lang in dagger_langs
             f.write(
-                f"    {name_map[lang]:<16} & {tfim_t} & {fmt_lcu(tfim_l, is_dagger)} "
-                f"& {heis_t} & {fmt_lcu(heis_l, is_dagger)} \\\\\n"
+                f"    {name_map[lang]:<16} & {shors} & {tfim_t} & {tfim_l} "
+                f"& {heis_t} & {heis_l} \\\\\n"
             )
 
         f.write("    \\bottomrule\n")
         f.write("  \\end{tabular}\n")
         f.write("\\end{table*}\n")
         f.write("%\n")
-        f.write(
-            "% Entries marked with $^{\\dagger}$ denote LCU programs that are pseudocode\n"
-            "% sketches or rely on delegated LCU behavior (HML/SimuQ, Qrisp, Silq, Strawberry Fields),\n"
-            "% rather than full Taylor LCU implementations in the given language.\n"
-        )
 
     print(f"Wrote updated LOC table to {out_path}")
 

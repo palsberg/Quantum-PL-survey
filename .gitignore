@@ -211,3 +211,11 @@ __marimo__/
 
 # mpl config
 .mplconfig/
+
+# qiskit order testing
+programs/qiskit/test.py
+
+# Quipper 
+
+my-quipper-project/*
+.DS_Store

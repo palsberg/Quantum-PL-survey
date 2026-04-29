@@ -51,7 +51,7 @@ def build_table(results):
     return table
 
 def fmt(val):
-    return f"{val*1000:.2f}" if val is not None else "??"
+    return f"{val:.3f}" if val is not None else "??"
 
 def lang_row(lang, table):
     col_keys = [k for k, _ in COLUMNS]
@@ -69,7 +69,7 @@ def generate_latex(table):
     lines = [
         r"\begin{table*}[t]",
         r"  \centering",
-        r"  \caption{Execution times in milliseconds.}",
+        r"  \caption{Execution times in seconds.}",
         r"  \begin{tabular}{c|r|rr|rr}",
         r"    \toprule",
         r"             & \multicolumn{1}{c|}{Factoring}",

@@ -145,20 +145,26 @@ Example (only Q# and Pennylane, TFIM trotter):
 python harness/run_tests.py --languages=qsharp,pennylane --cases=tfim_trotter
 ```
 
-### Benchmarking Execution Time
+## Benchmarking Execution Time
 
 The test harness can also be used to benchmark the programs, recording the mean
 and standard deviation of execution time across a number of runs. All testing
 results can be outputted to a JSON file.
 
-For example, the following executes the LCU programs for Qiskit and Silq,
-performing 20 runs and writing the results to `results.json`:
+To generate the execution times in the paper, we use a dedicated script
+(`scripts/benchmark.sh`), which invokes the test harness and records execution
+times. **This script requires `jq` to be installed.** To generate the table run the following from the root directory of this
+repository:
 
 ```bash
-source .venv/bin/activate
-python harness/run_tests.py \
-  --languages=qiskit,silq \
-  --cases=tfim_lcu,heis_lcu \
-  --runs=20 \
-  --json=results.json
+scripts/benchmark.sh benchmarks/most.json cirq guppy pennylane pyquil qsharp qiskit qualtran qrisp silq
+./cudaq
+
+# [Inside the container]
+scripts/benchmark.sh benchmarks/cudaq.json cudaq
+exit
+
+# [Outside the container]
+jq -s '.[0] * .[1]' benchmarks/most.json benchmarks/cudaq.json > benchmarks/all.json
+python scripts/results_to_latex.py -i benchmarks/all.json -o Paper/benchmarks.tex
 ```

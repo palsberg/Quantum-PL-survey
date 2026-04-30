@@ -69,7 +69,7 @@ def generate_latex(table):
     lines = [
         r"\begin{table*}[t]",
         r"  \centering",
-        r"  \caption{Execution times in seconds.}",
+        r"  \caption{Execution Times in Seconds}",
         r"  \begin{tabular}{c|r|rr|rr}",
         r"    \toprule",
         r"             & \multicolumn{1}{c|}{Factoring}",

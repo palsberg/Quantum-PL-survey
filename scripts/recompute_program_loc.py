@@ -496,7 +496,7 @@ def main() -> None:
         f.write("\\begin{table*}[t]\n")
         f.write("  \\centering\n")
         f.write(
-            "  \\caption{The ten languages and the lines of source code for our benchmark programs.}\n"
+            "  \\caption{The Ten Languages and the Lines of Source Code for Our Benchmark Programs}\n"
         )
         f.write("  \\label{tab:program-size}\n")
         f.write("  \\begin{tabular}{l|r|rr|rr}\n")

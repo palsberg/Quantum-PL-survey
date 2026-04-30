@@ -10,14 +10,14 @@ if [ "$#" -lt 2 ]; then
   usage
 fi
 
-RUNS=1
+RUNS=20
 JSON="${1?}"
 shift
 LANGS=("$@")
 CASES=( tfim_trotter tfim_lcu heis_trotter heis_lcu shors21_2 )
 NCASES=$((${#LANGS[@]} * ${#CASES[@]}))
 
-echo "Executing $RUNS runs for $NCASES programs."
+echo "Executing $RUNS run(s) for $NCASES programs."
 
 times_sum=()
 # Initialize sums to all zeros

@@ -219,3 +219,6 @@ programs/qiskit/test.py
 
 my-quipper-project/*
 .DS_Store
+
+benchmarks/
+.config/

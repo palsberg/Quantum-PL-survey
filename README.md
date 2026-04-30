@@ -157,8 +157,9 @@ times. **This script requires `jq` to be installed.** To generate the table run 
 repository:
 
 ```bash
+mkdir -p benchmarks
 scripts/benchmark.sh benchmarks/most.json cirq guppy pennylane pyquil qsharp qiskit qualtran qrisp silq
-./cudaq
+./cudaq.sh
 
 # [Inside the container]
 scripts/benchmark.sh benchmarks/cudaq.json cudaq
@@ -167,4 +168,13 @@ exit
 # [Outside the container]
 jq -s '.[0] * .[1]' benchmarks/most.json benchmarks/cudaq.json > benchmarks/all.json
 python scripts/results_to_latex.py -i benchmarks/all.json -o Paper/benchmarks.tex
+```
+
+## Counting Line Numbers
+
+We provide a script (`scripts/recompute_program_loc.py`) to compute the number
+of lines in each program and output a LaTeX table.
+
+```bash
+python scripts/recompute_program_loc.py
 ```

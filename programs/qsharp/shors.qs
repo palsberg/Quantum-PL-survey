@@ -1,3 +1,5 @@
+// Reference: https://github.com/microsoft/qdk/tree/main/samples
+
 namespace HamiltonianSimulation.Shors{
     import Std.Convert.*;
     import Std.Diagnostics.*;

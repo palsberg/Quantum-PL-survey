@@ -8,8 +8,6 @@ from typing import Iterable, Sequence
 
 import cirq
 import numpy as np
-from openfermion import QubitOperator
-from openfermion.transforms import qubit_operator_to_pauli_sum
 
 
 def _apply_basis_change(circuit: cirq.Circuit, qubit: cirq.Qid, axis: str, inverse: bool) -> None:
@@ -83,58 +81,55 @@ def _sorted_qubits_from_sums(*sums: "cirq.PauliSum") -> Sequence[cirq.Qid]:
 
 
 def _tfim_pauli_sums(num_sites: int, J: float, h: float) -> tuple["cirq.PauliSum", "cirq.PauliSum"]:
-    """Build TFIM H_ZZ and H_X as Cirq PauliSums via OpenFermion."""
-    h_zz = QubitOperator()
+    """Build TFIM H_ZZ and H_X as Cirq PauliSums."""
+    sites = cirq.LineQubit.range(num_sites)
+
+    ps_zz = cirq.PauliSum()
     for i in range(num_sites - 1):
-        h_zz += J * QubitOperator(f"Z{i} Z{i+1}")
+        ps_zz += J * cirq.Z(sites[i]) * cirq.Z(sites[i+1])
 
-    h_x = QubitOperator()
+    ps_x = cirq.PauliSum()
     for i in range(num_sites):
-        h_x += h * QubitOperator(f"X{i}")
+        ps_x += h * cirq.X(sites[i])
 
-    ps_zz = qubit_operator_to_pauli_sum(h_zz)
-    ps_x = qubit_operator_to_pauli_sum(h_x)
     return ps_zz, ps_x
 
 
 def _heis_pauli_sums(
     num_sites: int, J: float, field: float
 ) -> tuple["cirq.PauliSum", "cirq.PauliSum", "cirq.PauliSum", "cirq.PauliSum"]:
-    """Build Heisenberg XXX interaction and field terms as Cirq PauliSums via OpenFermion."""
-    h_xx = QubitOperator()
-    h_yy = QubitOperator()
-    h_zz = QubitOperator()
+    """Build Heisenberg XXX interaction and field terms as Cirq PauliSums."""
+    sites = cirq.LineQubit.range(num_sites)
+
+    ps_xx = cirq.PauliSum()
+    ps_yy = cirq.PauliSum()
+    ps_zz = cirq.PauliSum()
     for i in range(num_sites - 1):
-        h_xx += J * QubitOperator(f"X{i} X{i+1}")
-        h_yy += J * QubitOperator(f"Y{i} Y{i+1}")
-        h_zz += J * QubitOperator(f"Z{i} Z{i+1}")
+        ps_xx += J * cirq.X(sites[i]) * cirq.X(sites[i+1])
+        ps_yy += J * cirq.Y(sites[i]) * cirq.Y(sites[i+1])
+        ps_zz += J * cirq.Z(sites[i]) * cirq.Z(sites[i+1])
 
-    h_field = QubitOperator()
+    ps_field = cirq.PauliSum()
     for i in range(num_sites):
-        h_field += field * QubitOperator(f"Z{i}")
+        ps_field += field * cirq.Z(sites[i])
 
-    ps_xx = qubit_operator_to_pauli_sum(h_xx)
-    ps_yy = qubit_operator_to_pauli_sum(h_yy)
-    ps_zz = qubit_operator_to_pauli_sum(h_zz)
-    ps_field = qubit_operator_to_pauli_sum(h_field)
     return ps_xx, ps_yy, ps_zz, ps_field
 
 
 def trotterize_tfim(
     num_sites: int, J: float, h: float, time: float, steps: int
 ) -> tuple[cirq.Circuit, Sequence[cirq.Qid]]:
-    """Construct a Lie–Trotter circuit for the TFIM Hamiltonian.
-
-    Uses OpenFermion to express the Hamiltonian as a QubitOperator and Cirq's
-    PauliSumExponential to apply commuting ZZ and X pieces in product form.
-    """
+    """Construct a Lie–Trotter circuit for the TFIM Hamiltonian."""
     ps_zz, ps_x = _tfim_pauli_sums(num_sites, J, h)
     qubits = _sorted_qubits_from_sums(ps_zz, ps_x)
     circuit = cirq.Circuit()
     dt = time / steps
+
+    exp_zz = cirq.PauliSumExponential(ps_zz, exponent=-dt)
+    exp_x = cirq.PauliSumExponential(ps_x, exponent=-dt)
     for _ in range(steps):
-        circuit.append(cirq.PauliSumExponential(ps_zz, exponent=-dt))
-        circuit.append(cirq.PauliSumExponential(ps_x, exponent=-dt))
+        circuit.append(exp_zz)
+        circuit.append(exp_x)
     return circuit, qubits
 
 
@@ -146,10 +141,15 @@ def trotterize_heisenberg_xxx(
     qubits = _sorted_qubits_from_sums(ps_xx, ps_yy, ps_zz, ps_field)
     circuit = cirq.Circuit()
     dt = time / steps
+
+    exp_xx = cirq.PauliSumExponential(ps_xx, exponent=-dt)
+    exp_yy = cirq.PauliSumExponential(ps_yy, exponent=-dt)
+    exp_zz = cirq.PauliSumExponential(ps_zz, exponent=-dt)
+    exp_field = cirq.PauliSumExponential(ps_field, exponent=-dt)
     for _ in range(steps):
-        circuit.append(cirq.PauliSumExponential(ps_xx, exponent=-dt))
-        circuit.append(cirq.PauliSumExponential(ps_yy, exponent=-dt))
-        circuit.append(cirq.PauliSumExponential(ps_zz, exponent=-dt))
-        circuit.append(cirq.PauliSumExponential(ps_field, exponent=-dt))
+        circuit.append(exp_xx)
+        circuit.append(exp_yy)
+        circuit.append(exp_zz)
+        circuit.append(exp_field)
     return circuit, qubits
 

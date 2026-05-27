@@ -10,8 +10,9 @@ Reference: https://pennylane.ai/codebook/shors-algorithm
 *loosely used as a guide. needed a lot of editing to work*
 '''
 
+import math
 import pennylane as qml
-from pennylane import numpy as np
+import numpy as np
 from typing import Dict, Any
 
 #using Elliot's function from the qiskit implementation
@@ -37,19 +38,18 @@ def qpe_circuit(a, N, t):
     :param t: number of qubits in the estimation register
     '''
 
-    n_pe_qubits = t #size of estimation register
-    pe_wires = range(n_pe_qubits)
-    n_comp_qubits = int(np.ceil(np.log2(N))) #size of computational register
-    comp_wires = range(n_pe_qubits, n_pe_qubits+n_comp_qubits)
+    n_operand = int(math.ceil(math.log2(N)))
+    n_ancilla = n_operand + 2
 
-    #define the matrix Ma for later
-    matrix = get_Ma(a, N, n_comp_qubits)
+    ancilla = list(range(0, n_ancilla))
+    counting = list(range(n_ancilla, n_ancilla + t))
+    operand = list(range(n_ancilla + t, n_ancilla + t + n_operand))
 
     #set up quantum device
-    dev = qml.device("default.qubit", wires=n_comp_qubits + n_pe_qubits)
+    dev = qml.device("default.qubit", wires=n_ancilla+t+n_operand)
 
     @qml.qnode(dev)
-    def circuit(matrix):
+    def circuit():
         """Return the entire statevector after running the QPE circuit.
 
         Args:
@@ -59,15 +59,25 @@ def qpe_circuit(a, N, t):
             statevector(numpy tensor): final statevector
         """
 
-        # CREATE THE INITIAL STATE |0...1> ON TARGET WIRES
-        qml.PauliX(wires = comp_wires[-1])
+        # Prepare ancillas and operand
+        for i in counting:
+            qml.Hadamard(i)
+        qml.BasisEmbedding(1, wires=operand)
 
-        #Built in Quantum Phase Estimation subroutine
-        qml.QuantumPhaseEstimation(matrix,comp_wires,pe_wires)
+        # Modular exponentiation. We don't use qml.ModExp because it takes over
+        # 10x as long.
+        base_power = a
+        for ctrl_wire in counting[::-1]:
+            qml.ctrl(qml.Multiplier(base_power, operand, N, ancilla), control=ctrl_wire)
+            base_power = (base_power * base_power) % N
+
+        # iQFT
+        qml.adjoint(qml.QFT)(counting)
 
         return qml.state()
-    
-    return circuit(matrix)
+
+    state = circuit()[:2**(t + n_operand)]  # Remove the ancilla qubits
+    return state
 
 # Additional helper for metric evaluation
 def build_qpe_qnode(a: int, N: int, t: int):

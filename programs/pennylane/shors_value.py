@@ -1,21 +1,8 @@
 import pennylane as qml
-from pennylane import numpy as np
+import numpy as np
 from fractions import Fraction
 from typing import Dict, Any
-
-#using Elliot's function from the qiskit implementation
-def get_Ma(a: int, N: int, m: int):
-    """
-    Build the unitary |x> -> |(a*x) mod N> for x < N, and |x> -> |x> for x >= N,
-    on m qubits (dimension 2^m). 
-    This is a permutation matrix, wrapped as a UnitaryGate.
-    """
-    dim = 1 << m
-    U = np.zeros((dim, dim), dtype=complex)
-    for x in range(dim):
-        y = (a * x) % N if x < N else x # calculate correct permutation result
-        U[y, x] = 1.0
-    return U
+import math
 
 def FindOrderCandidate(a, N, t):
     '''
@@ -26,60 +13,55 @@ def FindOrderCandidate(a, N, t):
     :param t: number of qubits in the estimation register
     '''
 
-    n_comp_qubits = int(np.ceil(np.log2(N)))
-    n_pe_qubits = t
-    pe_wires = range(n_pe_qubits)
-    comp_wires = range(n_pe_qubits, n_pe_qubits + n_comp_qubits)
+    n_operand = int(math.ceil(math.log2(N)))
+    n_ancilla = n_operand + 2
 
-    matrix = get_Ma(a, N, n_comp_qubits)
+    ancilla = list(range(0, n_ancilla))
+    counting = list(range(n_ancilla, n_ancilla + t))
+    operand = list(range(n_ancilla + t, n_ancilla + t + n_operand))
 
-    dev = qml.device("default.qubit", wires=n_comp_qubits + n_pe_qubits)
+    #set up quantum device
+    dev = qml.device("default.qubit", wires=n_ancilla+t+n_operand)
 
     @qml.set_shots(10)
     @qml.qnode(dev)
-    def qpe_circuit(matrix):
-        qml.PauliX(wires=comp_wires[-1])
-        qml.QuantumPhaseEstimation(matrix, comp_wires, pe_wires)
-        return qml.sample(wires=pe_wires)
+    def qpe_circuit():
+        """Return the entire statevector after running the QPE circuit.
 
-    samples = qpe_circuit(matrix)
+        Args:
+            matrix (array[complex]): matrix representation of Ma.
 
-    aux = 2 ** n_pe_qubits
+        Returns:
+            statevector(numpy tensor): final statevector
+        """
+
+        # Prepare ancillas and operand
+        for i in counting:
+            qml.Hadamard(i)
+        qml.BasisEmbedding(1, wires=operand)
+
+        # Modular exponentiation. We don't use qml.ModExp because it takes over
+        # 10x as long.
+        base_power = a
+        for ctrl_wire in counting[::-1]:
+            qml.ctrl(qml.Multiplier(base_power, operand, N, ancilla), control=ctrl_wire)
+            base_power = (base_power * base_power) % N
+
+        # iQFT
+        qml.adjoint(qml.QFT)(counting)
+
+        return qml.sample(wires=counting)
+
+    samples = qpe_circuit()
+
+    aux = 2 ** t
     r = 0
     for sample in samples:
         binary = "".join([str(int(b)) for b in sample])
-        phase = Fraction(int(binary, 2), 2 ** n_pe_qubits)
+        phase = Fraction(int(binary, 2), 2 ** t)
         r = max(r, phase.limit_denominator(aux).denominator)
 
     return r
-
-def is_coprime(a, N):
-    """
-    Checks if a and N are coprime.
-
-    """
-
-    if np.gcd(a, N) == 1:
-        return True
-    return False
-
-def is_odd(r):
-    '''
-    Checks if r is odd.'''
-
-    if r % 2 == 1:
-        return True
-    return False
-
-def is_not_one(x, N):
-    """
-    Checks if x is not 1 or N-1.
-
-    """
-
-    if x != 1 and x != N - 1:
-        return True
-    return False
 
 def shor(N, t):
     """
@@ -95,18 +77,17 @@ def shor(N, t):
     """
     
     period = 1
-    while is_odd(period):
+    while period % 2 == 1:
         a = np.random.randint(2, N - 2)
 
-        if not is_coprime(a, N):
-            p = np.gcd(a, N)
-            return [p]
+        if np.gcd(a, N) != 1:
+            return [np.gcd(a, N)]
 
         period = FindOrderCandidate(a, N, t)
 
         x = (a ** (period // 2)) % N
 
-        if is_not_one(x, N) and not is_odd(period):
+        if (x != 1 and x != N-1) and period % 2 == 0:
             p = np.gcd(x - 1, N)
             return p
 

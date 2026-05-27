@@ -63,7 +63,7 @@ of our programs, as well as scripts to generate the tables in our paper.
 | Qualtran                              | `qualtran==0.6.1`, `cotengra==0.7.5`, `quimb==1.11.2`   | Used for advanced TFIM decompositions on Cirq backends. |
 | Qrisp                                 | `qrisp==0.7.0`                                          | Provides high-level Hamiltonian constructs used in `programs/qrisp`. |
 | Common math / tooling (multi-language)| `scipy==1.17.0`, `numpy==2.3.0`, `sympy==1.13.0`, `pandas==2.3.3`, `matplotlib==3.10.7` | Shared across multiple languages. |
-| Non-Python toolchains                 | **Quipper** (requires GHC + Quipper libraries, see https://www.mathstat.dal.ca/~selinger/quipper, also see the section below).<br>**Silq** (requires the Silq compiler toolchain, install from https://github.com/silq-lang/silq, compiling from commit 99aa556). | Our CLI wrappers assume those toolchains are on `PATH`. |
+| Non-Python toolchains                 | **Quipper** (requires GHC + Quipper libraries, see https://www.mathstat.dal.ca/~selinger/quipper, also see the section below).<br>**Silq** (requires the Silq compiler toolchain, install from https://github.com/silq-lang/silq, compiling from commit 61f3949). | Our CLI wrappers assume those toolchains are on `PATH`. |
 
 Install whichever rows correspond to the languages you intend to execute (e.g.,
 `pip install qsharp==1.22.0` before running the Q# programs). The versions above

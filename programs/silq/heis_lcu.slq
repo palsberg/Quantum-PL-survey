@@ -1,57 +1,19 @@
 import lcu_common;
 
-// Returns the Heisenberg hamiltonian as a list of Pauli strings with their
-// coefficients.
-Pauli := !uint[2];
-def heis_pauli_terms(n:!N, J:!R, B:!R) lifted :(Pauli^n x !R)[] {
-    assert(n > 0);
-    terms := []:(Pauli^n x !R)[];
-
-    // Interaction terms
-    for i in [0..n-1) {
-        pauli_string_X := vector(n, 0:Pauli);
-        pauli_string_X[i] = 1:Pauli;
-        pauli_string_X[i+1] = 1:Pauli;
-        terms ~= ((pauli_string_X, J),);
-
-        pauli_string_Y := vector(n, 0:Pauli);
-        pauli_string_Y[i] = 2:Pauli;
-        pauli_string_Y[i+1] = 2:Pauli;
-        terms ~= ((pauli_string_Y, J),);
-
-        pauli_string_Z := vector(n, 0:Pauli);
-        pauli_string_Z[i] = 3:Pauli;
-        pauli_string_Z[i+1] = 3:Pauli;
-        terms ~= ((pauli_string_Z, J),);
-    }
-
-    // Longitudinal field
-    for i in [0..n) {
-        pauli_string := vector(n, 0:Pauli);
-        pauli_string[i] = 3:Pauli;
-        terms ~= ((pauli_string, B),);
-    }
-
-    return terms;
+def Heisenberg_LCU[J:!ℝ,B:!ℝ][t:!ℝ][m:!ℕ,n:!ℕ](qs:𝔹^n) mfree{
+	assert(n>1);
+	coef := vector(3*(n sub 1),J/4)~vector(n,B);
+	ind := [];
+	for k in [0..n sub 1){
+		ind ~= [(0:!ℕ,3*2^k),(3*2^k,0:!ℕ),(3*2^k,3*2^k)];
+	}
+	ind ~= [(0:!ℕ,2^k) for k in [0..n)];
+	(ind,coef) := taylor2_terms(ind coerce _^(3*(n sub 1)+n),coef,t);
+	k := ind.length;
+	assert(m == (floor(log₂(k-1))+1 coerce !ℕ));
+	return pauli_LCU[m,n,k](qs,ind coerce _^k,coef coerce _^k);
 }
 
-
-n := __NUM_SITES__:!N;
-def main() {
-    J := __J__:!R;
-    field := __FIELD__:!R;
-    total_time := __TOTAL_TIME__:!R;
-
-    ham := heis_pauli_terms(n, J, field);
-    (paulis, coeffs, phases) := taylor_coefficients(ham, total_time);
-
-    unitaries := []:(B^n->mfree B^n)[];
-    for i in [0..paulis.length) {
-        unitaries ~= (pauli_to_unitary(paulis[i], phases[i]),);
-    }
-
-    ground := lambda()=>vector(n, 0:B); // returns some qubits in ground state
-    qs := LCU(ground, unitaries, coeffs);
-
-    return qs;
+def main(){
+	 return postselection[__NUM_ANCILLA__,__NUM_SITES__](0:uint[__NUM_SITES__] as B^__NUM_SITES__,Heisenberg_LCU[-__J__,-__FIELD__][__TOTAL_TIME__][__NUM_ANCILLA__,__NUM_SITES__]);
 }

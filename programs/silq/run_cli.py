@@ -391,7 +391,7 @@ def _run_case(case: str, config: Dict[str, Any]) -> np.ndarray:
         slq_path = ROOT / "programs" / "silq" / filename
         cleanup = False
 
-    cmd = ["silq", "--run", str(slq_path)]
+    cmd = ["silq", "--coords=cartesian", "--style=compact", "--run", str(slq_path)]
     proc = subprocess.run(cmd, capture_output=True, text=True, cwd=str(ROOT/'programs'/'silq'))
     if cleanup:
         try:

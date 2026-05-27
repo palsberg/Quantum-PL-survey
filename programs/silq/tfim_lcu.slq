@@ -1,49 +1,15 @@
 import lcu_common;
 
-// Returns the tfim hamiltonian as a list of Pauli strings with their
-// coefficients.
-Pauli := !uint[2];
-def tfim_pauli_terms(n:!N, J:!R, h:!R) lifted :(Pauli^n x !R)[] {
-    assert(n > 0);
-    terms := []:(Pauli^n x !R)[];
-
-    // ZZ terms
-    for i in [0..n-1) {
-        pauli_string := vector(n, 0:Pauli);
-        pauli_string[i] = 3:Pauli;
-        pauli_string[i+1] = 3:Pauli;
-        coeff := J;
-        terms ~= ((pauli_string, coeff),)
-    }
-
-    // X terms
-    for i in [0..n) {
-        pauli_string := vector(n, 0:Pauli);
-        pauli_string[i] = 1:Pauli;
-        coeff := h;
-        terms ~= ((pauli_string, coeff),)
-    }
-
-    return terms;
+def TFIM_LCU[J:!ℝ,h:!ℝ][t:!ℝ][m:!ℕ,n:!ℕ](qs:𝔹^n) mfree{
+    assert(n>1);
+	coef := vector(n sub 1,-J)~vector(n,-h);
+	(ind_z, ind_x) := ([(0:!ℕ,3*2^k) for k in [0..n sub 1)], [(2^k,0:!ℕ) for k in [0..n)]);
+	(ind,coef) := taylor2_terms(ind_z~ind_x,coef,t);
+	k := ind.length;
+	assert(m == (floor(log₂(k-1))+1 coerce !ℕ));
+	return pauli_LCU[m,n,k](qs,ind coerce _^k,coef coerce _^k);
 }
 
-
-n := __NUM_SITES__:!N;
-def main() {
-    J := __J__:!R;
-    h := __H__:!R;
-    total_time := __TOTAL_TIME__:!R;
-
-    ham := tfim_pauli_terms(n, J, h);
-    (paulis, coeffs, phases) := taylor_coefficients(ham, total_time);
-
-    unitaries := []:(B^n->mfree B^n)[];
-    for i in [0..paulis.length) {
-        unitaries ~= (pauli_to_unitary(paulis[i], phases[i]),);
-    }
-
-    ground := lambda()=>vector(n, 0:B); // returns some qubits in ground state
-    qs := LCU(ground, unitaries, coeffs);
-
-    return qs;
+def main(){
+	 return postselection[__NUM_ANCILLA__,__NUM_SITES__](0:uint[__NUM_SITES__] as B^__NUM_SITES__,TFIM_LCU[-__J__,-__H__][__TOTAL_TIME__][__NUM_ANCILLA__,__NUM_SITES__]);
 }

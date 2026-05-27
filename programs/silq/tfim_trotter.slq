@@ -1,65 +1,54 @@
-// Transverse-field Ising model (TFIM) via first-order Trotterization in Silq.
-// This file is used as a template: the Python CLI adapter substitutes all
-// occurrences of __NUM_SITES__, __J__, __H__, __TOTAL_TIME__, and __STEPS__
-// with concrete numeric literals before invoking `silq --run`. The resulting
-// instantiated program implements first-order Trotterization on a chain of
-// __NUM_SITES__ qubits with Hamiltonian
-//   H = J ∑_{i=0}^{N-2} Z_i Z_{i+1} + h ∑_{i=0}^{N-1} X_i
-// and time step dt = total_time / steps.
-
-// Single-control CNOT implemented via quantum control flow.
-def cnot(const x:𝔹, y:𝔹):𝔹{
-  if x{
-    y := X(y);
-  }
-  return y;
+def pauli_basis_change(x:𝔹,rj:!𝔹,sj:!𝔹) mfree:𝔹{
+	if rj{
+		if sj&&x{phase(-π/2);}
+		x := H(x);
+	}
+    return x;
 }
 
-// ZZ evolution on a pair of neighbouring sites using the standard
-// CX–Rz–CX decomposition (up to a global phase).
-def evolveZZ_pair(theta:!ℝ, q0:𝔹, q1:𝔹):𝔹 × 𝔹{
-  q1 := cnot(q0,q1);
-  q1 := rotZ(2.0 * theta, q1);
-  q1 := cnot(q0,q1);
-  return (q0,q1);
-}
-
-// One first-order Trotter step for the N-site TFIM Hamiltonian
-//   H = J ∑ Z_i Z_{i+1} + h ∑ X_i
-// with time slice Δt, applied to a register qs: 𝔹^__NUM_SITES__.
-def tfim_trotter_step(J:!ℝ, h:!ℝ, dt:!ℝ, qs:𝔹^__NUM_SITES__):𝔹^__NUM_SITES__{
-  zz_angle := (J * dt):!ℝ;
-  // ZZ blocks on all nearest neighbours.
-  for i in [0..__NUM_SITES__){
-    if i + 1 < __NUM_SITES__{
-      (qs[i],qs[i+1]) := evolveZZ_pair(zz_angle, qs[i], qs[i+1]);
+def cnot_col[n:!ℕ](qs:𝔹^n,const r:!ℕ,const s:!ℕ,const j:!ℕ,const target:!ℕ) qfree:𝔹^n{
+    temp := dup(qs[j]);
+    if (r|s as !uint[n])[j]{
+        qs[target] := CNOT(temp,qs[target]);
     }
-  }
-
-  // X blocks on each site: exp(-i h X dt) = rotX(2 h dt).
-  angleX := (2.0 * h * dt):!ℝ;
-  for i in [0..__NUM_SITES__){
-    qs[i] := rotX(angleX, qs[i]);
-  }
-  return qs;
+    forget(temp=qs[j]);
+    return qs;
 }
 
-// Entry point used by the harness after templating.
-// The Python adapter substitutes the placeholders with concrete values from
-// the JSON config before running this program.
-def main():𝔹^__NUM_SITES__{
-  qs := vector(__NUM_SITES__,0:𝔹);  // start from |0…0⟩
-
-  J := __J__:!ℝ;
-  h := __H__:!ℝ;
-  total_time := __TOTAL_TIME__:!ℝ;
-  steps := __STEPS__:!ℕ;
-  dt := total_time / (steps as !ℝ);
-
-  for k in [0..steps){
-    qs := tfim_trotter_step(J,h,dt,qs);
-  }
-
-  return qs;
+def identity_string(r:!ℕ,s:!ℕ) lifted:!ℕ{
+    x := r | s;
+    if x == 0 {return 0;}
+    return floor(log₂(x)) coerce !ℕ;
 }
 
+def pauli_exp[n:!ℕ](qs:𝔹^n,θ:!ℝ,r:!ℕ,s:!ℕ) mfree:𝔹^n{
+    if (r=0)&&(s=0){phase(θ);}
+    else{
+		target := identity_string(r,s);
+		with for j in [0..n){
+			qs[j] := pauli_basis_change(qs[j],(r as !uint[n])[j],(s as !uint[n])[j]);
+			if j!=target{qs := cnot_col(qs,r,s,j,target);}
+		}do qs[target] := rotZ(-2*θ,qs[target]);
+    }
+    return qs;
+}
+
+def trotterization[n:!ℕ,D:!ℕ](qs:𝔹^n,coef:!ℝ^D,index:(!ℕ^2)^D,t:!ℝ,Δ:!ℕ) mfree:𝔹^n{
+    repeat Δ{
+        for j in [0..D){
+            qs := pauli_exp(qs,t*coef[j]/Δ,index[j][0],index[j][1]);
+        }
+    }
+    return qs;
+}
+
+def TFIM[J:!ℝ,h:!ℝ][t:!ℝ][n:!ℕ](qs:𝔹^n,Δ:!ℕ) mfree:𝔹^n{
+    assert(n>1);
+    coef := vector(n sub 1 coerce !ℕ,-J)~vector(n,-h);
+	(ind_z, ind_x) := ([(0:!ℕ,3*2^k) for k in [0..n sub 1)], [(2^k,0:!ℕ) for k in [0..n)]);
+    return trotterization[n,n sub 1 + n](qs,coef,ind_z~ind_x,t,Δ);
+}
+
+def main(){
+	return TFIM[__J__, __H__][__TOTAL_TIME__](0:uint[__NUM_SITES__] as 𝔹^__NUM_SITES__,__STEPS__);
+}

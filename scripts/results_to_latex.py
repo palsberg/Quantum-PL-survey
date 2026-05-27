@@ -51,7 +51,7 @@ def build_table(results):
     return table
 
 def fmt(val):
-    return f"{val:.3f}" if val is not None else "??"
+    return f"{val:.1f}" if val is not None else "??"
 
 def lang_row(lang, table):
     col_keys = [k for k, _ in COLUMNS]

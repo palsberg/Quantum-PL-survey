@@ -1,58 +1,107 @@
-def pauli_basis_change(x:𝔹,rj:!𝔹,sj:!𝔹) mfree:𝔹{
-	if rj{
-		if sj&&x{phase(-π/2);}
-		x := H(x);
+def zz(θ:!ℝ,q1:𝔹,q2:𝔹){
+	with q2 ⊕= q1 do{
+		q2:=rotZ(θ,q2);
 	}
-	return x;
+	return (q1,q2);
 }
-
-def cnot_col[n:!ℕ](qs:𝔹^n,const r:!ℕ,const s:!ℕ,const j:!ℕ,const target:!ℕ) qfree:𝔹^n{
-	temp := dup(qs[j]);
-	if (r|s as !uint[n])[j]{
-		qs[target] := CNOT(temp,qs[target]);
+def xx(θ:!ℝ,q1:𝔹,q2:𝔹){
+	with (q1,q2) := (H(q1),H(q2)) do{
+		(q1,q2) := zz(θ,q1,q2);
 	}
-	forget(temp=qs[j]);
-	return qs;
+	return (q1,q2);
 }
-
-def identity_string(r:!ℕ,s:!ℕ) lifted:!ℕ{
-	x := r | s;
-	if x == 0 {return 0;}
-	return floor(log₂(x)) coerce !ℕ;
-}
-
-def pauli_exp[n:!ℕ](qs:𝔹^n,θ:!ℝ,r:!ℕ,s:!ℕ) mfree:𝔹^n{
-	if (r=0)&&(s=0){phase(θ);}
-	else{
-		target := identity_string(r,s);
-		with for j in [0..n){
-			qs[j] := pauli_basis_change(qs[j],(r as !uint[n])[j],(s as !uint[n])[j]);
-			if j!=target{qs := cnot_col(qs,r,s,j,target);}
-		}do qs[target] := rotZ(-2*θ,qs[target]);
+def yy(θ:!ℝ,q1:𝔹,q2:𝔹){
+	with (S(H(q1)),S(H(q2))) := (q1,q2) do{
+		(q1,q2) := zz(θ,q1,q2);
 	}
-	return qs;
+	return (q1,q2);
 }
 
-def trotterization[n:!ℕ,D:!ℕ](qs:𝔹^n,coef:!ℝ^D,index:(!ℕ^2)^D,t:!ℝ,Δ:!ℕ) mfree:𝔹^n{
-	repeat Δ{
-		for j in [0..D){
-			qs := pauli_exp(qs,t*coef[j]/Δ,index[j][0],index[j][1]);
+def initializeTilt[n:!ℕ](qs:𝔹^n,θ:!ℝ) ⇒ [rotY(θ, q) for q in qs]; // (unnecessary, as it is only called with θ=0)
+
+def run(numSites:!ℕ, steps:!ℕ, couplingJ:!ℝ, fieldH:!ℝ, totalTime:!ℝ){
+	qs := initializeTilt(vector(numSites,0), 0);
+	dt := totalTime/steps;
+	repeat steps{
+		for i in 0..numSites-1{
+			(qs[i],qs[i+1]) := xx(2·couplingJ·dt,qs[i],qs[i+1]);
+			(qs[i],qs[i+1]) := yy(2·couplingJ·dt,qs[i],qs[i+1]);
+			(qs[i],qs[i+1]) := zz(2·couplingJ·dt,qs[i],qs[i+1]);
 		}
+		qs := [rotZ(2·fieldH·dt,q) for q in qs];
 	}
 	return qs;
 }
 
-def Heisenberg[J:!ℝ,B:!ℝ][t:!ℝ][n:!ℕ](qs:𝔹^n,Δ:!ℕ) mfree:𝔹^n{
-	assert(n>1);
-	coef := vector(3*(n sub 1) coerce !ℕ,J/4)~vector(n,B);
-	ind := [];
-	for k in [0..n sub 1){
-		ind ~= [(0:!ℕ,3*2^k as !ℕ),(3*2^k as !ℕ,0:!ℕ),(3*2^k as !ℕ,3*2^k as !ℕ)];
-	}
-	ind ~= [(0:!ℕ,2^k) for k in [0..n)];
-	return trotterization[n,3*(n sub 1)+n](qs,coef,ind coerce !(!ℕ^2)^(3*(n sub 1)+n),t,Δ);
+def main() {
+	return run(__NUM_SITES__, __STEPS__, __J__, __FIELD__, __TOTAL_TIME__);
 }
 
-def main(){
-	return Heisenberg[-__J__, -__FIELD__][__TOTAL_TIME__](0:uint[__NUM_SITES__] as 𝔹^__NUM_SITES__,__STEPS__);
-}
+
+//==============================================================================
+// The implementation below handles arbitrary Hamiltonians, in contrast to the
+// Heisenberg-specific implementation above.
+//==============================================================================
+//
+//def pauli_basis_change(x:𝔹,rj:!𝔹,sj:!𝔹) mfree:𝔹{
+//	if rj{
+//		if sj&&x{phase(-π/2);}
+//		x := H(x);
+//	}
+//	return x;
+//}
+//
+//def cnot_col[n:!ℕ](qs:𝔹^n,const r:!ℕ,const s:!ℕ,const j:!ℕ,const target:!ℕ) qfree:𝔹^n{
+//	temp := dup(qs[j]);
+//	if (r|s as !uint[n])[j]{
+//		qs[target] := CNOT(temp,qs[target]);
+//	}
+//	forget(temp=qs[j]);
+//	return qs;
+//}
+//
+//def identity_string(r:!ℕ,s:!ℕ) lifted:!ℕ{
+//	x := r | s;
+//	if x == 0 {return 0;}
+//	return floor(log₂(x)) coerce !ℕ;
+//}
+//
+//def pauli_exp[n:!ℕ](qs:𝔹^n,θ:!ℝ,r:!ℕ,s:!ℕ) mfree:𝔹^n{
+//	if (r=0)&&(s=0){phase(θ);}
+//	else{
+//		target := identity_string(r,s);
+//		with{
+//			for j in [0..n){
+//				qs[j] := pauli_basis_change(qs[j],(r as !uint[n])[j],(s as !uint[n])[j]);
+//			}
+//			for j in [0..n){
+//				if j!=target{ qs := cnot_col(qs,r,s,j,target); }
+//			}
+//		}do qs[target] := rotZ(-2*θ,qs[target]);
+//	}
+//	return qs;
+//}
+//
+//def trotterization[n:!ℕ,D:!ℕ](qs:𝔹^n,coef:!ℝ^D,index:(!ℕ^2)^D,t:!ℝ,Δ:!ℕ) mfree:𝔹^n{
+//	repeat Δ{
+//		for j in [0..D){
+//			qs := pauli_exp(qs,t*coef[j]/Δ,index[j][0],index[j][1]);
+//		}
+//	}
+//	return qs;
+//}
+//
+//def Heisenberg[J:!ℝ,B:!ℝ][t:!ℝ][n:!ℕ](qs:𝔹^n,Δ:!ℕ) mfree:𝔹^n{
+//	assert(n>1);
+//	coef := vector(3*(n sub 1) coerce !ℕ,J/4)~vector(n,B);
+//	ind := [];
+//	for k in [0..n sub 1){
+//		ind ~= [(0:!ℕ,3*2^k as !ℕ),(3*2^k as !ℕ,0:!ℕ),(3*2^k as !ℕ,3*2^k as !ℕ)];
+//	}
+//	ind ~= [(0:!ℕ,2^k) for k in [0..n)];
+//	return trotterization[n,3*(n sub 1)+n](qs,coef,ind coerce !(!ℕ^2)^(3*(n sub 1)+n),t,Δ);
+//}
+//
+//def main(){
+//	return Heisenberg[-__J__, -__FIELD__][__TOTAL_TIME__](0:uint[__NUM_SITES__] as 𝔹^__NUM_SITES__,__STEPS__);
+//}

@@ -5,22 +5,16 @@ Source 2: https://quantumai.google/cirq/experiments/shor
 
 import math
 import random
-from dataclasses import dataclass
-from fractions import Fraction
 from typing import Any, Callable, Dict, List, Optional, Tuple
 import cirq
 import numpy as np
 import sympy
 from math import ceil, gcd, log2
-from qualtran.bloqs.cryptography.rsa import ModExp, RSAPhaseEstimate
-from .shor.shors_common import classical_order_finder, ModExpPermutationGate
 from qualtran import BloqBuilder, QUInt
-from qualtran.bloqs.basic_gates import Hadamard, XGate
+from qualtran.bloqs.basic_gates import Hadamard
+from qualtran.bloqs.bookkeeping import Split, Join
 from qualtran.bloqs.qft import QFTTextBook
-from qualtran.simulation.tensor import initialize_from_zero
-from qualtran.cirq_interop._interop_qubit_manager import InteropQubitManager
-from qualtran._infra.gate_with_registers import get_named_qubits, merge_qubits
-from qualtran.cirq_interop import CirqGateAsBloq
+from qualtran.bloqs.cryptography.rsa import ModExp
 
 """Functions for factoring from start to finish."""
 def find_factor_of_prime_power(n: int) -> int | None:
@@ -38,7 +32,8 @@ def find_factor_of_prime_power(n: int) -> int | None:
 
 def find_factor(
     n: int,
-    order_finder: Callable[[int, int], int | None] = classical_order_finder,
+    order_finder: Callable[[Dict], int | None],
+    config: Dict,
     max_attempts: int = 30,
 ) -> int | None:
     """Returns a non-trivial factor of composite integer n.
@@ -81,7 +76,7 @@ def find_factor(
             return c
 
         # Compute the order r of x modulo n using the order finder.
-        r = order_finder(x, n)
+        r = order_finder(config)
 
         # If the order finder failed, try again.
         if r is None:
@@ -101,7 +96,7 @@ def find_factor(
     print(f"Failed to find a non-trivial factor in {max_attempts} attempts.")
     return None
 
-def _build_qpe_circuit(t: int, N: int, a: int) -> np.ndarray:
+def _build_qpe_circuit(t: int, N: int, a: int):
     """
     Build QPE circuit for the Ma: |x>->|a*x mod N>
     """
@@ -112,39 +107,28 @@ def _build_qpe_circuit(t: int, N: int, a: int) -> np.ndarray:
 
     m = int(ceil(log2(N)))
     bb = BloqBuilder()
+    exp = bb.add_register('exp', t)
 
-    # exponent register (t qubits)
-    exponent = bb.add_register_from_dtype("exponent", QUInt(t))
-
-    # H on each exponent qubit; exponent register in uniform superposition
-    exp_bits = bb.split(exponent)
+    # Hadamards on counting qubits
+    exps = bb.add(Split(QUInt(t)), reg=exp)
     for i in range(t):
-        exp_bits[i] = bb.add(Hadamard(), q=exp_bits[i])
-    exponent = bb.join(exp_bits)
+        exps[i] = bb.add(Hadamard(), q=exps[i])
+    exp = bb.add(Join(QUInt(t)), reg=exps)
 
-    # target x register initialized to |1> (linear combination of all Ma eigenvectors)
-    x = bb.add_register_from_dtype("x", QUInt(m))
-    x_bits = bb.split(x)
-    x_bits[-1] = bb.add(XGate(), q=x_bits[-1])   # |1>
-    x = bb.join(x_bits)
-    
-    # fast ModExp by wrapping in Cirq permutation gate!
-    exp_bits = bb.split(exponent)
-    x_bits = bb.split(x)
-    work_bits = np.concatenate([exp_bits, x_bits]).astype(object)
-    work_bits = bb.add(CirqGateAsBloq(ModExpPermutationGate(t=t, m=m, a=a, N=N)), q=work_bits)
+    # Modular exponentiation: |exp>|1> -> |exp>|a^exp mod N>
+    exp, x = bb.add(
+        ModExp(base=a, mod=N, exp_bitsize=t, x_bitsize=m),
+        exponent=exp,
+    )
 
-    exponent = bb.join(list(work_bits[:t]))
-    x = bb.join(list(work_bits[t:]))
+    # Inverse QFT on counting qubits
+    exp = bb.add(QFTTextBook(bitsize=t).adjoint(), q=exp)
 
-    # iQFT on exponent
-    exponent = bb.add(QFTTextBook(t).adjoint(), q=exponent)
-
-    return bb.finalize(exponent=exponent, x=x)
+    return bb.finalize(exp=exp, x=x)
 
 def run_simulation(config: Dict[str, Any]):
     """
-    Build Shor QPE circuit for factoring 21 with a=2, without measurement.
+    Build Shor QPE circuit for factoring, without measurement.
     Returns the full final statevector.
     Expected config keys: t, N, a
     """
@@ -152,38 +136,21 @@ def run_simulation(config: Dict[str, Any]):
     N = int(config.get("N", 21))
     a = int(config.get("a", 2))
 
-    if N != 21 or a != 2:
-        raise ValueError(
-            f"This implementation is specialized for N=21, a=2 (got N={N}, a={a})."
-        )
+    m = math.ceil(math.log2(N))
 
     print(f"\t**Building Qualtran QPE Bloq for N={N}, a={a}, t={t}...")
-    qpe_bloq = _build_qpe_circuit(t=t, N=N, a=a)
+    bloq = _build_qpe_circuit(t=t, N=N, a=a)
     print("\t**Bloq built; simulating...")
 
-    # **Do the stimulation
-    init_quregs = get_named_qubits(qpe_bloq.signature)
-    qm = InteropQubitManager(cirq.ops.SimpleQubitManager())
-    circuit, quregs_out = qpe_bloq.flatten().to_cirq_circuit_and_quregs(qubit_manager=qm, **init_quregs)
-    sig_qubits = merge_qubits(qpe_bloq.signature, **quregs_out)
-    sig_set = set(sig_qubits)
-    extra_qubits = sorted(set(circuit.all_qubits()) - set(sig_qubits), key=str)
-    qubit_order = list(sig_qubits) + extra_qubits
-    result = cirq.Simulator(dtype=np.complex128).simulate(circuit, qubit_order=qubit_order)
-    full_sv = np.asarray(result.final_state_vector, dtype=np.complex128)
+    circuit, _ = bloq.to_cirq_circuit_and_quregs(
+        exp=np.array([cirq.LineQubit(i) for i in range(t)]),
+    )
+    state = cirq.Simulator().simulate(circuit).final_state_vector
 
-    # **Throw away ancilla qubits by projecting to |0...0>
-    sig_bits = sum(reg.total_bits() for reg in qpe_bloq.signature)
-    anc_bits = len(extra_qubits)
-    sv2 = full_sv.reshape((1 << sig_bits, 1 << anc_bits)) if anc_bits else full_sv.reshape((1 << sig_bits, 1))
-    projected = sv2[:, 0]
+    # Swap qubits around to match tester
+    state = state.reshape([2]*(t+m))
+    state = np.transpose(state, list(range(m, m+t)) + list(range(m)))
+    state = state.reshape((-1,))
 
-    return np.asarray(projected / np.linalg.norm(projected), dtype=np.complex128)
-    
-if __name__ == "__main__":
-    N = 21
-    factor = find_factor(N, order_finder=classical_order_finder)
-    if factor is not None:
-        print(f"A non-trivial factor of N = {N} is {factor}.")
-    else:
-        print(f"Failed to find a non-trivial factor of N = {N}.")
+    # print(np.round(state, 3).reshape((-1, 4)))
+    return state

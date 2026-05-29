@@ -373,7 +373,6 @@ def main() -> None:
             ],
             "shors_helpers": [
                 ROOT / "programs" / "qualtran" / "shors.py",
-                ROOT / "programs" / "qualtran" / "shor" / "shors_common.py",
             ],
         },
     }

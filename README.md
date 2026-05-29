@@ -25,7 +25,7 @@ of our programs, as well as scripts to generate the tables in our paper.
 1. Clone the repo and enter it:
    ```bash
    git clone <repo-url>
-   cd Hamiltonian-Simulation
+   cd Quantum-PL-survey
    ```
 2. Create and activate a Python 3.11 virtual environment:
    ```bash
@@ -79,7 +79,7 @@ us to run on any platform (with or without an Nvidia GPU).
 2. Run the provided script: `./cudaq.sh`. This script automatically downloads
    the CUDA-Q Docker image and starts a container in your current shell.
 3. You should now be in the container's shell, and you should see a prompt like
-   `cudaq@cudaq:~/Hamiltonian-Simulation$`. Now you can execute the
+   `cudaq@cudaq:~/Quantum-PL-survey$`. Now you can execute the
    CUDA-Q programs normally with our test harness (see below).
 4. To stop the container, type `exit` or `Ctrl+D`. To restart the container,
    rerun `./cudaq.sh`.

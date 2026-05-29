@@ -11,24 +11,75 @@ Required API:
 from __future__ import annotations
 
 from math import ceil, gcd, log2
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 from qiskit import QuantumCircuit, transpile
+from qiskit.circuit.library import QFTGate
+from qiskit.circuit.library.generalized_gates import UnitaryGate
+from fractions import Fraction
 
 # Aer sampler
 from qiskit_aer import Aer
 
-# Import what already exists in shors.py
-# Adjust the import path to match your repo layout, e.g.:
-#   from .shors import _build_qpe_circuit, _fraction_with_bounded_denominator_from_counts
-# or
-#   from programs.qiskit.shors import ...
-from .shors import (
-    _build_qpe_circuit,
-    _fraction_with_bounded_denominator_from_counts,
-)
+def _mul_mod_N_gate(a: int, N: int, m: int) -> UnitaryGate:
+    """
+    Build the unitary |x> -> |(a*x) mod N> for x < N, and |x> -> |x> for x >= N,
+    on m qubits (dimension 2^m). 
+    This is a permutation matrix, wrapped as a UnitaryGate.
+    """
+    dim = 1 << m
+    U = np.zeros((dim, dim), dtype=complex)
+    for x in range(dim):
+        y = (a * x) % N if x < N else x # calculate correct permutation result
+        U[y, x] = 1.0
+    return UnitaryGate(U, label=f"mul_{a}_mod_{N}")
 
+
+def _build_qpe_circuit(a:int, N:int, t:int)-> Tuple[QuantumCircuit,int]:
+    """
+    Build QPE circuit for the Ma: |x>->|a*x mod N> with NO measurements
+    returns (circuit, m) where m is the number of target qubits.
+    """
+    if N<=1:
+        raise ValueError("N must be >1")
+    
+    if gcd(a,N)!=1:
+        raise ValueError("QPE requires gcd(a,N)==1 for order finding")
+    
+    m = int(ceil(log2(N))) 
+    qc = QuantumCircuit(t + m, name=f"qpe_a{a}_N{N}")
+
+    # Counting register in uniform superposition
+    qc.h(range(t))
+
+    # Target register initialized to |1>
+    qc.x(t+m-1) # treat last bit as least-significant target qubit
+
+    # targets = list(range(t, t + m))
+    targets = list(range(t, t + m))[::-1]   # [t+m-1, ..., t]
+
+    # Controlled-U^(2^k). Instead of powering U, directly use a^(2^k) mod N to save unnecessary gates
+    for idx in range(t):
+        a_k = pow(a, 1 << (t - 1 - idx), N)  # big-endian: MSB gets largest power
+        U_k=_mul_mod_N_gate(a_k,N,m)
+        cU_k=U_k.control(1)
+        qc.append(cU_k,[idx] + targets)
+
+    # Append LSB-first qubit order for Qiskit matrices:
+    iqft_gate = QFTGate(t).inverse()
+    qc.append(iqft_gate, list(range(t))[::-1]) #avoids Qiskit’s internal ordering/swap conventions entirely.
+    
+    return qc, m
+
+
+def _fraction_with_bounded_denominator_from_counts(c: int, t: int, N: int) -> Fraction:
+    """
+    Continued fraction helper:
+    Given measured counting value c (0..2^t-1), interpret f = c/2^t and return best rational approximation with denominator <= N.
+    """
+    f = Fraction(c, 1 << t)  # exact
+    return f.limit_denominator(N)
 
 # def _measure_counting_register_once(
 #     tqc,

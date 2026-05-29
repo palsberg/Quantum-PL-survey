@@ -96,10 +96,5 @@ def shor(N, t):
 def run_simulation(config: Dict[str, Any]):
     t=int(config.get("t",6))
     N=int(config.get("N",21))
-    a=int(config.get("a",2))
 
     return np.array(shor(N,t))
-
-if __name__ == "__main__":
-    N = 64
-    print(shor(N,6))

@@ -3,12 +3,8 @@ from guppylang import guppy
 from guppylang.defs import GuppyFunctionDefinition
 from guppylang.std.builtins import comptime, result, array
 from guppylang.std.quantum import cx, discard, discard_array, h, measure_array, qubit, reset, x, crz
-from guppylang.std.qsystem import zz_phase
-from guppylang.std.angles import angle, pi
 from guppylang.std.debug import state_result
-from guppylang.std.mem import mem_swap
 
-import pytket
 from pytket import Circuit
 from pytket.circuit import Op, OpType, Qubit, StatePreparationBox, QControlBox, ToffoliBox
 from pytket.passes import AutoRebase, DecomposeBoxes
@@ -16,7 +12,6 @@ from pytket.passes import AutoRebase, DecomposeBoxes
 import math
 import numpy as np
 from typing import Any, Dict, List, Optional
-import time
 
 from fractions import Fraction
 import random
@@ -216,9 +211,7 @@ def run_simulation(config: Dict[str, Any]) -> np.ndarray:
     t = config.get("t", None)
     t = int(t) if t is not None else None
 
-    max_tries = int(config.get("max_tries", 25))
     seed = int(config.get("seed", 0))
-    allow_random_a = bool(config.get("allow_random_a", True))
 
     shots = int(config.get("shots", 10))
     retries = int(config.get("retries", 16))
@@ -250,30 +243,3 @@ def run_simulation(config: Dict[str, Any]) -> np.ndarray:
             return np.array(g)
 
     raise RuntimeError('Failed to find a factor')
-
-
-
-def main():
-    N = 21
-    a = 2
-    t = 6
-
-    time_start = time.time()
-    shors = build_shors(N, a, t, True)
-    time_shors = time.time()
-    print('built shors:', time_shors - time_start)
-
-    emu = shors.emulator().with_shots(1)
-    time_emu = time.time()
-    print('built emulator:', time_emu - time_shors)
-    time_i = time_emu
-    for i in range(10):
-        print('i:', time.time() - time_i)
-        time_i = time.time()
-        res = emu.run()
-        print(res.register_counts()['ctrl'])
-
-
-
-if __name__ == '__main__':
-    main()

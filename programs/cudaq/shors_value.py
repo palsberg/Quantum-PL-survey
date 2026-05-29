@@ -126,10 +126,6 @@ def run_simulation(config: Dict[str, Any]) -> np.ndarray:
     t = config.get("t", None)
     t = int(t) if t is not None else None
 
-    max_tries = int(config.get("max_tries", 25))
-    seed = int(config.get("seed", 0))
-    allow_random_a = bool(config.get("allow_random_a", True))
-
     shots = int(config.get("shots", 256))
     retries = int(config.get("retries", 16))
 
@@ -158,23 +154,3 @@ def run_simulation(config: Dict[str, Any]) -> np.ndarray:
             return np.array(g)
 
     raise RuntimeError('Failed to find a factor')
-
-
-
-
-def main():
-    N = 21
-    a = 2
-    t = 6
-
-    register_oracle(N, a)
-
-    for i in range(100):
-        res = cudaq.sample(shors, N, a, t, True, shots_count=10)
-        bitstring = max(res, key=lambda b:res[b])
-        n = int(bitstring[::-1], 2)
-        print(n)
-
-
-if __name__ == '__main__':
-    main()

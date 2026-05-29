@@ -327,8 +327,6 @@ def run_simulation(config: Dict[str, Any]):
     n_target = int(np.ceil(np.log2(N))) 
     count_qubits = list(range(n_count))
 
-    count_dim=2**n_count
-    target_dim=2**n_target
     # Target register qubits
     target_qubits = list(range(n_count, n_count + n_target))
     p=Program()
@@ -378,12 +376,3 @@ def get_r_candidates(approx):
             continued_fraction_iterator(Rational(approx))
         )
         return [rat.q for rat in rationals]
-
-if __name__ == "__main__":
-    N=21
-    n_count=6
-    n_target=int(np.ceil(np.log2(N)))
-    count_dim=2**n_count
-    target_dim=2**n_target
-    g=run_simulation({"t":6,"N":21,"a":2})
-    print(g)

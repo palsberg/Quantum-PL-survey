@@ -216,7 +216,7 @@ CASES: List[Case] = [
         config={
             "num_sites": 3,
             "time": 0.3,
-            "params": {"J": 1.2, "field": 0.8, "trotter_steps": 4},
+            "params": {"J": 0.8, "field": 0.2, "trotter_steps": 4},
         },
     ),
     Case(
@@ -226,7 +226,7 @@ CASES: List[Case] = [
             "num_sites": 3,
             "num_ancilla": 5,
             "time": 0.3,
-            "params": {"J": 1.2, "field": 0.8, "lcu_precision": 0.1},
+            "params": {"J": 0.8, "field": 0.2, "lcu_precision": 0.1},
         },
     ),
     Case(

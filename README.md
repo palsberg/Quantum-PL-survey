@@ -29,6 +29,13 @@ See [arXiv:2606.26254](https://arxiv.org/abs/2606.26254) for our paper.
    git clone <repo-url>
    cd Quantum-PL-survey
    ```
+
+### uv instructions
+
+2. Run `uv sync`
+
+### pip instructions
+
 2. Create and activate a Python 3.11 virtual environment:
    ```bash
    python3.11 -m venv .venv
